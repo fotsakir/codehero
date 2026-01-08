@@ -23,6 +23,19 @@ This is not science fiction. This is happening now. And this project lets you ex
 
 ---
 
+## Screenshots
+
+![Dashboard](screenshots/dashboard.png)
+*Dashboard - Real-time overview of projects, tickets, and usage statistics*
+
+![Tickets](screenshots/tickets.png)
+*Tickets - Track all development tasks across projects*
+
+![Projects](screenshots/projects.png)
+*Projects - Manage multiple projects with isolated environments*
+
+---
+
 ## Why Fotios Claude System?
 
 | Challenge | Solution |
