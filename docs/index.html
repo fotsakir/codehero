@@ -21,6 +21,8 @@
     <meta name="twitter:description" content="Self-hosted autonomous AI coding agent powered by Claude AI.">
     <meta name="twitter:image" content="https://raw.githubusercontent.com/fotsakir/Claude-AI-developer/main/assets/logo.svg">
 
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
     <style>
         * {
             margin: 0;
@@ -29,22 +31,113 @@
         }
 
         :root {
-            --bg-dark: #0a0a0f;
-            --bg-card: #12121a;
-            --bg-card-hover: #1a1a25;
-            --accent: #00d9ff;
-            --accent-purple: #a855f7;
-            --accent-green: #22c55e;
-            --text: #e4e4e7;
-            --text-muted: #a1a1aa;
-            --border: #27272a;
+            --bg-primary: #07070d;
+            --bg-secondary: #0d0d16;
+            --bg-card: rgba(18, 18, 32, 0.7);
+            --bg-card-hover: rgba(25, 25, 45, 0.8);
+            --border-subtle: rgba(99, 102, 241, 0.15);
+            --border-glow: rgba(99, 102, 241, 0.4);
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-primary: #6366f1;
+            --accent-secondary: #8b5cf6;
+            --accent-cyan: #22d3ee;
+            --accent-green: #10b981;
+            --accent-orange: #f59e0b;
+            --glow-primary: 0 0 20px rgba(99, 102, 241, 0.3);
+            --glow-cyan: 0 0 20px rgba(34, 211, 238, 0.3);
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: var(--bg-dark);
-            color: var(--text);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
             line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Aurora Background */
+        .aurora-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+            background: var(--bg-primary);
+            overflow: hidden;
+        }
+
+        .aurora-blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.5;
+            animation: float 20s ease-in-out infinite;
+        }
+
+        .aurora-blob:nth-child(1) {
+            width: 600px;
+            height: 600px;
+            background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+            top: -200px;
+            left: -200px;
+            animation-delay: 0s;
+        }
+
+        .aurora-blob:nth-child(2) {
+            width: 500px;
+            height: 500px;
+            background: linear-gradient(135deg, var(--accent-cyan) 0%, var(--accent-primary) 100%);
+            top: 50%;
+            right: -150px;
+            animation-delay: -5s;
+        }
+
+        .aurora-blob:nth-child(3) {
+            width: 400px;
+            height: 400px;
+            background: linear-gradient(135deg, var(--accent-secondary) 0%, var(--accent-cyan) 100%);
+            bottom: -100px;
+            left: 30%;
+            animation-delay: -10s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(50px, -50px) scale(1.1); }
+            50% { transform: translate(-30px, 30px) scale(0.95); }
+            75% { transform: translate(-50px, -30px) scale(1.05); }
+        }
+
+        /* Code Rain Background */
+        .code-rain {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+            opacity: 0.15;
+        }
+
+        .code-column {
+            position: absolute;
+            top: -100%;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            line-height: 1.4;
+            color: var(--accent-cyan);
+            white-space: pre;
+            animation: codefall linear infinite;
+            text-shadow: 0 0 10px var(--accent-cyan);
+        }
+
+        @keyframes codefall {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(calc(100vh + 100%)); }
         }
 
         .container {
@@ -62,27 +155,21 @@
             align-items: center;
             text-align: center;
             padding: 40px 20px;
-            background: radial-gradient(ellipse at top, #1a1a2e 0%, var(--bg-dark) 70%);
+            position: relative;
         }
 
-        .logo {
-            width: 120px;
-            height: 120px;
+        .hero-logo {
+            width: 100%;
+            max-width: 700px;
             margin-bottom: 30px;
-            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-purple) 100%);
-            border-radius: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 48px;
-            box-shadow: 0 20px 60px rgba(0, 217, 255, 0.3);
+            filter: drop-shadow(0 0 30px rgba(99, 102, 241, 0.3));
         }
 
         .hero h1 {
             font-size: clamp(2.5rem, 5vw, 4rem);
             font-weight: 700;
             margin-bottom: 20px;
-            background: linear-gradient(135deg, #fff 0%, var(--accent) 100%);
+            background: linear-gradient(135deg, #fff 0%, var(--accent-cyan) 50%, var(--accent-primary) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -90,7 +177,7 @@
 
         .hero .subtitle {
             font-size: clamp(1.1rem, 2vw, 1.4rem);
-            color: var(--text-muted);
+            color: var(--text-secondary);
             max-width: 700px;
             margin-bottom: 40px;
         }
@@ -104,7 +191,7 @@
 
         .btn {
             padding: 14px 32px;
-            border-radius: 8px;
+            border-radius: 12px;
             font-size: 1rem;
             font-weight: 600;
             text-decoration: none;
@@ -112,39 +199,72 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
+            border: none;
+            cursor: pointer;
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-purple) 100%);
-            color: #000;
+            background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+            color: #fff;
+            box-shadow: var(--glow-primary);
         }
 
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 40px rgba(0, 217, 255, 0.4);
+            box-shadow: 0 10px 40px rgba(99, 102, 241, 0.5);
         }
 
         .btn-secondary {
             background: var(--bg-card);
-            color: var(--text);
-            border: 1px solid var(--border);
+            color: var(--text-primary);
+            border: 1px solid var(--border-subtle);
+            backdrop-filter: blur(10px);
         }
 
         .btn-secondary:hover {
             background: var(--bg-card-hover);
-            border-color: var(--accent);
+            border-color: var(--accent-primary);
+            box-shadow: var(--glow-primary);
+        }
+
+        /* Code Block */
+        .code-block {
+            background: var(--bg-card);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 24px;
+            margin: 40px auto;
+            max-width: 700px;
+            text-align: left;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            border: 1px solid var(--border-subtle);
+            box-shadow: var(--glow-primary);
+        }
+
+        .code-block .comment {
+            color: var(--text-muted);
+        }
+
+        .code-block .command {
+            color: var(--accent-cyan);
         }
 
         /* Features Section */
         .features {
             padding: 100px 20px;
-            background: var(--bg-dark);
+            position: relative;
         }
 
         .section-title {
             text-align: center;
             font-size: 2.5rem;
             margin-bottom: 60px;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-cyan) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         .features-grid {
@@ -157,16 +277,17 @@
 
         .feature-card {
             background: var(--bg-card);
-            border: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-subtle);
             border-radius: 16px;
             padding: 32px;
             transition: all 0.3s ease;
         }
 
         .feature-card:hover {
-            border-color: var(--accent);
+            border-color: var(--accent-primary);
             transform: translateY(-4px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            box-shadow: var(--glow-primary);
         }
 
         .feature-icon {
@@ -177,17 +298,17 @@
         .feature-card h3 {
             font-size: 1.3rem;
             margin-bottom: 12px;
-            color: var(--accent);
+            color: var(--accent-cyan);
         }
 
         .feature-card p {
-            color: var(--text-muted);
+            color: var(--text-secondary);
         }
 
         /* How it Works */
         .how-it-works {
             padding: 100px 20px;
-            background: linear-gradient(180deg, var(--bg-dark) 0%, #0f0f18 100%);
+            position: relative;
         }
 
         .steps {
@@ -209,30 +330,31 @@
         .step-number {
             width: 60px;
             height: 60px;
-            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-purple) 100%);
+            background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 1.5rem;
             font-weight: 700;
-            color: #000;
+            color: #fff;
             margin: 0 auto 20px;
+            box-shadow: var(--glow-primary);
         }
 
         .step h3 {
             margin-bottom: 10px;
+            color: var(--text-primary);
         }
 
         .step p {
-            color: var(--text-muted);
+            color: var(--text-secondary);
             font-size: 0.95rem;
         }
 
         /* Screenshots */
         .screenshots {
             padding: 100px 20px;
-            background: var(--bg-dark);
         }
 
         .screenshot-grid {
@@ -244,15 +366,17 @@
         }
 
         .screenshot {
-            border-radius: 12px;
+            border-radius: 16px;
             overflow: hidden;
-            border: 1px solid var(--border);
+            border: 1px solid var(--border-subtle);
             transition: all 0.3s ease;
+            background: var(--bg-card);
         }
 
         .screenshot:hover {
             transform: scale(1.02);
-            box-shadow: 0 20px 60px rgba(0, 217, 255, 0.2);
+            box-shadow: var(--glow-cyan);
+            border-color: var(--accent-cyan);
         }
 
         .screenshot img {
@@ -265,14 +389,14 @@
             padding: 16px;
             background: var(--bg-card);
             text-align: center;
-            color: var(--text-muted);
+            color: var(--text-secondary);
         }
 
         /* CTA Section */
         .cta-section {
             padding: 100px 20px;
             text-align: center;
-            background: radial-gradient(ellipse at bottom, #1a1a2e 0%, var(--bg-dark) 70%);
+            position: relative;
         }
 
         .cta-section h2 {
@@ -281,49 +405,114 @@
         }
 
         .cta-section p {
-            color: var(--text-muted);
+            color: var(--text-secondary);
             max-width: 600px;
             margin: 0 auto 40px;
             font-size: 1.1rem;
+        }
+
+        /* About Section */
+        .about {
+            padding: 80px 20px;
+            position: relative;
+        }
+
+        .about-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .about-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 40px;
+            margin-top: 40px;
+        }
+
+        .about-intro {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+        }
+
+        .about-intro strong {
+            color: var(--text-primary);
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+            margin-top: 30px;
+        }
+
+        .product-card {
+            text-decoration: none;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 24px;
+            transition: all 0.3s ease;
+            display: block;
+        }
+
+        .product-card:hover {
+            border-color: var(--accent-primary);
+            box-shadow: var(--glow-primary);
+            transform: translateY(-2px);
+        }
+
+        .product-icon {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+
+        .product-card h3 {
+            color: var(--accent-cyan);
+            margin-bottom: 8px;
+            font-size: 1.1rem;
+        }
+
+        .product-card p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .product-card strong {
+            color: var(--text-primary);
+        }
+
+        .about-tagline {
+            margin-top: 30px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            text-align: center;
+        }
+
+        .about-tagline strong {
+            color: var(--accent-cyan);
         }
 
         /* Footer */
         footer {
             padding: 40px 20px;
             text-align: center;
-            border-top: 1px solid var(--border);
+            border-top: 1px solid var(--border-subtle);
             color: var(--text-muted);
         }
 
         footer a {
-            color: var(--accent);
+            color: var(--accent-cyan);
             text-decoration: none;
+            transition: color 0.3s ease;
         }
 
         footer a:hover {
-            text-decoration: underline;
-        }
-
-        /* Code Block */
-        .code-block {
-            background: #1a1a2e;
-            border-radius: 12px;
-            padding: 24px;
-            margin: 40px auto;
-            max-width: 700px;
-            text-align: left;
-            font-family: 'Monaco', 'Menlo', monospace;
-            font-size: 0.9rem;
-            overflow-x: auto;
-            border: 1px solid var(--border);
-        }
-
-        .code-block .comment {
-            color: #6b7280;
-        }
-
-        .code-block .command {
-            color: var(--accent);
+            color: var(--accent-primary);
         }
 
         /* Responsive */
@@ -342,13 +531,27 @@
                 max-width: 300px;
                 justify-content: center;
             }
+
+            .code-column {
+                font-size: 10px;
+            }
         }
     </style>
 </head>
 <body>
+    <!-- Aurora Background -->
+    <div class="aurora-bg">
+        <div class="aurora-blob"></div>
+        <div class="aurora-blob"></div>
+        <div class="aurora-blob"></div>
+    </div>
+
+    <!-- Code Rain Background -->
+    <div class="code-rain" id="codeRain"></div>
+
     <!-- Hero Section -->
     <section class="hero">
-        <img src="https://raw.githubusercontent.com/fotsakir/Claude-AI-developer/main/assets/logo.svg" alt="Claude AI Developer" style="width: 100%; max-width: 700px; margin-bottom: 30px;">
+        <img src="https://raw.githubusercontent.com/fotsakir/Claude-AI-developer/main/assets/logo.svg" alt="Claude AI Developer" class="hero-logo">
         <h1>Claude-AI-developer</h1>
         <p class="subtitle">
             Self-hosted autonomous AI coding agent powered by Claude.
@@ -374,7 +577,7 @@
 
     <!-- Features Section -->
     <section class="features">
-        <h2 class="section-title">Why Fotios Claude System?</h2>
+        <h2 class="section-title">Why Claude-AI-developer?</h2>
         <div class="features-grid">
             <div class="feature-card">
                 <div class="feature-icon">🤖</div>
@@ -484,46 +687,46 @@
     </section>
 
     <!-- About Section -->
-    <section class="about" style="padding: 80px 20px; background: linear-gradient(180deg, var(--bg-dark) 0%, #0f0f18 100%);">
-        <div class="container" style="max-width: 900px; margin: 0 auto;">
+    <section class="about">
+        <div class="about-container">
             <h2 class="section-title">Built by Smartnav</h2>
-            <div style="background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 40px; margin-top: 40px;">
-                <p style="font-size: 1.1rem; color: var(--text-muted); margin-bottom: 24px;">
-                    <strong style="color: var(--text);">Smartnav Telematic Services</strong> specializes in building autonomous AI systems
+            <div class="about-card">
+                <p class="about-intro">
+                    <strong>Smartnav Telematic Services</strong> specializes in building autonomous AI systems
                     that solve real-world logistics and software development challenges.
                 </p>
 
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px; margin-top: 30px;">
-                    <a href="https://routeplanner.gr/en/" target="_blank" style="text-decoration: none; background: var(--bg-card-hover); border: 1px solid var(--border); border-radius: 12px; padding: 24px; transition: all 0.3s ease;">
-                        <div style="font-size: 1.5rem; margin-bottom: 10px;">🚛</div>
-                        <h3 style="color: var(--accent); margin-bottom: 8px; font-size: 1.1rem;">RoutePlanner.gr</h3>
-                        <p style="color: var(--text-muted); font-size: 0.9rem;">
-                            The first <strong style="color: var(--text);">AI-powered route planner</strong> for spare parts distributors and 3PL companies.
+                <div class="products-grid">
+                    <a href="https://routeplanner.gr/en/" target="_blank" class="product-card">
+                        <div class="product-icon">🚛</div>
+                        <h3>RoutePlanner.gr</h3>
+                        <p>
+                            The first <strong>AI-powered route planner</strong> for spare parts distributors and 3PL companies.
                             Truly autonomous route optimization for the most complex delivery scenarios.
                         </p>
                     </a>
 
-                    <a href="https://smartracker.com/en/" target="_blank" style="text-decoration: none; background: var(--bg-card-hover); border: 1px solid var(--border); border-radius: 12px; padding: 24px; transition: all 0.3s ease;">
-                        <div style="font-size: 1.5rem; margin-bottom: 10px;">📍</div>
-                        <h3 style="color: var(--accent); margin-bottom: 8px; font-size: 1.1rem;">Smartracker</h3>
-                        <p style="color: var(--text-muted); font-size: 0.9rem;">
+                    <a href="https://smartracker.com/en/" target="_blank" class="product-card">
+                        <div class="product-icon">📍</div>
+                        <h3>Smartracker</h3>
+                        <p>
                             Professional GPS fleet tracking platform. Real-time vehicle monitoring,
                             driver behavior analysis, and comprehensive fleet management.
                         </p>
                     </a>
 
-                    <a href="https://smartnav.com.cy/" target="_blank" style="text-decoration: none; background: var(--bg-card-hover); border: 1px solid var(--border); border-radius: 12px; padding: 24px; transition: all 0.3s ease;">
-                        <div style="font-size: 1.5rem; margin-bottom: 10px;">🌐</div>
-                        <h3 style="color: var(--accent); margin-bottom: 8px; font-size: 1.1rem;">Smartnav Cyprus</h3>
-                        <p style="color: var(--text-muted); font-size: 0.9rem;">
+                    <a href="https://smartnav.com.cy/" target="_blank" class="product-card">
+                        <div class="product-icon">🌐</div>
+                        <h3>Smartnav Cyprus</h3>
+                        <p>
                             Telematics and fleet management solutions for Cyprus.
                             Local expertise with cutting-edge technology.
                         </p>
                     </a>
                 </div>
 
-                <p style="margin-top: 30px; padding-top: 24px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 0.95rem; text-align: center;">
-                    We believe in <strong style="color: var(--accent);">autonomous AI systems</strong> that work independently to solve complex problems —
+                <p class="about-tagline">
+                    We believe in <strong>autonomous AI systems</strong> that work independently to solve complex problems —
                     whether it's optimizing delivery routes or writing production code.
                 </p>
             </div>
@@ -541,5 +744,82 @@
             Powered by Claude AI from Anthropic
         </p>
     </footer>
+
+    <script>
+        // Code Rain Effect
+        const codeSnippets = [
+            'def process_ticket(ticket):',
+            '    claude.run(prompt)',
+            '    return result',
+            '',
+            'class ProjectWorker:',
+            '    def __init__(self):',
+            '        self.running = True',
+            '',
+            'async function deploy() {',
+            '  await build()',
+            '  return success',
+            '}',
+            '',
+            'SELECT * FROM tickets',
+            'WHERE status = "open"',
+            'ORDER BY priority',
+            '',
+            'git commit -m "feat"',
+            'git push origin main',
+            '',
+            'npm install',
+            'npm run build',
+            '',
+            'CREATE TABLE users (',
+            '  id INT PRIMARY KEY,',
+            '  name VARCHAR(255)',
+            ');',
+            '',
+            'docker build -t app .',
+            'docker run -p 80:80',
+            '',
+            'const api = axios()',
+            'api.get("/tickets")',
+            '',
+            'if __name__ == "main":',
+            '    daemon.run()',
+        ];
+
+        function createCodeRain() {
+            const container = document.getElementById('codeRain');
+            const columns = Math.floor(window.innerWidth / 150);
+
+            for (let i = 0; i < columns; i++) {
+                const column = document.createElement('div');
+                column.className = 'code-column';
+                column.style.left = (i * 150 + Math.random() * 50) + 'px';
+                column.style.animationDuration = (15 + Math.random() * 20) + 's';
+                column.style.animationDelay = (-Math.random() * 20) + 's';
+
+                // Random code snippet selection
+                let code = '';
+                const snippetCount = 5 + Math.floor(Math.random() * 10);
+                for (let j = 0; j < snippetCount; j++) {
+                    code += codeSnippets[Math.floor(Math.random() * codeSnippets.length)] + '\n';
+                }
+                column.textContent = code;
+
+                container.appendChild(column);
+            }
+        }
+
+        createCodeRain();
+
+        // Recreate on resize
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                document.getElementById('codeRain').innerHTML = '';
+                createCodeRain();
+            }, 250);
+        });
+    </script>
 </body>
 </html>
