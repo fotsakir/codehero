@@ -433,7 +433,7 @@
                     if (mode === 'blueprint' && !blueprintSent) {
                         blueprintSent = true;
                         setTimeout(() => {
-                            const prompt = 'Read the file /home/claude/fotios-claude-system/config/project-template.md and help me create a blueprint for a new project. Guide me through each section step by step, asking questions to understand my requirements. Start by asking what kind of project I want to build.';
+                            const prompt = 'Read the file /opt/fotios-claude/config/project-template.md and help me create a blueprint for a new project. Guide me through each section step by step, asking questions to understand my requirements. Start by asking what kind of project I want to build.';
                             sendInput(prompt + '\n');
                         }, 2000);
                     }
@@ -442,7 +442,7 @@
                     if (mode === 'help' && !blueprintSent) {
                         blueprintSent = true;
                         setTimeout(() => {
-                            const prompt = 'Read the file /home/claude/fotios-claude-system/config/PLATFORM_KNOWLEDGE.md to learn about the Fotios Claude System platform. You are now the platform support assistant. When I ask questions about the platform, use this knowledge to help me. Also check CLAUDE_OPERATIONS.md, docs/USER_GUIDE.md, and CLAUDE_DEV_NOTES.md if needed. Tell me you are ready to help and ask what I need assistance with.';
+                            const prompt = 'Read the file /opt/fotios-claude/config/PLATFORM_KNOWLEDGE.md to learn about the Fotios Claude System platform. You are now the platform support assistant. When I ask questions about the platform, use this knowledge to help me. Also check /opt/fotios-claude/CLAUDE_OPERATIONS.md, /opt/fotios-claude/docs/USER_GUIDE.md, and /opt/fotios-claude/CLAUDE_DEV_NOTES.md if needed. Tell me you are ready to help and ask what I need assistance with.';
                             sendInput(prompt + '\n');
                         }, 2000);
                     }

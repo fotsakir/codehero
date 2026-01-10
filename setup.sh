@@ -334,8 +334,21 @@ cp "${SCRIPT_DIR}/scripts/"*.sh ${INSTALL_DIR}/scripts/ 2>/dev/null || true
 cp "${SCRIPT_DIR}/web/app.py" ${INSTALL_DIR}/web/ 2>/dev/null || true
 cp "${SCRIPT_DIR}/web/templates/"*.html ${INSTALL_DIR}/web/templates/ 2>/dev/null || true
 
-# Copy global context for Claude
-cp "${SCRIPT_DIR}/config/global-context.md" ${CONFIG_DIR}/ 2>/dev/null || true
+# Copy config files for Claude (global context, knowledge base, templates)
+mkdir -p ${INSTALL_DIR}/config
+cp "${SCRIPT_DIR}/config/"*.md ${CONFIG_DIR}/ 2>/dev/null || true
+cp "${SCRIPT_DIR}/config/"*.md ${INSTALL_DIR}/config/ 2>/dev/null || true
+
+# Copy documentation files
+mkdir -p ${INSTALL_DIR}/docs
+cp -r "${SCRIPT_DIR}/docs/"* ${INSTALL_DIR}/docs/ 2>/dev/null || true
+cp "${SCRIPT_DIR}/CLAUDE_OPERATIONS.md" ${INSTALL_DIR}/ 2>/dev/null || true
+cp "${SCRIPT_DIR}/CLAUDE_DEV_NOTES.md" ${INSTALL_DIR}/ 2>/dev/null || true
+cp "${SCRIPT_DIR}/CLAUDE.md" ${INSTALL_DIR}/ 2>/dev/null || true
+cp "${SCRIPT_DIR}/README.md" ${INSTALL_DIR}/ 2>/dev/null || true
+cp "${SCRIPT_DIR}/CHANGELOG.md" ${INSTALL_DIR}/ 2>/dev/null || true
+cp "${SCRIPT_DIR}/VERSION" ${INSTALL_DIR}/ 2>/dev/null || true
+echo "  Documentation and knowledge files copied"
 
 chmod +x ${INSTALL_DIR}/scripts/*.py 2>/dev/null || true
 chmod +x ${INSTALL_DIR}/scripts/*.sh 2>/dev/null || true

@@ -319,10 +319,21 @@ if [ -d "${SOURCE_DIR}/docs" ]; then
     echo "  Copied docs"
 fi
 
-# VERSION and CHANGELOG
+# Config files (knowledge base, templates)
+if [ -d "${SOURCE_DIR}/config" ]; then
+    mkdir -p "${INSTALL_DIR}/config"
+    cp "${SOURCE_DIR}/config/"*.md "${INSTALL_DIR}/config/" 2>/dev/null || true
+    cp "${SOURCE_DIR}/config/"*.md "${CONFIG_DIR}/" 2>/dev/null || true
+    echo "  Copied config files (knowledge base, templates)"
+fi
+
+# VERSION, CHANGELOG, and documentation
 cp "${SOURCE_DIR}/VERSION" "${INSTALL_DIR}/"
 cp "${SOURCE_DIR}/CHANGELOG.md" "${INSTALL_DIR}/" 2>/dev/null || true
 cp "${SOURCE_DIR}/README.md" "${INSTALL_DIR}/" 2>/dev/null || true
+cp "${SOURCE_DIR}/CLAUDE_OPERATIONS.md" "${INSTALL_DIR}/" 2>/dev/null || true
+cp "${SOURCE_DIR}/CLAUDE_DEV_NOTES.md" "${INSTALL_DIR}/" 2>/dev/null || true
+cp "${SOURCE_DIR}/CLAUDE.md" "${INSTALL_DIR}/" 2>/dev/null || true
 
 log_success "Files copied"
 
