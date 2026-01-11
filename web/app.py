@@ -36,6 +36,12 @@ import shutil
 import uuid
 from datetime import datetime
 from functools import wraps
+import sys
+sys.path.insert(0, '/opt/fotios-claude/scripts')
+try:
+    from smart_context import SmartContextManager
+except ImportError:
+    SmartContextManager = None
 
 def to_iso_utc(dt):
     """Convert datetime to ISO format with UTC indicator for JavaScript"""
@@ -1858,6 +1864,57 @@ def delete_message(message_id):
         cursor.close()
         conn.close()
         return jsonify({'success': True, 'message': 'Message deleted'})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/ticket/<int:ticket_id>/summarize', methods=['POST'])
+@login_required
+def create_ticket_summary(ticket_id):
+    """Create manual summary/extraction using Haiku to save tokens"""
+    try:
+        if not SmartContextManager:
+            return jsonify({'success': False, 'message': 'SmartContextManager not available'})
+
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+
+        # Get all unsummarized messages
+        cursor.execute("""
+            SELECT id, role, content, tool_name, tool_input, token_count
+            FROM conversation_messages
+            WHERE ticket_id = %s AND is_summarized = FALSE
+            ORDER BY created_at ASC
+        """, (ticket_id,))
+        messages = cursor.fetchall()
+
+        if not messages:
+            cursor.close(); conn.close()
+            return jsonify({'success': False, 'message': 'No messages to summarize'})
+
+        # Count tokens before
+        tokens_before = sum(len(m.get('content', '') or '') // 4 for m in messages)
+
+        cursor.close(); conn.close()
+
+        # Create SmartContextManager instance
+        context_manager = SmartContextManager(db_pool, logger=lambda msg, level: print(f"[{level}] {msg}"))
+
+        # Create extraction
+        result = context_manager.create_extraction(ticket_id, messages)
+
+        if result:
+            tokens_after = result.get('tokens_after', 0)
+            saved = tokens_before - tokens_after
+            return jsonify({
+                'success': True,
+                'message': f'Summary created! Compressed {len(messages)} messages. Saved ~{saved} tokens ({tokens_before} → {tokens_after})',
+                'tokens_before': tokens_before,
+                'tokens_after': tokens_after,
+                'messages_summarized': len(messages)
+            })
+        else:
+            return jsonify({'success': False, 'message': 'Failed to create summary'})
+
     except Exception as e:
         return jsonify({'success': False, 'message': str(e)})
 

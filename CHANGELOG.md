@@ -5,6 +5,15 @@ All notable changes to the Fotios Claude System will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.40.0] - 2026-01-11
+
+### Added
+- **"Create Summary" button**: Manually compress conversations to save tokens
+  - Uses Haiku AI (~$0.01-0.05) to create intelligent summary
+  - Keeps decisions, problems solved, and important notes
+  - Reduces token usage on future requests
+  - Button in ticket sidebar under Actions
+
 ## [2.39.0] - 2026-01-11
 
 ### Added

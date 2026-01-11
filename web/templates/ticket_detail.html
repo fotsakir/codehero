@@ -667,6 +667,7 @@
                     <button class="btn-secondary" onclick="location.href='/project/{{ ticket.project_id }}'">Back to Project</button>
                     <button class="btn-secondary" onclick="popoutEditor()" style="margin-top:10px">⧉ Code Editor</button>
                     <button class="btn-secondary" onclick="createBackup()" style="margin-top:10px">Create Backup</button>
+                    <button class="btn-secondary" onclick="createSummary()" style="margin-top:10px" title="Compress conversation to save tokens (uses Haiku)">📝 Create Summary</button>
                 </div>
             </div>
 
@@ -1168,6 +1169,30 @@
                 if (result.success) alert('Backup created: ' + result.filename);
                 else alert('Error: ' + result.message);
             } catch (err) { alert('Error creating backup: ' + err.message); }
+        }
+
+        async function createSummary() {
+            if (!confirm('Create a summary of the conversation?\n\nThis will:\n- Compress all messages using Haiku AI\n- Save tokens on future requests\n- Keep important decisions and notes\n\nCost: ~0.01-0.05 USD (Haiku)')) return;
+            try {
+                const btn = event.target;
+                btn.disabled = true;
+                btn.textContent = '⏳ Creating...';
+
+                const resp = await fetch(`/api/ticket/${ticketId}/summarize`, {method: 'POST'});
+                const result = await resp.json();
+
+                btn.disabled = false;
+                btn.textContent = '📝 Create Summary';
+
+                if (result.success) {
+                    alert(`✅ ${result.message}`);
+                    location.reload();
+                } else {
+                    alert('Error: ' + result.message);
+                }
+            } catch (err) {
+                alert('Error creating summary: ' + err.message);
+            }
         }
 
         async function loadFileList() {

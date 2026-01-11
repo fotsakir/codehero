@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-2.39.0-green.svg" alt="Version"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-2.40.0-green.svg" alt="Version"></a>
   <img src="https://img.shields.io/badge/Ubuntu-22.04%20|%2024.04-orange.svg" alt="Ubuntu">
   <a href="https://anthropic.com"><img src="https://img.shields.io/badge/Powered%20by-Claude%20AI-blueviolet.svg" alt="Claude AI"></a>
   <a href="https://github.com/fotsakir/Claude-AI-developer/stargazers"><img src="https://img.shields.io/github/stars/fotsakir/Claude-AI-developer?style=social" alt="Stars"></a>
@@ -168,7 +168,7 @@ Full Linux terminal in your browser:
 ```bash
 # Download, extract, and run
 cd /root
-unzip fotios-claude-system-2.39.0.zip
+unzip fotios-claude-system-2.40.0.zip
 cd fotios-claude-system
 chmod +x setup.sh && ./setup.sh
 
@@ -188,7 +188,7 @@ The installer automatically sets up:
 ```bash
 # Download new version
 cd /root
-unzip fotios-claude-system-2.39.0.zip
+unzip fotios-claude-system-2.40.0.zip
 cd fotios-claude-system
 
 # Preview changes (recommended)
