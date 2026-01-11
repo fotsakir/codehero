@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-2.41.0-green.svg" alt="Version"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-2.41.1-green.svg" alt="Version"></a>
   <img src="https://img.shields.io/badge/Ubuntu-22.04%20|%2024.04-orange.svg" alt="Ubuntu">
   <a href="https://anthropic.com"><img src="https://img.shields.io/badge/Powered%20by-Claude%20AI-blueviolet.svg" alt="Claude AI"></a>
   <a href="https://github.com/fotsakir/Claude-AI-developer/stargazers"><img src="https://img.shields.io/github/stars/fotsakir/Claude-AI-developer?style=social" alt="Stars"></a>
@@ -26,6 +26,15 @@ For beginners, it removes complexity.
 For developers, it removes noise.
 
 **Download it. Let it build.**
+
+### True Autonomy - Works While You Sleep
+
+Unlike chat-based AI tools that require constant prompting, this system runs **unattended for hours or even days**. Create your tickets, describe what you want, and walk away. Come back to find completed features, fixed bugs, and working code.
+
+- Queue multiple tasks across projects
+- AI works through them one by one
+- Built-in failsafe prevents runaway sessions
+- Wake up to progress, not prompts
 
 ---
 
