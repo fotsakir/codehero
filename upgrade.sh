@@ -267,14 +267,47 @@ mkdir -p "$BACKUP_DIR"
 tar -czf "${BACKUP_DIR}/${BACKUP_NAME}.tar.gz" -C /opt fotios-claude 2>/dev/null
 log_success "Backup created"
 
-# Step 2: Stop services
+# Step 2: Install new packages (if any)
+log_info "Checking for new packages..."
+
+# Multimedia tools (added in v2.42.0)
+NEW_PACKAGES=""
+command -v ffmpeg >/dev/null 2>&1 || NEW_PACKAGES="$NEW_PACKAGES ffmpeg"
+command -v convert >/dev/null 2>&1 || NEW_PACKAGES="$NEW_PACKAGES imagemagick"
+command -v tesseract >/dev/null 2>&1 || NEW_PACKAGES="$NEW_PACKAGES tesseract-ocr tesseract-ocr-eng tesseract-ocr-ell"
+command -v sox >/dev/null 2>&1 || NEW_PACKAGES="$NEW_PACKAGES sox"
+command -v pdftotext >/dev/null 2>&1 || NEW_PACKAGES="$NEW_PACKAGES poppler-utils"
+command -v gs >/dev/null 2>&1 || NEW_PACKAGES="$NEW_PACKAGES ghostscript"
+command -v mediainfo >/dev/null 2>&1 || NEW_PACKAGES="$NEW_PACKAGES mediainfo"
+command -v cwebp >/dev/null 2>&1 || NEW_PACKAGES="$NEW_PACKAGES webp"
+command -v optipng >/dev/null 2>&1 || NEW_PACKAGES="$NEW_PACKAGES optipng"
+command -v jpegoptim >/dev/null 2>&1 || NEW_PACKAGES="$NEW_PACKAGES jpegoptim"
+command -v rsvg-convert >/dev/null 2>&1 || NEW_PACKAGES="$NEW_PACKAGES librsvg2-bin"
+command -v vips >/dev/null 2>&1 || NEW_PACKAGES="$NEW_PACKAGES libvips-tools"
+command -v qpdf >/dev/null 2>&1 || NEW_PACKAGES="$NEW_PACKAGES qpdf"
+
+if [ -n "$NEW_PACKAGES" ]; then
+    echo "  Installing:$NEW_PACKAGES"
+    apt-get update -qq
+    apt-get install -y $NEW_PACKAGES >/dev/null 2>&1 || log_warning "Some packages failed to install"
+
+    # Python packages
+    pip3 install --quiet Pillow opencv-python-headless pydub pytesseract pdf2image --break-system-packages 2>/dev/null || \
+    pip3 install --quiet Pillow opencv-python-headless pydub pytesseract pdf2image 2>/dev/null || true
+
+    log_success "New packages installed"
+else
+    echo "  (all packages already installed)"
+fi
+
+# Step 3: Stop services
 log_info "Stopping services..."
 systemctl stop fotios-claude-web 2>/dev/null || true
 systemctl stop fotios-claude-daemon 2>/dev/null || true
 sleep 2
 log_success "Services stopped"
 
-# Step 3: Apply database migrations
+# Step 4: Apply database migrations
 if [ ${#PENDING_MIGRATIONS[@]} -gt 0 ]; then
     log_info "Applying database migrations..."
     for migration in "${PENDING_MIGRATIONS[@]}"; do
@@ -295,7 +328,7 @@ if [ ${#PENDING_MIGRATIONS[@]} -gt 0 ]; then
     log_success "All migrations applied"
 fi
 
-# Step 4: Copy files
+# Step 5: Copy files
 log_info "Copying files..."
 
 # Web app
@@ -337,7 +370,7 @@ cp "${SOURCE_DIR}/CLAUDE.md" "${INSTALL_DIR}/" 2>/dev/null || true
 
 log_success "Files copied"
 
-# Step 5: Start services
+# Step 6: Start services
 log_info "Starting services..."
 systemctl start fotios-claude-daemon
 sleep 1
@@ -345,7 +378,7 @@ systemctl start fotios-claude-web
 sleep 2
 log_success "Services started"
 
-# Step 6: Verify
+# Step 7: Verify
 log_info "Verifying services..."
 VERIFY_OK=true
 
