@@ -63,6 +63,24 @@ cd /home/claude
 zip -r fotios-claude-system-X.Y.Z.zip fotios-claude-system -x "*.pyc" -x "*__pycache__*" -x "*.git*"
 ```
 
+### 7. Git commit and push
+```bash
+git add -A
+git commit -m "Release vX.Y.Z - Description"
+git push origin main
+```
+
+### 8. Create tag and push
+```bash
+git tag -a vX.Y.Z -m "Release vX.Y.Z - Description"
+git push origin vX.Y.Z
+```
+
+### 9. Create GitHub release with zip
+```bash
+gh release create vX.Y.Z /home/claude/fotios-claude-system-X.Y.Z.zip --title "vX.Y.Z - Description" --notes "Release notes here"
+```
+
 ## Service Names (IMPORTANT!)
 
 The correct names are:

@@ -166,6 +166,31 @@ zip -r fotios-claude-system-X.Y.Z.zip fotios-claude-system \
     -x "*.pyc" -x "*__pycache__*" -x "*.git*"
 ```
 
+### Git Commit, Tag, and Push
+
+```bash
+# Commit changes
+git add -A
+git commit -m "Release vX.Y.Z - Description"
+git push origin main
+
+# Create and push tag
+git tag -a vX.Y.Z -m "Release vX.Y.Z - Description"
+git push origin vX.Y.Z
+```
+
+### Create GitHub Release
+
+```bash
+gh release create vX.Y.Z /home/claude/fotios-claude-system-X.Y.Z.zip \
+    --title "vX.Y.Z - Description" \
+    --notes "### Fixed
+- Bug fix 1
+
+### Changed
+- Change 1"
+```
+
 ### Version Numbering
 
 - **Major (X):** Breaking changes, major rewrites
