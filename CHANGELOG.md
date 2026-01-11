@@ -5,6 +5,16 @@ All notable changes to the Fotios Claude System will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.41.1] - 2026-01-11
+
+### Fixed
+- **env_file path**: Use `os.path.expanduser("~")` instead of hardcoded path
+
+### Changed
+- **Documentation**: Added remote server sync workflow and restart reminders
+  - Always restart services after changes (changes won't be visible otherwise)
+  - Remote server credentials provided by user when needed
+
 ## [2.41.0] - 2026-01-11
 
 ### Added
