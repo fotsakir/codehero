@@ -64,7 +64,7 @@ fi
 
 # Download cloud-init
 echo "[2/5] Downloading configuration..."
-CLOUD_INIT_URL="https://raw.githubusercontent.com/fotsakir/Claude-AI-developer/main/multipass/cloud-init.yaml"
+CLOUD_INIT_URL="https://raw.githubusercontent.com/fotsakir/codehero/main/multipass/cloud-init.yaml"
 CLOUD_INIT_PATH="/tmp/cloud-init.yaml"
 curl -sL "$CLOUD_INIT_URL" -o "$CLOUD_INIT_PATH"
 echo "      Done."

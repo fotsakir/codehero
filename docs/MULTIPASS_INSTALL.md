@@ -1,6 +1,6 @@
 # Installation with Multipass (macOS & Linux)
 
-Complete guide to install Claude-AI-developer using Multipass virtual machines.
+Complete guide to install codehero using Multipass virtual machines.
 
 ## Table of Contents
 
@@ -58,12 +58,12 @@ Multipass is a free tool from Canonical (makers of Ubuntu) that creates lightwei
 #### Option 1: One-Line Install (Terminal)
 
 ```bash
-curl -sL https://raw.githubusercontent.com/fotsakir/Claude-AI-developer/main/multipass/install-macos.command | bash
+curl -sL https://raw.githubusercontent.com/fotsakir/codehero/main/multipass/install-macos.command | bash
 ```
 
 #### Option 2: Download and Double-Click
 
-1. Download: [install-macos.command](https://raw.githubusercontent.com/fotsakir/Claude-AI-developer/main/multipass/install-macos.command)
+1. Download: [install-macos.command](https://raw.githubusercontent.com/fotsakir/codehero/main/multipass/install-macos.command)
 2. Double-click the file
 3. If macOS blocks it: **System Settings** → **Privacy & Security** → **Allow**
 4. Enter your password when prompted (for sudo)
@@ -75,7 +75,7 @@ curl -sL https://raw.githubusercontent.com/fotsakir/Claude-AI-developer/main/mul
 3. Starts the Multipass daemon
 4. Downloads Ubuntu 24.04 image
 5. Creates VM with 6GB RAM, 64GB disk, 4 CPUs
-6. Installs Claude-AI-developer inside VM
+6. Installs codehero inside VM
 7. Creates desktop shortcuts
 
 **Installation time:** 15-25 minutes (depending on internet speed)
@@ -87,7 +87,7 @@ curl -sL https://raw.githubusercontent.com/fotsakir/Claude-AI-developer/main/mul
 #### One-Line Install
 
 ```bash
-curl -sL https://raw.githubusercontent.com/fotsakir/Claude-AI-developer/main/multipass/install-linux.sh | bash
+curl -sL https://raw.githubusercontent.com/fotsakir/codehero/main/multipass/install-linux.sh | bash
 ```
 
 #### What Happens
@@ -96,7 +96,7 @@ curl -sL https://raw.githubusercontent.com/fotsakir/Claude-AI-developer/main/mul
 2. Installs Multipass via Snap
 3. Downloads Ubuntu 24.04 image
 4. Creates VM with 6GB RAM, 64GB disk, 4 CPUs
-5. Installs Claude-AI-developer inside VM
+5. Installs codehero inside VM
 6. Creates desktop shortcuts
 
 **Installation time:** 15-25 minutes
@@ -143,7 +143,7 @@ multipass list
 ### Step 3: Download Configuration
 
 ```bash
-curl -sL https://raw.githubusercontent.com/fotsakir/Claude-AI-developer/main/multipass/cloud-init.yaml -o /tmp/cloud-init.yaml
+curl -sL https://raw.githubusercontent.com/fotsakir/codehero/main/multipass/cloud-init.yaml -o /tmp/cloud-init.yaml
 ```
 
 ### Step 4: Create the VM
@@ -161,7 +161,7 @@ multipass launch 24.04 \
 This takes 15-20 minutes. The cloud-init configuration automatically:
 - Updates the system
 - Installs all dependencies
-- Downloads and installs Claude-AI-developer
+- Downloads and installs codehero
 - Configures services
 
 ### Step 5: Check Installation Progress
@@ -563,4 +563,4 @@ multipass exec claude-dev -- hostname -I
 
 ---
 
-*Need help? Open an issue at [GitHub](https://github.com/fotsakir/Claude-AI-developer/issues)*
+*Need help? Open an issue at [GitHub](https://github.com/fotsakir/codehero/issues)*

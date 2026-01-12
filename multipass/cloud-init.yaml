@@ -33,7 +33,7 @@ write_files:
 
       # Download latest release
       echo "[1/4] Downloading latest release..."
-      LATEST_URL=$(curl -s https://api.github.com/repos/fotsakir/Claude-AI-developer/releases/latest | grep "browser_download_url.*zip" | cut -d '"' -f 4)
+      LATEST_URL=$(curl -s https://api.github.com/repos/fotsakir/codehero/releases/latest | grep "browser_download_url.*zip" | cut -d '"' -f 4)
       wget -q --show-progress "$LATEST_URL" -O fotios-claude-system.zip
 
       # Extract

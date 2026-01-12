@@ -1,6 +1,6 @@
 # VM Installation Guide
 
-Step-by-step guide to install Claude-AI-developer on a Virtual Machine.
+Step-by-step guide to install codehero on a Virtual Machine.
 
 > **Quick Links:**
 > - **Windows users**: See [WSL2 Installation](WSL_INSTALL.md) (recommended) or [Multipass](MULTIPASS_INSTALL.md)
@@ -17,7 +17,7 @@ Step-by-step guide to install Claude-AI-developer on a Virtual Machine.
   - [UTM (macOS)](#utm-macos)
   - [Parallels (macOS)](#parallels-macos)
 - [Step 3: Install Ubuntu](#step-3-install-ubuntu)
-- [Step 4: Install Claude-AI-developer](#step-4-install-claude-ai-developer)
+- [Step 4: Install codehero](#step-4-install-claude-ai-developer)
 - [Step 5: Access the Dashboard](#step-5-access-the-dashboard)
 - [How to Find Your VM's IP Address](#how-to-find-your-vms-ip-address)
 - [Start, Stop & Delete VMs](#start-stop--delete-vms)
@@ -313,7 +313,7 @@ These steps are the same for all VM platforms.
 
 ---
 
-## Step 4: Install Claude-AI-developer
+## Step 4: Install codehero
 
 Now you're logged into Ubuntu. Run these commands one by one:
 
@@ -345,7 +345,7 @@ sudo su
 cd /root
 
 # Download the latest release
-wget https://github.com/fotsakir/Claude-AI-developer/releases/latest/download/fotios-claude-system-2.52.0.zip
+wget https://github.com/fotsakir/codehero/releases/latest/download/fotios-claude-system-2.52.0.zip
 
 # Extract
 unzip fotios-claude-system-2.52.0.zip
@@ -654,4 +654,4 @@ prlctl delete "claude-ai-developer"
 
 ---
 
-*Need help? Open an issue at [GitHub](https://github.com/fotsakir/Claude-AI-developer/issues)*
+*Need help? Open an issue at [GitHub](https://github.com/fotsakir/codehero/issues)*

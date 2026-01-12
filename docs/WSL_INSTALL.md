@@ -1,6 +1,6 @@
 # Windows Installation with WSL2
 
-Complete guide to install Claude-AI-developer on Windows using WSL2 (Windows Subsystem for Linux).
+Complete guide to install codehero on Windows using WSL2 (Windows Subsystem for Linux).
 
 ## Table of Contents
 
@@ -49,7 +49,7 @@ Press `Win + R`, type `winver` and press Enter. You need:
 Open **PowerShell as Administrator** and run:
 
 ```powershell
-irm https://raw.githubusercontent.com/fotsakir/Claude-AI-developer/main/multipass/install-wsl.ps1 | iex
+irm https://raw.githubusercontent.com/fotsakir/codehero/main/multipass/install-wsl.ps1 | iex
 ```
 
 ### What the Installer Does
@@ -57,7 +57,7 @@ irm https://raw.githubusercontent.com/fotsakir/Claude-AI-developer/main/multipas
 1. Checks if WSL is installed (installs if needed)
 2. Installs Ubuntu 24.04
 3. Configures systemd (required for services)
-4. Downloads and installs Claude-AI-developer
+4. Downloads and installs codehero
 5. Starts all services
 6. Creates desktop shortcuts
 
@@ -120,7 +120,7 @@ wsl --shutdown
 wsl -d Ubuntu-24.04
 ```
 
-### Step 4: Install Claude-AI-developer
+### Step 4: Install codehero
 
 Inside WSL (now running as root):
 
@@ -131,7 +131,7 @@ apt-get install -y unzip wget curl
 
 # Download latest release
 cd /root
-wget https://github.com/fotsakir/Claude-AI-developer/releases/latest/download/fotios-claude-system-2.52.0.zip
+wget https://github.com/fotsakir/codehero/releases/latest/download/fotios-claude-system-2.52.0.zip
 
 # Extract and install
 unzip fotios-claude-system-2.52.0.zip
@@ -436,4 +436,4 @@ hostname -I
 
 ---
 
-*Need help? Open an issue at [GitHub](https://github.com/fotsakir/Claude-AI-developer/issues)*
+*Need help? Open an issue at [GitHub](https://github.com/fotsakir/codehero/issues)*

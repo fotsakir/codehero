@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://fotsakir.github.io/Claude-AI-developer/sitemap.xml
+Sitemap: https://fotsakir.github.io/codehero/sitemap.xml

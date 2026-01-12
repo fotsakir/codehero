@@ -3581,7 +3581,7 @@ def claude_assistant():
 
 # ============ UPDATE SYSTEM ============
 
-GITHUB_REPO = "fotsakir/Claude-AI-developer"
+GITHUB_REPO = "fotsakir/codehero"
 GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 
 @app.route('/api/check-update')

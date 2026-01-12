@@ -1,6 +1,6 @@
-# Claude-AI-developer User Guide
+# CodeHero User Guide
 
-This guide will walk you through using the Claude-AI-developer Admin Panel to manage your AI-powered development projects.
+This guide will walk you through using the CodeHero Admin Panel to manage your AI-powered development projects.
 
 ## Table of Contents
 
@@ -64,7 +64,7 @@ Click on any project to see its details and all associated tickets.
 
 ## Working with Tickets
 
-Tickets are the core of Claude-AI-developer. Each ticket represents a task for Claude to complete.
+Tickets are the core of CodeHero. Each ticket represents a task for Claude to complete.
 
 ### Viewing Tickets
 
@@ -368,9 +368,9 @@ Ensure the `claude` user has:
 ## Need Help?
 
 - **Documentation**: Check `CLAUDE_OPERATIONS.md` for technical details
-- **Issues**: Report bugs at [GitHub Issues](https://github.com/fotsakir/Claude-AI-developer/issues)
-- **Updates**: Check [Releases](https://github.com/fotsakir/Claude-AI-developer/releases) for new versions
+- **Issues**: Report bugs at [GitHub Issues](https://github.com/fotsakir/codehero/issues)
+- **Updates**: Check [Releases](https://github.com/fotsakir/codehero/releases) for new versions
 
 ---
 
-*Claude-AI-developer v2.32.0 - Smartnav*
+*CodeHero v2.52.0*

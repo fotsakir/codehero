@@ -13,7 +13,7 @@
   <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-2.52.0-green.svg" alt="Version"></a>
   <img src="https://img.shields.io/badge/Ubuntu-22.04%20|%2024.04-orange.svg" alt="Ubuntu">
   <a href="https://anthropic.com"><img src="https://img.shields.io/badge/Powered%20by-Claude%20AI-blueviolet.svg" alt="Claude AI"></a>
-  <a href="https://github.com/fotsakir/Claude-AI-developer/stargazers"><img src="https://img.shields.io/github/stars/fotsakir/Claude-AI-developer?style=social" alt="Stars"></a>
+  <a href="https://github.com/fotsakir/codehero/stargazers"><img src="https://img.shields.io/github/stars/fotsakir/codehero?style=social" alt="Stars"></a>
 </p>
 
 > **This is not an AI that answers questions. It builds software.**
@@ -206,17 +206,17 @@ Full Linux terminal in your browser:
 
 **🪟 Windows** - Open PowerShell as Admin, paste:
 ```powershell
-irm https://raw.githubusercontent.com/fotsakir/Claude-AI-developer/main/multipass/install-windows.ps1 | iex
+irm https://raw.githubusercontent.com/fotsakir/codehero/main/multipass/install-windows.ps1 | iex
 ```
 
 **🍎 macOS** - Open Terminal, paste:
 ```bash
-curl -sL https://raw.githubusercontent.com/fotsakir/Claude-AI-developer/main/multipass/install-macos.command | bash
+curl -sL https://raw.githubusercontent.com/fotsakir/codehero/main/multipass/install-macos.command | bash
 ```
 
 **🐧 Linux** - Open Terminal, paste:
 ```bash
-curl -sL https://raw.githubusercontent.com/fotsakir/Claude-AI-developer/main/multipass/install-linux.sh | bash
+curl -sL https://raw.githubusercontent.com/fotsakir/codehero/main/multipass/install-linux.sh | bash
 ```
 
 Paste → Enter → Wait 15 minutes → Done! [Full guide →](docs/MULTIPASS_INSTALL.md)
@@ -244,7 +244,7 @@ apt-get update && apt-get install -y unzip wget net-tools
 
 # Download and extract
 cd /root
-wget https://github.com/fotsakir/Claude-AI-developer/releases/latest/download/fotios-claude-system-2.47.0.zip
+wget https://github.com/fotsakir/codehero/releases/latest/download/fotios-claude-system-2.47.0.zip
 unzip fotios-claude-system-2.47.0.zip
 cd fotios-claude-system
 

@@ -187,7 +187,7 @@ driver=virtualbox
 
 # Download cloud-init
 Write-Host "[4/6] Downloading configuration..." -ForegroundColor Yellow
-$cloudInitUrl = "https://raw.githubusercontent.com/fotsakir/Claude-AI-developer/main/multipass/cloud-init.yaml"
+$cloudInitUrl = "https://raw.githubusercontent.com/fotsakir/codehero/main/multipass/cloud-init.yaml"
 $cloudInitPath = "$env:TEMP\cloud-init.yaml"
 Invoke-WebRequest -Uri $cloudInitUrl -OutFile $cloudInitPath
 Write-Host "      Done." -ForegroundColor Green
