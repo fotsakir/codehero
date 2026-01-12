@@ -71,5 +71,8 @@ write_files:
       echo ""
       echo "=========================================="
 
+      # Mark installation as complete
+      echo "done" > /root/install-complete
+
 runcmd:
   - /root/install-claude-system.sh

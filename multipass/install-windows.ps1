@@ -94,19 +94,23 @@ while ($waited -lt $maxWait) {
     Start-Sleep -Seconds $interval
     $waited += $interval
 
-    $status = multipass exec claude-dev -- cat /root/install-complete 2>$null
-    if ($status -eq "done") {
-        break
-    }
-
-    # Check if setup is running
-    $setupRunning = multipass exec claude-dev -- pgrep -f setup.sh 2>$null
-    if (-not $setupRunning) {
-        # Setup finished, check for services
-        $webRunning = multipass exec claude-dev -- systemctl is-active fotios-claude-web 2>$null
-        if ($webRunning -eq "active") {
+    try {
+        $status = multipass exec claude-dev -- cat /root/install-complete 2>&1
+        if ($status -match "done") {
             break
         }
+    } catch {
+        # File doesn't exist yet, continue waiting
+    }
+
+    # Check if services are running
+    try {
+        $webRunning = multipass exec claude-dev -- systemctl is-active fotios-claude-web 2>&1
+        if ($webRunning -match "active") {
+            break
+        }
+    } catch {
+        # Service not ready yet
     }
 
     $minutes = [math]::Floor($waited / 60)
