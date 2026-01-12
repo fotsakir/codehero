@@ -90,32 +90,29 @@ $maxWait = 1200  # 20 minutes
 $waited = 0
 $interval = 30
 
+$ErrorActionPreference = "SilentlyContinue"
+
 while ($waited -lt $maxWait) {
     Start-Sleep -Seconds $interval
     $waited += $interval
 
-    try {
-        $status = multipass exec claude-dev -- cat /root/install-complete 2>&1
-        if ($status -match "done") {
-            break
-        }
-    } catch {
-        # File doesn't exist yet, continue waiting
+    # Check if install completed
+    $status = & multipass exec claude-dev -- cat /root/install-complete 2>$null
+    if ($LASTEXITCODE -eq 0 -and $status -match "done") {
+        break
     }
 
     # Check if services are running
-    try {
-        $webRunning = multipass exec claude-dev -- systemctl is-active fotios-claude-web 2>&1
-        if ($webRunning -match "active") {
-            break
-        }
-    } catch {
-        # Service not ready yet
+    $webRunning = & multipass exec claude-dev -- systemctl is-active fotios-claude-web 2>$null
+    if ($LASTEXITCODE -eq 0 -and $webRunning -match "active") {
+        break
     }
 
     $minutes = [math]::Floor($waited / 60)
     Write-Host "      Still installing... ($minutes minutes elapsed)" -ForegroundColor Gray
 }
+
+$ErrorActionPreference = "Stop"
 
 # Get IP address
 $ip = multipass exec claude-dev -- hostname -I | ForEach-Object { $_.Split()[0] }
