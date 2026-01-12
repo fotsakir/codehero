@@ -5,6 +5,24 @@ All notable changes to the Fotios Claude System will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.45.0] - 2026-01-12
+
+### Added
+- **Telegram Error Feedback**: User-friendly error messages for all scenarios
+  - Direct message (not reply): Informs user to reply to notification
+  - Invalid ticket number: Guides user to reply to valid notification
+  - Ticket not found: Informs ticket may be deleted/archived
+- **Question mark flexibility**: "?" works at start OR end of message
+  - `?what's wrong` and `what's wrong?` both work as questions
+
+### Changed
+- **Documentation**: Prominent "Control from Your Phone" section in README and website
+  - New phone control section on website with code example
+  - Updated USER_GUIDE with two-way communication instructions
+
+### Fixed
+- **Claude CLI path**: Fixed Haiku not working (was missing full path to claude binary)
+
 ## [2.44.0] - 2026-01-12
 
 ### Added
