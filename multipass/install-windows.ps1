@@ -299,28 +299,32 @@ Remove-Item $cloudInitPath -Force -ErrorAction SilentlyContinue
 
 Write-Host ""
 Write-Host "==========================================" -ForegroundColor Green
-Write-Host "  Installation Complete!" -ForegroundColor Green
+Write-Host "  VM Created Successfully!" -ForegroundColor Green
 Write-Host "==========================================" -ForegroundColor Green
 Write-Host ""
-Write-Host "  ACCESS POINTS:" -ForegroundColor Yellow
+Write-Host "  IMPORTANT: Software is still installing inside the VM!" -ForegroundColor Yellow
+Write-Host "  This takes 10-15 minutes. Wait before accessing the dashboard." -ForegroundColor Yellow
+Write-Host ""
+Write-Host "  To check installation progress:" -ForegroundColor Cyan
+Write-Host "    multipass shell claude-dev" -ForegroundColor White
+Write-Host "    tail -f /var/log/cloud-init-output.log" -ForegroundColor White
+Write-Host ""
+Write-Host "  ACCESS POINTS (available after setup completes):" -ForegroundColor Yellow
 Write-Host "  Dashboard:    https://${ip}:9453" -ForegroundColor Cyan
 Write-Host "  Web Projects: https://${ip}:9867" -ForegroundColor Cyan
-Write-Host "  OLS Admin:    https://${ip}:7080" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "  LOGIN:" -ForegroundColor Yellow
 Write-Host "  Username:  admin" -ForegroundColor White
 Write-Host "  Password:  admin123" -ForegroundColor White
 Write-Host ""
-Write-Host "  VM TERMINAL:" -ForegroundColor Yellow
-Write-Host "  multipass shell claude-dev" -ForegroundColor White
-Write-Host ""
-Write-Host "  CHANGE PASSWORDS (via Web Terminal or SSH):" -ForegroundColor Red
-Write-Host "  sudo /opt/fotios-claude/scripts/change-passwords.sh" -ForegroundColor White
-Write-Host ""
-Write-Host "  DAILY USAGE:" -ForegroundColor Yellow
+Write-Host "  VM COMMANDS:" -ForegroundColor Yellow
 Write-Host "  Start VM:   multipass start claude-dev" -ForegroundColor White
 Write-Host "  Stop VM:    multipass stop claude-dev" -ForegroundColor White
+Write-Host "  VM Shell:   multipass shell claude-dev" -ForegroundColor White
 Write-Host "  VM Status:  multipass list" -ForegroundColor White
+Write-Host ""
+Write-Host "  CHANGE PASSWORDS (after setup completes):" -ForegroundColor Red
+Write-Host "  sudo /opt/fotios-claude/scripts/change-passwords.sh" -ForegroundColor White
 Write-Host ""
 Write-Host "==========================================" -ForegroundColor Green
 Write-Host ""
