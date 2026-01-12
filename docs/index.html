@@ -37,7 +37,7 @@
         "description": "That app you've been dreaming about? Stop talking about it. Start building it. An AI that works alone - planning, coding, debugging - while you live your life.",
         "url": "https://fotsakir.github.io/Claude-AI-developer/",
         "downloadUrl": "https://github.com/fotsakir/Claude-AI-developer/releases/latest",
-        "softwareVersion": "2.49.0",
+        "softwareVersion": "2.50.0",
         "applicationCategory": "DeveloperApplication",
         "operatingSystem": "Ubuntu 22.04, Ubuntu 24.04",
         "offers": {
@@ -677,7 +677,7 @@
                     </p>
                     <div style="background: rgba(0,0,0,0.3); padding: 0.8rem; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; overflow-x: auto;">
                         <span style="color: var(--text-muted);"># On Ubuntu VM (as root)</span><br>
-                        <span style="color: var(--accent-cyan);">wget https://github.com/fotsakir/Claude-AI-developer/releases/latest/download/fotios-claude-system-2.49.0.zip</span><br>
+                        <span style="color: var(--accent-cyan);">wget https://github.com/fotsakir/Claude-AI-developer/releases/latest/download/fotios-claude-system-2.50.0.zip</span><br>
                         <span style="color: var(--accent-cyan);">unzip fotios-claude-system-*.zip && cd fotios-claude-system && ./setup.sh</span>
                     </div>
                     <p style="margin-top: 0.8rem; font-size: 0.8rem;">
@@ -716,10 +716,16 @@
                         <code style="color: var(--accent-cyan);">irm https://raw.githubusercontent.com/fotsakir/Claude-AI-developer/main/multipass/install-windows.ps1 | iex</code>
                     </div>
                     <div style="font-size: 0.8rem; margin-bottom: 0.5rem;">
-                        <strong style="color: #a3a3a3;">🍎 macOS</strong> / <strong style="color: #e95420;">🐧 Linux</strong> <span style="color: var(--text-muted);">(Terminal)</span>
+                        <strong style="color: #a3a3a3;">🍎 macOS</strong> <span style="color: var(--text-muted);">(Terminal)</span>
+                    </div>
+                    <div style="background: rgba(0,0,0,0.3); padding: 0.5rem 0.8rem; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; overflow-x: auto; margin-bottom: 0.8rem;">
+                        <code style="color: var(--accent-cyan);">curl -sL https://raw.githubusercontent.com/fotsakir/Claude-AI-developer/main/multipass/install-macos.command | bash</code>
+                    </div>
+                    <div style="font-size: 0.8rem; margin-bottom: 0.5rem;">
+                        <strong style="color: #e95420;">🐧 Linux</strong> <span style="color: var(--text-muted);">(Terminal)</span>
                     </div>
                     <div style="background: rgba(0,0,0,0.3); padding: 0.5rem 0.8rem; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; overflow-x: auto;">
-                        <code style="color: var(--accent-cyan);">curl -sL https://raw.githubusercontent.com/fotsakir/Claude-AI-developer/main/multipass/install-macos.command | bash</code>
+                        <code style="color: var(--accent-cyan);">curl -sL https://raw.githubusercontent.com/fotsakir/Claude-AI-developer/main/multipass/install-linux.sh | bash</code>
                     </div>
                     <p style="margin-top: 0.8rem; font-size: 0.8rem;">
                         <a href="https://github.com/fotsakir/Claude-AI-developer/blob/main/docs/MULTIPASS_INSTALL.md" style="color: #f59e0b;">Full Multipass guide →</a>
@@ -795,6 +801,11 @@
                 <div class="feature-icon">🔴</div>
                 <h3>Live Preview</h3>
                 <p>See your app update in real-time. Auto-refresh every 15 seconds while Claude works. Watch changes appear as they're made.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🚀</div>
+                <h3>Auto-Update</h3>
+                <p>Stay current effortlessly. Dashboard checks for updates automatically, shows release notes, and installs with one click.</p>
             </div>
         </div>
     </section>
