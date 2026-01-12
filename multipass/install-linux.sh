@@ -122,17 +122,14 @@ echo ""
 echo "[5/5] Installing software (15-20 minutes)..."
 echo ""
 
+LAST_LINE=0
 while true; do
-    # Clear screen and show last 30 lines
-    clear
-    echo "=========================================="
-    echo "  CodeHero Installation Progress"
-    echo "  (refreshing every 3 seconds)"
-    echo "=========================================="
-    echo ""
-    multipass exec claude-dev -- tail -30 /var/log/cloud-init-output.log 2>/dev/null || echo "      Waiting for installation to start..."
-    echo ""
-    echo "=========================================="
+    # Show only NEW lines from the log (no clear)
+    CURRENT=$(multipass exec claude-dev -- wc -l /var/log/cloud-init-output.log 2>/dev/null | awk '{print $1}')
+    if [ -n "$CURRENT" ] && [ "$CURRENT" -gt "$LAST_LINE" ] 2>/dev/null; then
+        multipass exec claude-dev -- tail -n +$((LAST_LINE + 1)) /var/log/cloud-init-output.log 2>/dev/null | head -n $((CURRENT - LAST_LINE))
+        LAST_LINE=$CURRENT
+    fi
 
     # Check if install completed
     if multipass exec claude-dev -- test -f /root/install-complete 2>/dev/null; then
