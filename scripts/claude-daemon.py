@@ -77,6 +77,54 @@ def send_telegram(message, parse_mode="HTML"):
         print(f"[WARNING] Telegram notification failed: {e}")
         return False
 
+# Telegram polling for replies
+TELEGRAM_LAST_UPDATE_ID = 0
+
+def poll_telegram_replies():
+    """Poll Telegram for new reply messages"""
+    global TELEGRAM_LAST_UPDATE_ID
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        return []
+
+    try:
+        url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/getUpdates"
+        params = f"?offset={TELEGRAM_LAST_UPDATE_ID + 1}&timeout=5"
+        req = urllib.request.Request(url + params)
+        resp = urllib.request.urlopen(req, timeout=10)
+        data = json.loads(resp.read().decode('utf-8'))
+
+        replies = []
+        if data.get('ok') and data.get('result'):
+            for update in data['result']:
+                TELEGRAM_LAST_UPDATE_ID = update['update_id']
+                msg = update.get('message', {})
+
+                # Check if it's a reply to one of our messages
+                reply_to = msg.get('reply_to_message')
+                if reply_to and msg.get('text'):
+                    # Extract ticket number from original message
+                    original_text = reply_to.get('text', '')
+                    ticket_number = extract_ticket_from_message(original_text)
+                    if ticket_number:
+                        replies.append({
+                            'ticket_number': ticket_number,
+                            'message': msg['text'],
+                            'from': msg.get('from', {}).get('first_name', 'User')
+                        })
+        return replies
+    except Exception as e:
+        print(f"[WARNING] Telegram polling failed: {e}")
+        return []
+
+def extract_ticket_from_message(text):
+    """Extract ticket number from notification message"""
+    import re
+    # Look for pattern: 🎫 Ticket: XXXX-0000
+    match = re.search(r'🎫 Ticket: ([A-Z]+-\d+)', text)
+    if match:
+        return match.group(1)
+    return None
+
 def notify(event_type, title, message, project_name=None, ticket_number=None):
     """Send notification based on event type and settings"""
     if not NOTIFY_SETTINGS.get(event_type, False):
@@ -1196,6 +1244,37 @@ Your response:"""
         self.running = False
 
 
+class TelegramPoller(threading.Thread):
+    """Background thread that polls Telegram for reply messages"""
+
+    def __init__(self, daemon):
+        super().__init__(daemon=True)
+        self.daemon_ref = daemon
+        self.running = True
+
+    def log(self, message, level="INFO"):
+        self.daemon_ref.log(f"[TelegramPoller] {message}", level)
+
+    def run(self):
+        if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+            self.log("Telegram not configured - poller disabled")
+            return
+
+        self.log("Telegram poller started - listening for replies")
+
+        while self.running:
+            try:
+                time.sleep(10)  # Poll every 10 seconds
+                if not self.running:
+                    break
+                self.daemon_ref.process_telegram_replies()
+            except Exception as e:
+                self.log(f"Error: {e}", "ERROR")
+
+    def stop(self):
+        self.running = False
+
+
 class ClaudeDaemon:
     """Main daemon - manages project workers"""
 
@@ -1230,6 +1309,8 @@ class ClaudeDaemon:
 
         # Initialize Watchdog (will be started in run())
         self.watchdog = None
+        # Initialize Telegram Poller (will be started in run())
+        self.telegram_poller = None
 
     def load_global_context(self):
         """Load global context that applies to all projects"""
@@ -1273,7 +1354,146 @@ class ClaudeDaemon:
             with open(LOG_FILE, 'a') as f:
                 f.write(log_line + "\n")
         except: pass
-    
+
+    def process_telegram_replies(self):
+        """Process replies received via Telegram and add them to tickets"""
+        try:
+            replies = poll_telegram_replies()
+            for reply in replies:
+                ticket_number = reply['ticket_number']
+                message = reply['message']
+                from_user = reply['from']
+
+                # Find ticket by number
+                conn = self.get_db()
+                cursor = conn.cursor(dictionary=True)
+                cursor.execute("""
+                    SELECT t.id, t.status, t.title, t.project_id, p.name as project_name
+                    FROM tickets t
+                    JOIN projects p ON t.project_id = p.id
+                    WHERE t.ticket_number = %s
+                """, (ticket_number,))
+                ticket = cursor.fetchone()
+
+                if ticket:
+                    # Check if it's a question (starts with ?)
+                    if message.strip().startswith('?'):
+                        # It's a question - get summary and respond without reopening
+                        question = message.strip()[1:].strip()  # Remove the ?
+                        cursor.close()
+                        conn.close()
+                        self.handle_telegram_question(ticket, ticket_number, question)
+                        continue
+
+                    # Normal flow - add message to conversation
+                    cursor.execute("""
+                        INSERT INTO conversation_messages (ticket_id, role, content, created_at)
+                        VALUES (%s, 'user', %s, NOW())
+                    """, (ticket['id'], f"[Via Telegram from {from_user}]\n{message}"))
+
+                    # If ticket is awaiting_input, reopen it
+                    if ticket['status'] == 'awaiting_input':
+                        cursor.execute("""
+                            UPDATE tickets SET status = 'open', updated_at = NOW()
+                            WHERE id = %s
+                        """, (ticket['id'],))
+                        self.log(f"Telegram reply reopened ticket {ticket_number}")
+
+                        # Send confirmation
+                        send_telegram(f"✅ Message received for {ticket_number}\nTicket reopened - Claude will continue.")
+
+                    conn.commit()
+                else:
+                    self.log(f"Telegram reply for unknown ticket: {ticket_number}", "WARNING")
+
+                cursor.close()
+                conn.close()
+        except Exception as e:
+            self.log(f"Error processing Telegram replies: {e}", "ERROR")
+
+    def handle_telegram_question(self, ticket, ticket_number, question):
+        """Handle a question from Telegram - respond with summary without reopening ticket"""
+        try:
+            # Get last messages from conversation
+            conn = self.get_db()
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("""
+                SELECT role, content, created_at
+                FROM conversation_messages
+                WHERE ticket_id = %s
+                ORDER BY created_at DESC
+                LIMIT 10
+            """, (ticket['id'],))
+            messages = cursor.fetchall()
+            messages.reverse()  # Chronological order
+
+            # Get token usage
+            cursor.execute("""
+                SELECT COALESCE(SUM(tokens_used), 0) as total_tokens
+                FROM execution_sessions
+                WHERE ticket_id = %s
+            """, (ticket['id'],))
+            tokens_row = cursor.fetchone()
+            total_tokens = tokens_row['total_tokens'] if tokens_row else 0
+
+            cursor.close()
+            conn.close()
+
+            # Build context for Haiku
+            context = f"Ticket: {ticket_number}\n"
+            context += f"Title: {ticket['title']}\n"
+            context += f"Status: {ticket['status']}\n"
+            context += f"Tokens used: {total_tokens:,}\n\n"
+            context += "Recent conversation:\n"
+            for msg in messages[-5:]:  # Last 5 messages
+                role = "User" if msg['role'] == 'user' else "Claude"
+                content = msg['content'][:300] + "..." if len(msg['content']) > 300 else msg['content']
+                context += f"\n{role}: {content}\n"
+
+            # Call Haiku for summary
+            summary = self.ask_haiku_for_summary(context, question)
+
+            # Send response via Telegram
+            response = f"📋 <b>{ticket_number}</b>\n\n{summary}"
+            send_telegram(response)
+            self.log(f"Telegram question answered for {ticket_number}")
+
+        except Exception as e:
+            self.log(f"Error handling Telegram question: {e}", "ERROR")
+            send_telegram(f"❌ Error getting info for {ticket_number}")
+
+    def ask_haiku_for_summary(self, context, question):
+        """Use Claude Haiku to generate a short summary"""
+        try:
+            import subprocess
+
+            prompt = f"""Based on this ticket information, answer the user's question in 2-3 short sentences in the same language as the question. Be concise.
+
+{context}
+
+User's question: {question if question else "What is the current status?"}
+
+Answer briefly:"""
+
+            # Use claude CLI with haiku model
+            result = subprocess.run(
+                ['claude', '--model', 'haiku', '-p', prompt, '--max-tokens', '200'],
+                capture_output=True,
+                text=True,
+                timeout=30,
+                cwd=os.path.expanduser('~')
+            )
+
+            if result.returncode == 0 and result.stdout.strip():
+                return result.stdout.strip()
+            else:
+                # Fallback to basic info
+                return f"Status: {context.split('Status:')[1].split(chr(10))[0].strip() if 'Status:' in context else 'unknown'}"
+
+        except Exception as e:
+            self.log(f"Haiku summary failed: {e}", "WARNING")
+            return "Could not generate summary. Check the web panel for details."
+
     def send_email(self, subject, body):
         if self.config.get('SMTP_ENABLED', 'false').lower() != 'true':
             return
@@ -1466,6 +1686,10 @@ class ClaudeDaemon:
         self.watchdog.start()
         self.log("Watchdog thread started")
 
+        # Start Telegram Poller thread
+        self.telegram_poller = TelegramPoller(self)
+        self.telegram_poller.start()
+
         while self.running:
             try:
                 self.cleanup_dead_workers()
@@ -1506,6 +1730,11 @@ class ClaudeDaemon:
         if self.watchdog:
             self.log("Stopping Watchdog...")
             self.watchdog.stop()
+
+        # Stop Telegram Poller
+        if self.telegram_poller:
+            self.log("Stopping Telegram Poller...")
+            self.telegram_poller.stop()
 
         self.log("Stopping all workers...")
         with self.workers_lock:

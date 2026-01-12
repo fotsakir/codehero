@@ -10,7 +10,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-2.43.0-green.svg" alt="Version"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-2.44.0-green.svg" alt="Version"></a>
   <img src="https://img.shields.io/badge/Ubuntu-22.04%20|%2024.04-orange.svg" alt="Ubuntu">
   <a href="https://anthropic.com"><img src="https://img.shields.io/badge/Powered%20by-Claude%20AI-blueviolet.svg" alt="Claude AI"></a>
   <a href="https://github.com/fotsakir/Claude-AI-developer/stargazers"><img src="https://img.shields.io/github/stars/fotsakir/Claude-AI-developer?style=social" alt="Stars"></a>
@@ -115,7 +115,8 @@ Get instant alerts on your phone when Claude needs attention:
 - **Task Failed** - Immediate alert if something goes wrong
 - **Watchdog Alerts** - Know when a ticket gets stuck
 - **Easy Setup** - Configure directly from the Settings panel (⚙️)
-- **Test Before Save** - Send test notification to verify your setup
+- **Two-Way Communication** - Reply to notifications to add messages to tickets
+- **Quick Questions** - Start reply with "?" for instant status summaries
 
 ### Core AI Features
 - **Autonomous AI Agent** - Claude AI works on tickets independently, writing real code

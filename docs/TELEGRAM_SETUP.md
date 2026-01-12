@@ -89,9 +89,48 @@ Add user authentication to the login page
 - Send another message to your bot
 - Refresh the getUpdates URL
 
+## Two-Way Communication
+
+You can reply directly to notifications in Telegram!
+
+### Reply to Add a Message
+
+When you receive a notification, simply **reply** to it with your message. The system will:
+1. Detect which ticket you're replying to
+2. Add your message to the ticket conversation
+3. If the ticket was "awaiting input", it reopens automatically
+
+### Ask Questions with "?"
+
+Start your reply with `?` to ask a quick question without reopening the ticket:
+
+```
+?what's wrong
+?τι δεν πάει καλά
+?status
+```
+
+The system will:
+1. Use Claude Haiku to generate a short summary
+2. Send the answer back to your Telegram
+3. NOT reopen the ticket (stays in current status)
+
+This is useful for quickly checking on progress without triggering Claude to work again.
+
+### Examples
+
+| Your Reply | What Happens |
+|------------|--------------|
+| `fix the login bug` | Message added, ticket reopens, Claude starts working |
+| `?what's the error?` | You get a short summary, ticket stays as-is |
+| `looks good, thanks` | Message added, ticket reopens |
+| `?τι γίνεται` | Summary in Greek, ticket stays as-is |
+
 ## Notes
 
 - Notifications are sent instantly when ticket status changes
 - Settings are saved in `/etc/fotios-claude/system.conf`
 - The daemon restarts automatically when you save settings
 - You can disable notifications anytime from the Settings panel
+- Two-way communication polls every 10 seconds
+- Questions use Claude Haiku for fast, low-cost responses

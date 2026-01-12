@@ -5,6 +5,19 @@ All notable changes to the Fotios Claude System will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.44.0] - 2026-01-12
+
+### Added
+- **Two-Way Telegram Communication**: Reply to notifications directly from Telegram
+  - Reply to any notification to add a message to that ticket
+  - Ticket automatically reopens if it was awaiting input
+  - TelegramPoller thread polls for replies every 10 seconds
+- **Telegram Questions**: Start reply with "?" for quick status checks
+  - Get short summary via Claude Haiku without reopening ticket
+  - Works in any language (e.g., "?τι δεν πάει καλά")
+  - Low-cost, fast responses (~$0.001)
+- **Updated TELEGRAM_SETUP.md**: Added two-way communication documentation
+
 ## [2.43.0] - 2026-01-12
 
 ### Added
