@@ -244,246 +244,210 @@
             filter: drop-shadow(0 0 30px rgba(99, 102, 241, 0.3));
         }
 
-        /* Night Shift Scene */
-        .night-scene {
+        /* 24-Hour Story Scene */
+        .day-scene {
             position: relative;
             width: 100%;
-            max-width: 500px;
-            height: 300px;
+            max-width: 600px;
+            height: 280px;
             margin-bottom: 30px;
             border-radius: 20px;
-            background: linear-gradient(180deg, #0a0a1a 0%, #12122a 100%);
-            overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-        }
-
-        /* Window with moon */
-        .window {
-            position: absolute;
-            top: 20px;
-            right: 30px;
-            width: 80px;
-            height: 100px;
-            background: linear-gradient(180deg, #1a1a3a 0%, #0d0d20 100%);
-            border: 3px solid #2a2a4a;
-            border-radius: 8px;
+            background: rgba(10, 10, 26, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(99, 102, 241, 0.2);
             overflow: hidden;
         }
 
-        .moon {
+        /* Animated clock */
+        .scene-clock {
             position: absolute;
             top: 15px;
-            right: 15px;
-            width: 30px;
-            height: 30px;
-            background: linear-gradient(135deg, #fff9c4 0%, #ffd54f 100%);
-            border-radius: 50%;
-            box-shadow: 0 0 20px rgba(255, 245, 157, 0.6), 0 0 40px rgba(255, 245, 157, 0.3);
-            animation: moonGlow 4s ease-in-out infinite;
+            left: 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #22d3ee;
+            text-shadow: 0 0 15px rgba(34, 211, 238, 0.5);
+            animation: cycleTime 24s linear infinite;
         }
 
-        @keyframes moonGlow {
-            0%, 100% { box-shadow: 0 0 20px rgba(255, 245, 157, 0.6), 0 0 40px rgba(255, 245, 157, 0.3); }
-            50% { box-shadow: 0 0 30px rgba(255, 245, 157, 0.8), 0 0 60px rgba(255, 245, 157, 0.4); }
+        @keyframes cycleTime {
+            0% { content: "8:00 AM"; }
+            100% { content: "8:00 AM"; }
         }
 
-        .stars {
+        .scene-label {
             position: absolute;
-            top: 0;
+            top: 50px;
+            left: 20px;
+            font-size: 0.9rem;
+            color: #a78bfa;
+            font-weight: 500;
+            animation: cycleLabel 24s linear infinite;
+        }
+
+        /* Scene container for transitions */
+        .scene-content {
+            position: absolute;
+            bottom: 0;
             left: 0;
             right: 0;
-            bottom: 0;
+            height: 200px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-around;
+            padding: 0 30px 20px;
         }
 
-        .star {
+        /* Human side */
+        .human-side {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 45%;
+        }
+
+        .human-activity {
+            font-size: 3rem;
+            animation: cycleActivity 24s linear infinite;
+            filter: drop-shadow(0 0 10px rgba(255,255,255,0.3));
+        }
+
+        .human-status {
+            margin-top: 10px;
+            font-size: 0.85rem;
+            color: #94a3b8;
+            text-align: center;
+            animation: cycleStatus 24s linear infinite;
+        }
+
+        /* Laptop side - always working */
+        .laptop-side {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 45%;
+        }
+
+        .mini-laptop {
+            width: 100px;
+            height: 70px;
+            background: #0d0d1a;
+            border: 2px solid #3a3a5a;
+            border-radius: 6px 6px 0 0;
+            position: relative;
+            box-shadow: 0 0 25px rgba(34, 211, 238, 0.4);
+        }
+
+        .mini-laptop::after {
+            content: '';
             position: absolute;
-            width: 2px;
-            height: 2px;
-            background: #fff;
-            border-radius: 50%;
-            animation: twinkle 2s ease-in-out infinite;
+            bottom: -8px;
+            left: -5px;
+            width: 110px;
+            height: 8px;
+            background: linear-gradient(180deg, #4a4a6a 0%, #3a3a5a 100%);
+            border-radius: 0 0 4px 4px;
         }
 
-        @keyframes twinkle {
-            0%, 100% { opacity: 0.3; }
-            50% { opacity: 1; }
-        }
-
-        /* Clock */
-        .clock {
-            position: absolute;
-            top: 25px;
-            left: 30px;
+        .mini-screen-code {
+            padding: 6px;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 1.5rem;
+            font-size: 0.4rem;
             color: #22d3ee;
-            text-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
-            animation: clockPulse 1s ease-in-out infinite;
+            line-height: 1.3;
+            animation: typeCode 2s steps(20) infinite;
         }
 
-        @keyframes clockPulse {
+        @keyframes typeCode {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.7; }
         }
 
-        .clock-label {
-            font-size: 0.6rem;
-            color: #64748b;
-            margin-top: 2px;
+        .laptop-status {
+            margin-top: 15px;
+            font-size: 0.85rem;
+            color: #10b981;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
-        /* Desk */
-        .desk {
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 1s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.7; }
+        }
+
+        /* Divider */
+        .scene-divider {
+            width: 2px;
+            height: 150px;
+            background: linear-gradient(180deg, transparent, rgba(99, 102, 241, 0.5), transparent);
+        }
+
+        /* Benefits bar */
+        .benefits-bar {
             position: absolute;
             bottom: 0;
             left: 0;
             right: 0;
-            height: 80px;
-            background: linear-gradient(180deg, #1a1a2e 0%, #16162a 100%);
-            border-top: 2px solid #2a2a4a;
+            height: 40px;
+            background: rgba(16, 185, 129, 0.1);
+            border-top: 1px solid rgba(16, 185, 129, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 30px;
+            font-size: 0.75rem;
         }
 
-        /* Laptop */
-        .laptop {
-            position: absolute;
-            bottom: 60px;
-            left: 50%;
-            transform: translateX(-50%);
+        .benefit {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #10b981;
         }
 
-        .laptop-screen {
-            width: 180px;
-            height: 120px;
-            background: #0d0d1a;
-            border: 3px solid #3a3a5a;
-            border-bottom: none;
-            border-radius: 8px 8px 0 0;
-            overflow: hidden;
-            box-shadow: 0 0 30px rgba(34, 211, 238, 0.3), inset 0 0 20px rgba(34, 211, 238, 0.1);
-            position: relative;
-        }
-
-        .laptop-base {
-            width: 200px;
-            height: 10px;
-            background: linear-gradient(180deg, #4a4a6a 0%, #3a3a5a 100%);
-            border-radius: 0 0 4px 4px;
-            margin-left: -10px;
-        }
-
-        /* Code animation on screen */
-        .code-lines {
-            padding: 8px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.5rem;
-            line-height: 1.4;
-        }
-
-        .code-line {
-            color: #22d3ee;
-            opacity: 0;
-            animation: typeLine 0.5s ease forwards;
-            white-space: nowrap;
-            overflow: hidden;
-        }
-
-        .code-line.purple { color: #a78bfa; }
-        .code-line.green { color: #10b981; }
-        .code-line.yellow { color: #fbbf24; }
-        .code-line.pink { color: #f472b6; }
-
-        @keyframes typeLine {
-            from { opacity: 0; width: 0; }
-            to { opacity: 1; width: 100%; }
-        }
-
-        .code-line:nth-child(1) { animation-delay: 0s; }
-        .code-line:nth-child(2) { animation-delay: 0.3s; }
-        .code-line:nth-child(3) { animation-delay: 0.6s; }
-        .code-line:nth-child(4) { animation-delay: 0.9s; }
-        .code-line:nth-child(5) { animation-delay: 1.2s; }
-        .code-line:nth-child(6) { animation-delay: 1.5s; }
-        .code-line:nth-child(7) { animation-delay: 1.8s; }
-        .code-line:nth-child(8) { animation-delay: 2.1s; }
-
-        .cursor {
-            display: inline-block;
-            width: 6px;
-            height: 10px;
-            background: #22d3ee;
-            animation: blink 0.8s infinite;
-            margin-left: 2px;
-            vertical-align: middle;
-        }
-
-        @keyframes blink {
-            0%, 50% { opacity: 1; }
-            51%, 100% { opacity: 0; }
-        }
-
-        /* Screen glow effect */
-        .screen-glow {
-            position: absolute;
-            bottom: 100px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 250px;
-            height: 150px;
-            background: radial-gradient(ellipse at center, rgba(34, 211, 238, 0.15) 0%, transparent 70%);
-            pointer-events: none;
-        }
-
-        /* Zzz animation */
-        .zzz {
-            position: absolute;
-            bottom: 180px;
-            right: 50px;
-            font-size: 1.2rem;
-            color: #64748b;
-            opacity: 0;
-            animation: floatZzz 3s ease-in-out infinite;
-        }
-
-        .zzz:nth-child(2) {
-            right: 40px;
-            bottom: 200px;
-            animation-delay: 0.5s;
+        .benefit-icon {
             font-size: 1rem;
         }
 
-        .zzz:nth-child(3) {
-            right: 55px;
-            bottom: 220px;
-            animation-delay: 1s;
-            font-size: 0.8rem;
-        }
-
-        @keyframes floatZzz {
-            0% { opacity: 0; transform: translateY(0); }
-            20% { opacity: 0.7; }
-            80% { opacity: 0.7; }
-            100% { opacity: 0; transform: translateY(-20px); }
-        }
-
-        /* Coffee cup (crossed out) */
-        .no-coffee {
+        /* Scene animations - 24 second cycle (1 sec = 1 hour) */
+        .scene-frame {
             position: absolute;
-            bottom: 90px;
-            right: 60px;
-            font-size: 1.5rem;
-            opacity: 0.6;
+            inset: 0;
+            opacity: 0;
+            transition: opacity 0.5s ease;
         }
 
-        .no-coffee::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: -5px;
-            width: 35px;
-            height: 3px;
-            background: #ef4444;
-            transform: rotate(-45deg);
-            border-radius: 2px;
+        .scene-frame.active {
+            opacity: 1;
+        }
+
+        /* Individual scenes */
+        .scene-1, .scene-2, .scene-3, .scene-4, .scene-5, .scene-6 {
+            animation: sceneSwitch 24s linear infinite;
+        }
+
+        .scene-1 { animation-delay: 0s; }
+        .scene-2 { animation-delay: 4s; }
+        .scene-3 { animation-delay: 8s; }
+        .scene-4 { animation-delay: 12s; }
+        .scene-5 { animation-delay: 16s; }
+        .scene-6 { animation-delay: 20s; }
+
+        @keyframes sceneSwitch {
+            0%, 12% { opacity: 1; }
+            16.66%, 100% { opacity: 0; }
         }
 
         /* Hero Character */
@@ -1009,56 +973,115 @@
 
     <!-- Hero Section -->
     <section class="hero">
-        <!-- Night Shift Animated Scene -->
-        <div class="night-scene">
-            <!-- Window with moon and stars -->
-            <div class="window">
-                <div class="stars">
-                    <div class="star" style="top: 20%; left: 20%; animation-delay: 0s;"></div>
-                    <div class="star" style="top: 40%; left: 60%; animation-delay: 0.5s;"></div>
-                    <div class="star" style="top: 15%; left: 45%; animation-delay: 1s;"></div>
-                    <div class="star" style="top: 60%; left: 30%; animation-delay: 1.5s;"></div>
-                    <div class="star" style="top: 35%; left: 75%; animation-delay: 0.7s;"></div>
-                </div>
-                <div class="moon"></div>
-            </div>
+        <!-- 24-Hour Story Animation -->
+        <div class="day-scene">
+            <!-- Clock and label change with scenes -->
+            <div class="scene-clock" id="sceneClock">9:00 AM</div>
+            <div class="scene-label" id="sceneLabel">while you work...</div>
 
-            <!-- Clock showing 3:00 AM -->
-            <div class="clock">
-                3:00<span style="font-size: 0.8rem;"> AM</span>
-                <div class="clock-label">while you sleep...</div>
-            </div>
-
-            <!-- Desk surface -->
-            <div class="desk"></div>
-
-            <!-- Screen glow effect -->
-            <div class="screen-glow"></div>
-
-            <!-- Laptop with animated code -->
-            <div class="laptop">
-                <div class="laptop-screen">
-                    <div class="code-lines" id="codeAnimation">
-                        <div class="code-line purple">async function build() {</div>
-                        <div class="code-line green">  await compile();</div>
-                        <div class="code-line green">  await test();</div>
-                        <div class="code-line yellow">  // Fixed bug #142</div>
-                        <div class="code-line green">  await deploy();</div>
-                        <div class="code-line pink">  console.log('Done!');</div>
-                        <div class="code-line purple">}</div>
-                        <div class="code-line"><span class="cursor"></span></div>
+            <!-- Scene frames that rotate -->
+            <div class="scene-frame scene-1" style="opacity: 1;">
+                <div class="scene-content">
+                    <div class="human-side">
+                        <div class="human-activity">💼</div>
+                        <div class="human-status">You start your day</div>
+                    </div>
+                    <div class="scene-divider"></div>
+                    <div class="laptop-side">
+                        <div class="mini-laptop">
+                            <div class="mini-screen-code">Building...<br>Testing...<br>Deploying...</div>
+                        </div>
+                        <div class="laptop-status"><span class="status-dot"></span> Working</div>
                     </div>
                 </div>
-                <div class="laptop-base"></div>
             </div>
 
-            <!-- Floating Zzz -->
-            <div class="zzz">z</div>
-            <div class="zzz">z</div>
-            <div class="zzz">z</div>
+            <div class="scene-frame scene-2">
+                <div class="scene-content">
+                    <div class="human-side">
+                        <div class="human-activity">☕</div>
+                        <div class="human-status">You take a coffee break</div>
+                    </div>
+                    <div class="scene-divider"></div>
+                    <div class="laptop-side">
+                        <div class="mini-laptop">
+                            <div class="mini-screen-code">Fixing bugs<br>Refactoring<br>Optimizing...</div>
+                        </div>
+                        <div class="laptop-status"><span class="status-dot"></span> Working</div>
+                    </div>
+                </div>
+            </div>
 
-            <!-- No coffee needed -->
-            <div class="no-coffee">☕</div>
+            <div class="scene-frame scene-3">
+                <div class="scene-content">
+                    <div class="human-side">
+                        <div class="human-activity">🍽️</div>
+                        <div class="human-status">You have lunch</div>
+                    </div>
+                    <div class="scene-divider"></div>
+                    <div class="laptop-side">
+                        <div class="mini-laptop">
+                            <div class="mini-screen-code">API done ✓<br>Tests pass ✓<br>Building...</div>
+                        </div>
+                        <div class="laptop-status"><span class="status-dot"></span> Working</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="scene-frame scene-4">
+                <div class="scene-content">
+                    <div class="human-side">
+                        <div class="human-activity">🏃</div>
+                        <div class="human-status">You go for a run</div>
+                    </div>
+                    <div class="scene-divider"></div>
+                    <div class="laptop-side">
+                        <div class="mini-laptop">
+                            <div class="mini-screen-code">Feature #3<br>Complete!<br>Starting #4...</div>
+                        </div>
+                        <div class="laptop-status"><span class="status-dot"></span> Working</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="scene-frame scene-5">
+                <div class="scene-content">
+                    <div class="human-side">
+                        <div class="human-activity">👨‍👩‍👧</div>
+                        <div class="human-status">Family time</div>
+                    </div>
+                    <div class="scene-divider"></div>
+                    <div class="laptop-side">
+                        <div class="mini-laptop">
+                            <div class="mini-screen-code">Docs done ✓<br>CI/CD done ✓<br>Deploying...</div>
+                        </div>
+                        <div class="laptop-status"><span class="status-dot"></span> Working</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="scene-frame scene-6">
+                <div class="scene-content">
+                    <div class="human-side">
+                        <div class="human-activity">😴</div>
+                        <div class="human-status">You sleep peacefully</div>
+                    </div>
+                    <div class="scene-divider"></div>
+                    <div class="laptop-side">
+                        <div class="mini-laptop">
+                            <div class="mini-screen-code">All tasks<br>COMPLETE! ✓<br>Ready to review</div>
+                        </div>
+                        <div class="laptop-status"><span class="status-dot"></span> Working</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Benefits bar at bottom -->
+            <div class="benefits-bar">
+                <div class="benefit"><span class="benefit-icon">⏰</span> Save Time</div>
+                <div class="benefit"><span class="benefit-icon">💰</span> Save Money</div>
+                <div class="benefit"><span class="benefit-icon">❤️</span> Better Life</div>
+            </div>
         </div>
 
         <div class="hero-title-row">
@@ -1540,17 +1563,37 @@
             }, 250);
         });
 
-        // Loop the code animation in night scene
-        function restartCodeAnimation() {
-            const codeLines = document.querySelectorAll('.code-line');
-            codeLines.forEach(line => {
-                line.style.animation = 'none';
-                line.offsetHeight; // Trigger reflow
-                line.style.animation = null;
+        // 24-Hour Scene Animation
+        const scenes = [
+            { time: "9:00 AM", label: "while you work..." },
+            { time: "11:00 AM", label: "while you take a break..." },
+            { time: "1:00 PM", label: "while you eat..." },
+            { time: "4:00 PM", label: "while you exercise..." },
+            { time: "7:00 PM", label: "while you're with family..." },
+            { time: "11:00 PM", label: "while you sleep..." }
+        ];
+
+        let currentScene = 0;
+        const clock = document.getElementById('sceneClock');
+        const label = document.getElementById('sceneLabel');
+        const frames = document.querySelectorAll('.scene-frame');
+
+        function updateScene() {
+            // Update clock and label
+            clock.textContent = scenes[currentScene].time;
+            label.textContent = scenes[currentScene].label;
+
+            // Update frame visibility
+            frames.forEach((frame, i) => {
+                frame.style.opacity = i === currentScene ? '1' : '0';
             });
+
+            // Next scene
+            currentScene = (currentScene + 1) % scenes.length;
         }
-        // Restart animation every 4 seconds
-        setInterval(restartCodeAnimation, 4000);
+
+        // Change scene every 4 seconds
+        setInterval(updateScene, 4000);
     </script>
 </body>
 </html>
