@@ -86,7 +86,14 @@ Open in your browser: `https://YOUR_VM_IP:9453`
 - Username: `admin`
 - Password: `admin123`
 
-> **Important**: Change the default password immediately!
+### Change Passwords (Important!)
+
+Open the **Web Terminal** from the dashboard menu, or SSH into the VM:
+
+```bash
+multipass shell claude-dev
+sudo /opt/fotios-claude/scripts/change-passwords.sh
+```
 
 ### Access the VM Terminal
 

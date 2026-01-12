@@ -137,7 +137,8 @@ Write-Host ""
 Write-Host "  VM TERMINAL:" -ForegroundColor Yellow
 Write-Host "  multipass shell claude-dev" -ForegroundColor White
 Write-Host ""
-Write-Host "  IMPORTANT: Change passwords after first login!" -ForegroundColor Red
+Write-Host "  CHANGE PASSWORDS (via Web Terminal or SSH):" -ForegroundColor Red
+Write-Host "  sudo /opt/fotios-claude/scripts/change-passwords.sh" -ForegroundColor White
 Write-Host ""
 Write-Host "==========================================" -ForegroundColor Green
 Write-Host ""

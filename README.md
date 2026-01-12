@@ -218,6 +218,10 @@ curl -sL https://raw.githubusercontent.com/fotsakir/Claude-AI-developer/main/mul
 
 Paste → Enter → Wait 15 minutes → Done! [Full guide →](docs/MULTIPASS_INSTALL.md)
 
+**After installation:**
+- Dashboard: `https://VM_IP:9453` (login: admin / admin123)
+- Change passwords: `sudo /opt/fotios-claude/scripts/change-passwords.sh`
+
 ---
 
 ### Manual Install (Ubuntu Server)
