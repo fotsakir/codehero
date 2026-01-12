@@ -33,6 +33,31 @@ if ! command -v multipass &> /dev/null; then
     fi
 
     echo "      Multipass installed!"
+
+    # Start the Multipass daemon
+    echo "      Starting Multipass daemon..."
+    sudo launchctl load /Library/LaunchDaemons/com.canonical.multipassd.plist 2>/dev/null || true
+
+    # Wait for daemon to be ready
+    echo "      Waiting for daemon to initialize..."
+    DAEMON_READY=false
+    for i in {1..30}; do
+        if multipass list &>/dev/null; then
+            DAEMON_READY=true
+            break
+        fi
+        sleep 2
+    done
+
+    if [ "$DAEMON_READY" = false ]; then
+        echo "      Restarting daemon..."
+        sudo launchctl unload /Library/LaunchDaemons/com.canonical.multipassd.plist 2>/dev/null || true
+        sleep 2
+        sudo launchctl load /Library/LaunchDaemons/com.canonical.multipassd.plist
+        sleep 10
+    fi
+
+    echo "      Daemon ready!"
 else
     echo "      Multipass is already installed."
 fi
