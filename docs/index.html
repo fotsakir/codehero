@@ -37,7 +37,7 @@
         "description": "That app you've been dreaming about? Stop talking about it. Start building it. An AI that works alone - planning, coding, debugging - while you live your life.",
         "url": "https://fotsakir.github.io/Claude-AI-developer/",
         "downloadUrl": "https://github.com/fotsakir/Claude-AI-developer/releases/latest",
-        "softwareVersion": "2.48.1",
+        "softwareVersion": "2.49.0",
         "applicationCategory": "DeveloperApplication",
         "operatingSystem": "Ubuntu 22.04, Ubuntu 24.04",
         "offers": {
@@ -594,6 +594,12 @@
         }
 
         /* Responsive */
+        /* Install tabs hover */
+        .install-tab:hover {
+            color: var(--text-primary) !important;
+            background: rgba(99, 102, 241, 0.1);
+        }
+
         @media (max-width: 768px) {
             .screenshot-grid {
                 grid-template-columns: 1fr;
@@ -644,94 +650,83 @@
             </a>
         </div>
 
-        <!-- Manual Install Section (Recommended) -->
-        <details open style="margin-top: 2rem; text-align: left; max-width: 750px; margin-left: auto; margin-right: auto; background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(139, 92, 246, 0.15)); border-radius: 12px; border: 1px solid rgba(99, 102, 241, 0.3); padding: 1.5rem;">
-            <summary style="cursor: pointer; color: #6366f1; font-size: 1.2rem; font-weight: 600; list-style: none; display: flex; align-items: center; gap: 0.5rem;">
-                <span style="font-size: 1.3rem;">📦</span> Manual Install on VM
-                <span style="margin-left: auto; font-size: 0.75rem; background: #6366f1; color: white; padding: 2px 8px; border-radius: 4px;">RECOMMENDED</span>
-            </summary>
-            <p style="margin: 1rem 0 0.5rem 0; font-size: 0.9rem; color: var(--text-secondary);">
-                Install on a fresh <strong>Ubuntu 22.04/24.04</strong> VM (VirtualBox, VMware, Hyper-V, or cloud VPS).
-                <a href="https://github.com/fotsakir/Claude-AI-developer/blob/main/INSTALL.md" style="color: #22d3ee;">Full installation guide →</a>
-            </p>
-            <div class="code-block" style="margin-top: 0.8rem;">
-                <span class="comment"># On Ubuntu VM (as root)</span><br>
-                <span class="command">apt-get update && apt-get install -y unzip wget</span><br>
-                <span class="command">wget https://github.com/fotsakir/Claude-AI-developer/releases/latest/download/fotios-claude-system-2.48.1.zip</span><br>
-                <span class="command">unzip fotios-claude-system-*.zip && cd fotios-claude-system && ./setup.sh</span>
-            </div>
-        </details>
-
-        <!-- WSL2 Install Section (Windows) -->
-        <details open style="margin-top: 1.5rem; text-align: left; max-width: 750px; margin-left: auto; margin-right: auto; background: linear-gradient(135deg, rgba(0, 120, 212, 0.15), rgba(34, 211, 238, 0.15)); border-radius: 12px; border: 1px solid rgba(0, 120, 212, 0.3); padding: 1.5rem;">
-            <summary style="cursor: pointer; color: #0078d4; font-size: 1.2rem; font-weight: 600; list-style: none; display: flex; align-items: center; gap: 0.5rem;">
-                <span style="font-size: 1.3rem;">🪟</span> Windows with WSL2
-                <span style="margin-left: auto; font-size: 0.75rem; background: #0078d4; color: white; padding: 2px 8px; border-radius: 4px;">WINDOWS</span>
-            </summary>
-            <p style="margin: 1rem 0 0.5rem 0; font-size: 0.9rem; color: var(--text-secondary);">
-                Run natively on Windows 10/11 using <strong>WSL2</strong>. Built-in, no extra software needed.
-            </p>
-            <div style="background: rgba(0,0,0,0.3); padding: 0.6rem 1rem; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; overflow-x: auto; margin-top: 0.5rem;">
-                <code style="color: #22d3ee;">irm https://raw.githubusercontent.com/fotsakir/Claude-AI-developer/main/multipass/install-wsl.ps1 | iex</code>
-            </div>
-            <p style="margin: 0.5rem 0 0 0; font-size: 0.8rem; color: var(--text-muted);">
-                Run in <strong>PowerShell as Administrator</strong>. May require restart for WSL2 installation.
-            </p>
-        </details>
-
-        <!-- One-Click Install Section (Experimental) -->
-        <details style="margin-top: 1.5rem; text-align: left; max-width: 750px; margin-left: auto; margin-right: auto; background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(251, 191, 36, 0.1)); border-radius: 12px; border: 1px solid rgba(245, 158, 11, 0.3); padding: 1.5rem;">
-            <summary style="cursor: pointer; color: #f59e0b; font-size: 1.2rem; font-weight: 600; list-style: none; display: flex; flex-direction: column; gap: 0.3rem;">
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <span style="font-size: 0.9rem; transition: transform 0.2s;">▶</span>
-                    <span>One-Click Install (Multipass)</span>
-                    <span style="margin-left: auto; font-size: 0.75rem; background: #f59e0b; color: black; padding: 2px 8px; border-radius: 4px;">EXPERIMENTAL</span>
-                </div>
-                <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 400; margin-left: 1.5rem;">
-                    Automatically creates a VM using Multipass. Works on Windows, macOS, and Linux. Behavior may vary.
-                </span>
-            </summary>
-
-            <!-- Windows -->
-            <div style="margin: 1rem 0 0.8rem 0;">
-                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem;">
-                    <span style="font-size: 1.1rem;">🪟</span>
-                    <strong style="color: #0078d4; font-size: 0.9rem;">Windows</strong>
-                    <span style="font-size: 0.75rem; color: var(--text-muted);">- PowerShell as Admin:</span>
-                </div>
-                <div style="background: rgba(0,0,0,0.3); padding: 0.5rem 0.8rem; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; overflow-x: auto;">
-                    <code style="color: #22d3ee;">irm https://raw.githubusercontent.com/fotsakir/Claude-AI-developer/main/multipass/install-windows.ps1 | iex</code>
-                </div>
+        <!-- Installation Tabs Box -->
+        <div class="install-box" style="margin-top: 2rem; max-width: 700px; margin-left: auto; margin-right: auto; background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border-subtle); overflow: hidden;">
+            <!-- Tab Headers -->
+            <div class="install-tabs" style="display: flex; border-bottom: 1px solid var(--border-subtle);">
+                <button class="install-tab active" onclick="showInstallTab('manual')" style="flex: 1; padding: 12px 16px; background: none; border: none; color: var(--text-primary); cursor: pointer; font-size: 0.85rem; font-weight: 500; border-bottom: 2px solid var(--accent-primary); transition: all 0.2s;">
+                    📦 Manual
+                </button>
+                <button class="install-tab" onclick="showInstallTab('wsl')" style="flex: 1; padding: 12px 16px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.85rem; font-weight: 500; border-bottom: 2px solid transparent; transition: all 0.2s;">
+                    🪟 WSL2
+                </button>
+                <button class="install-tab" onclick="showInstallTab('multipass')" style="flex: 1; padding: 12px 16px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.85rem; font-weight: 500; border-bottom: 2px solid transparent; transition: all 0.2s;">
+                    ⚡ Multipass
+                </button>
             </div>
 
-            <!-- macOS -->
-            <div style="margin-bottom: 0.8rem;">
-                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem;">
-                    <span style="font-size: 1.1rem;">🍎</span>
-                    <strong style="color: #a3a3a3; font-size: 0.9rem;">macOS</strong>
-                    <span style="font-size: 0.75rem; color: var(--text-muted);">- Terminal:</span>
+            <!-- Tab Content -->
+            <div class="install-content" style="padding: 1.2rem; text-align: left;">
+                <!-- Manual Tab -->
+                <div id="tab-manual" class="tab-panel">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.8rem;">
+                        <span style="font-size: 0.7rem; background: var(--accent-primary); color: white; padding: 2px 6px; border-radius: 4px;">RECOMMENDED</span>
+                    </div>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.8rem;">
+                        Install on <strong>Ubuntu 22.04/24.04</strong> VM (VirtualBox, VMware, Hyper-V, or cloud VPS).
+                    </p>
+                    <div style="background: rgba(0,0,0,0.3); padding: 0.8rem; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; overflow-x: auto;">
+                        <span style="color: var(--text-muted);"># On Ubuntu VM (as root)</span><br>
+                        <span style="color: var(--accent-cyan);">wget https://github.com/fotsakir/Claude-AI-developer/releases/latest/download/fotios-claude-system-2.49.0.zip</span><br>
+                        <span style="color: var(--accent-cyan);">unzip fotios-claude-system-*.zip && cd fotios-claude-system && ./setup.sh</span>
+                    </div>
+                    <p style="margin-top: 0.8rem; font-size: 0.8rem;">
+                        <a href="https://github.com/fotsakir/Claude-AI-developer/blob/main/INSTALL.md" style="color: var(--accent-cyan);">Full installation guide →</a>
+                    </p>
                 </div>
-                <div style="background: rgba(0,0,0,0.3); padding: 0.5rem 0.8rem; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; overflow-x: auto;">
-                    <code style="color: #22d3ee;">curl -sL https://raw.githubusercontent.com/fotsakir/Claude-AI-developer/main/multipass/install-macos.command | bash</code>
+
+                <!-- WSL2 Tab -->
+                <div id="tab-wsl" class="tab-panel" style="display: none;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.8rem;">
+                        <span style="font-size: 0.7rem; background: #0078d4; color: white; padding: 2px 6px; border-radius: 4px;">WINDOWS 10/11</span>
+                    </div>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.8rem;">
+                        Run natively using <strong>Windows Subsystem for Linux</strong>. No extra software needed.
+                    </p>
+                    <div style="background: rgba(0,0,0,0.3); padding: 0.8rem; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; overflow-x: auto;">
+                        <span style="color: var(--accent-cyan);">irm https://raw.githubusercontent.com/fotsakir/Claude-AI-developer/main/multipass/install-wsl.ps1 | iex</span>
+                    </div>
+                    <p style="margin-top: 0.6rem; font-size: 0.75rem; color: var(--text-muted);">
+                        Run in <strong>PowerShell as Administrator</strong>. May require restart.
+                    </p>
+                </div>
+
+                <!-- Multipass Tab -->
+                <div id="tab-multipass" class="tab-panel" style="display: none;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.8rem;">
+                        <span style="font-size: 0.7rem; background: #f59e0b; color: black; padding: 2px 6px; border-radius: 4px;">EXPERIMENTAL</span>
+                    </div>
+                    <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.8rem;">
+                        Auto-creates a VM using Multipass. Works on Windows, macOS, Linux.
+                    </p>
+                    <div style="font-size: 0.8rem; margin-bottom: 0.5rem;">
+                        <strong style="color: #0078d4;">🪟 Windows</strong> <span style="color: var(--text-muted);">(PowerShell Admin)</span>
+                    </div>
+                    <div style="background: rgba(0,0,0,0.3); padding: 0.5rem 0.8rem; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; overflow-x: auto; margin-bottom: 0.8rem;">
+                        <code style="color: var(--accent-cyan);">irm https://raw.githubusercontent.com/fotsakir/Claude-AI-developer/main/multipass/install-windows.ps1 | iex</code>
+                    </div>
+                    <div style="font-size: 0.8rem; margin-bottom: 0.5rem;">
+                        <strong style="color: #a3a3a3;">🍎 macOS</strong> / <strong style="color: #e95420;">🐧 Linux</strong> <span style="color: var(--text-muted);">(Terminal)</span>
+                    </div>
+                    <div style="background: rgba(0,0,0,0.3); padding: 0.5rem 0.8rem; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; overflow-x: auto;">
+                        <code style="color: var(--accent-cyan);">curl -sL https://raw.githubusercontent.com/fotsakir/Claude-AI-developer/main/multipass/install-macos.command | bash</code>
+                    </div>
+                    <p style="margin-top: 0.8rem; font-size: 0.8rem;">
+                        <a href="https://github.com/fotsakir/Claude-AI-developer/blob/main/docs/MULTIPASS_INSTALL.md" style="color: #f59e0b;">Full Multipass guide →</a>
+                    </p>
                 </div>
             </div>
-
-            <!-- Linux -->
-            <div style="margin-bottom: 0.8rem;">
-                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.3rem;">
-                    <span style="font-size: 1.1rem;">🐧</span>
-                    <strong style="color: #e95420; font-size: 0.9rem;">Linux</strong>
-                    <span style="font-size: 0.75rem; color: var(--text-muted);">- Terminal:</span>
-                </div>
-                <div style="background: rgba(0,0,0,0.3); padding: 0.5rem 0.8rem; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; overflow-x: auto;">
-                    <code style="color: #22d3ee;">curl -sL https://raw.githubusercontent.com/fotsakir/Claude-AI-developer/main/multipass/install-linux.sh | bash</code>
-                </div>
-            </div>
-
-            <p style="margin: 0.5rem 0 0 0; font-size: 0.8rem; color: var(--text-muted); text-align: center;">
-                <a href="https://github.com/fotsakir/Claude-AI-developer/blob/main/docs/MULTIPASS_INSTALL.md" style="color: #f59e0b;">Full Multipass guide →</a>
-            </p>
-        </details>
+        </div>
     </section>
 
     <!-- Autonomy Highlight -->
@@ -1068,6 +1063,21 @@
         }
 
         createCodeRain();
+
+        // Install tabs functionality
+        function showInstallTab(tab) {
+            // Hide all panels
+            document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
+            // Show selected panel
+            document.getElementById('tab-' + tab).style.display = 'block';
+            // Update tab styles
+            document.querySelectorAll('.install-tab').forEach(t => {
+                t.style.color = 'var(--text-muted)';
+                t.style.borderBottomColor = 'transparent';
+            });
+            event.target.style.color = 'var(--text-primary)';
+            event.target.style.borderBottomColor = 'var(--accent-primary)';
+        }
 
         // Recreate on resize
         let resizeTimeout;
