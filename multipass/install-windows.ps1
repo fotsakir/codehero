@@ -102,40 +102,58 @@ if ($needsVirtualBox) {
 
     # Stop service completely
     Write-Host "      Stopping Multipass service..." -ForegroundColor Gray
-    Stop-Service Multipass -ErrorAction SilentlyContinue
-    Start-Sleep -Seconds 3
+    Stop-Service Multipass -Force -ErrorAction SilentlyContinue
+    Start-Sleep -Seconds 5
+
+    # Write driver setting directly to config file (bypasses socket issue)
+    Write-Host "      Writing VirtualBox driver to config..." -ForegroundColor Gray
+    $configDir = "C:\ProgramData\Multipass\data"
+    $configFile = "$configDir\multipassd\multipassd.conf"
+
+    # Create directory if needed
+    New-Item -ItemType Directory -Path "$configDir\multipassd" -Force -ErrorAction SilentlyContinue | Out-Null
+
+    # Write config
+    @"
+[General]
+driver=virtualbox
+"@ | Out-File -FilePath $configFile -Encoding utf8 -Force
+
+    Write-Host "      Config written to: $configFile" -ForegroundColor Gray
 
     # Start service
     Write-Host "      Starting Multipass service..." -ForegroundColor Gray
     Start-Service Multipass -ErrorAction SilentlyContinue
-    Start-Sleep -Seconds 10
 
-    # Set VirtualBox driver
-    Write-Host "      Setting VirtualBox driver..." -ForegroundColor Gray
-    & multipass set local.driver=virtualbox 2>$null
-    Start-Sleep -Seconds 3
+    # Wait longer for VirtualBox initialization
+    Write-Host "      Waiting for VirtualBox initialization (30 seconds)..." -ForegroundColor Gray
+    Start-Sleep -Seconds 30
 
-    # Restart service to apply
-    Write-Host "      Restarting service to apply changes..." -ForegroundColor Gray
-    Restart-Service Multipass -ErrorAction SilentlyContinue
-    Start-Sleep -Seconds 10
+    # Test connection with retries
+    Write-Host "      Testing Multipass connection..." -ForegroundColor Gray
+    $maxRetries = 5
+    $retryCount = 0
+    $connected = $false
 
-    # Verify
-    $driver = & multipass get local.driver 2>$null
-    if ($driver -match "virtualbox") {
-        Write-Host "      VirtualBox driver configured!" -ForegroundColor Green
-    } else {
-        Write-Host "      Warning: Could not verify driver setting" -ForegroundColor Yellow
+    while ($retryCount -lt $maxRetries -and -not $connected) {
+        $retryCount++
+        $testResult = & multipass list 2>&1
+        if ($testResult -match "No instances found" -or $testResult -match "Name") {
+            Write-Host "      Multipass connection OK!" -ForegroundColor Green
+            $connected = $true
+        } else {
+            Write-Host "      Retry $retryCount/$maxRetries - waiting 10 more seconds..." -ForegroundColor Yellow
+            Start-Sleep -Seconds 10
+        }
     }
 
-    # Test connection
-    Write-Host "      Testing Multipass connection..." -ForegroundColor Gray
-    $testResult = & multipass list 2>&1
-    if ($testResult -match "No instances found" -or $testResult -match "Name") {
-        Write-Host "      Multipass connection OK!" -ForegroundColor Green
-    } else {
-        Write-Host "      Warning: Multipass may not be responding. Waiting more..." -ForegroundColor Yellow
-        Start-Sleep -Seconds 10
+    if (-not $connected) {
+        Write-Host "      ERROR: Could not connect to Multipass" -ForegroundColor Red
+        Write-Host "      Please try:" -ForegroundColor Yellow
+        Write-Host "        1. Restart your computer" -ForegroundColor White
+        Write-Host "        2. Run this script again" -ForegroundColor White
+        Read-Host "Press Enter to exit"
+        exit 1
     }
 }
 
