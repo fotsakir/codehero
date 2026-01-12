@@ -90,10 +90,22 @@ multipass launch 24.04 --name claude-dev --memory 6G --disk 64G --cpus 4 --timeo
 # Wait for cloud-init to complete
 echo "[5/5] Waiting for installation to complete..."
 echo "      This may take 10-15 more minutes..."
+echo ""
+echo "      Live installation progress:"
+echo "      ─────────────────────────────"
+
+# Show live progress in background, check for completion
+(
+    sleep 10  # Wait for cloud-init to start
+    multipass exec claude-dev -- tail -f /var/log/cloud-init-output.log 2>/dev/null | while read line; do
+        echo "      $line"
+    done
+) &
+TAIL_PID=$!
 
 MAX_WAIT=1200  # 20 minutes
 WAITED=0
-INTERVAL=30
+INTERVAL=10
 
 while [ $WAITED -lt $MAX_WAIT ]; do
     sleep $INTERVAL
@@ -110,10 +122,13 @@ while [ $WAITED -lt $MAX_WAIT ]; do
     if [ "$WEB_STATUS" == "active" ]; then
         break
     fi
-
-    MINUTES=$((WAITED / 60))
-    echo "      Still installing... ($MINUTES minutes elapsed)"
 done
+
+# Stop the tail process
+kill $TAIL_PID 2>/dev/null
+echo ""
+echo "      ─────────────────────────────"
+echo "      Installation complete!"
 
 # Get IP address
 IP=$(multipass exec claude-dev -- hostname -I | awk '{print $1}')
