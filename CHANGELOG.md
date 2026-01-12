@@ -5,6 +5,21 @@ All notable changes to the Fotios Claude System will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.51.0] - 2026-01-12
+
+### Fixed
+- **WSL2 Installer**: Complete rewrite for reliable Windows installation
+  - Uses `--exec` flag to bypass interactive OOBE user creation prompt
+  - Enables systemd in WSL (required for services to run)
+  - Sets root as default user automatically
+  - All commands now work without interactive prompts
+
+### Changed
+- **Website**: Reorganized installation options
+  - Windows: WSL2 as primary method
+  - Linux/macOS: Multipass
+  - Removed contact email from website
+
 ## [2.50.5] - 2026-01-12
 
 ### Changed

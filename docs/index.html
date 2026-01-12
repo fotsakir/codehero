@@ -37,7 +37,7 @@
         "description": "That app you've been dreaming about? Stop talking about it. Start building it. An AI that works alone - planning, coding, debugging - while you live your life.",
         "url": "https://fotsakir.github.io/Claude-AI-developer/",
         "downloadUrl": "https://github.com/fotsakir/Claude-AI-developer/releases/latest",
-        "softwareVersion": "2.50.5",
+        "softwareVersion": "2.51.0",
         "applicationCategory": "DeveloperApplication",
         "operatingSystem": "Ubuntu 22.04, Ubuntu 24.04",
         "offers": {
@@ -657,11 +657,11 @@
                 <button class="install-tab active" onclick="showInstallTab('manual')" style="flex: 1; padding: 12px 16px; background: none; border: none; color: var(--text-primary); cursor: pointer; font-size: 0.85rem; font-weight: 500; border-bottom: 2px solid var(--accent-primary); transition: all 0.2s;">
                     📦 Manual
                 </button>
-                <button class="install-tab" onclick="showInstallTab('wsl')" style="flex: 1; padding: 12px 16px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.85rem; font-weight: 500; border-bottom: 2px solid transparent; transition: all 0.2s;">
-                    🪟 WSL2
+                <button class="install-tab" onclick="showInstallTab('windows')" style="flex: 1; padding: 12px 16px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.85rem; font-weight: 500; border-bottom: 2px solid transparent; transition: all 0.2s;">
+                    🪟 Windows
                 </button>
                 <button class="install-tab" onclick="showInstallTab('multipass')" style="flex: 1; padding: 12px 16px; background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.85rem; font-weight: 500; border-bottom: 2px solid transparent; transition: all 0.2s;">
-                    ⚡ Multipass
+                    🍎🐧 macOS/Linux
                 </button>
             </div>
 
@@ -677,7 +677,7 @@
                     </p>
                     <div style="background: rgba(0,0,0,0.3); padding: 0.8rem; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; overflow-x: auto;">
                         <span style="color: var(--text-muted);"># On Ubuntu VM (as root)</span><br>
-                        <span style="color: var(--accent-cyan);">wget https://github.com/fotsakir/Claude-AI-developer/releases/latest/download/fotios-claude-system-2.50.5.zip</span><br>
+                        <span style="color: var(--accent-cyan);">wget https://github.com/fotsakir/Claude-AI-developer/releases/latest/download/fotios-claude-system-2.51.0.zip</span><br>
                         <span style="color: var(--accent-cyan);">unzip fotios-claude-system-*.zip && cd fotios-claude-system && ./setup.sh</span>
                     </div>
                     <p style="margin-top: 0.8rem; font-size: 0.8rem;">
@@ -685,36 +685,30 @@
                     </p>
                 </div>
 
-                <!-- WSL2 Tab -->
-                <div id="tab-wsl" class="tab-panel" style="display: none;">
+                <!-- Windows Tab (WSL) -->
+                <div id="tab-windows" class="tab-panel" style="display: none;">
                     <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.8rem;">
-                        <span style="font-size: 0.7rem; background: #0078d4; color: white; padding: 2px 6px; border-radius: 4px;">WINDOWS 10/11</span>
+                        <span style="font-size: 0.7rem; background: #0078d4; color: white; padding: 2px 6px; border-radius: 4px;">WSL2</span>
                     </div>
                     <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.8rem;">
-                        Run natively using <strong>Windows Subsystem for Linux</strong>. No extra software needed.
+                        Run natively using <strong>Windows Subsystem for Linux</strong>. Installs Ubuntu automatically.
                     </p>
                     <div style="background: rgba(0,0,0,0.3); padding: 0.8rem; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; overflow-x: auto;">
                         <span style="color: var(--accent-cyan);">irm https://raw.githubusercontent.com/fotsakir/Claude-AI-developer/main/multipass/install-wsl.ps1 | iex</span>
                     </div>
                     <p style="margin-top: 0.6rem; font-size: 0.75rem; color: var(--text-muted);">
-                        Run in <strong>PowerShell as Administrator</strong>. May require restart.
+                        Run in <strong>PowerShell as Administrator</strong>. May require restart if WSL not installed.
                     </p>
                 </div>
 
-                <!-- Multipass Tab -->
+                <!-- Multipass Tab (macOS/Linux) -->
                 <div id="tab-multipass" class="tab-panel" style="display: none;">
                     <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.8rem;">
-                        <span style="font-size: 0.7rem; background: #f59e0b; color: black; padding: 2px 6px; border-radius: 4px;">EXPERIMENTAL</span>
+                        <span style="font-size: 0.7rem; background: #f59e0b; color: black; padding: 2px 6px; border-radius: 4px;">MULTIPASS VM</span>
                     </div>
                     <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.8rem;">
-                        Auto-creates a VM using Multipass. Works on Windows, macOS, Linux.
+                        Auto-creates an Ubuntu VM using Multipass. Setup takes 15-20 minutes.
                     </p>
-                    <div style="font-size: 0.8rem; margin-bottom: 0.5rem;">
-                        <strong style="color: #0078d4;">🪟 Windows</strong> <span style="color: var(--text-muted);">(PowerShell Admin)</span>
-                    </div>
-                    <div style="background: rgba(0,0,0,0.3); padding: 0.5rem 0.8rem; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 0.65rem; overflow-x: auto; margin-bottom: 0.8rem;">
-                        <code style="color: var(--accent-cyan);">irm https://raw.githubusercontent.com/fotsakir/Claude-AI-developer/main/multipass/install-windows.ps1 | iex</code>
-                    </div>
                     <div style="font-size: 0.8rem; margin-bottom: 0.5rem;">
                         <strong style="color: #a3a3a3;">🍎 macOS</strong> <span style="color: var(--text-muted);">(Terminal)</span>
                     </div>
@@ -905,35 +899,6 @@
                 <div class="screenshot-caption">Projects - Manage multiple projects</div>
             </div>
         </div>
-    </section>
-
-    <!-- Enterprise Services Section -->
-    <section style="padding: 3rem 2rem; text-align: center; background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(251, 191, 36, 0.1)); border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle);">
-        <h2 style="font-size: 1.8rem; margin-bottom: 1rem; color: #f59e0b;">Need Custom Solutions?</h2>
-        <p style="font-size: 1.1rem; color: var(--text-secondary); max-width: 700px; margin: 0 auto 1.5rem auto;">
-            Want to integrate this into your business? Need custom features or enterprise support?<br>
-            <strong style="color: var(--text-primary);">We're ready to make the impossible happen.</strong>
-        </p>
-        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 1.5rem; max-width: 800px; margin: 0 auto 1.5rem auto;">
-            <div style="background: rgba(0,0,0,0.2); padding: 1rem 1.5rem; border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.3);">
-                <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">🏢</div>
-                <strong style="color: var(--text-primary);">Enterprise Integration</strong>
-                <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0.3rem 0 0 0;">Deploy in your infrastructure</p>
-            </div>
-            <div style="background: rgba(0,0,0,0.2); padding: 1rem 1.5rem; border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.3);">
-                <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">⚙️</div>
-                <strong style="color: var(--text-primary);">Custom Development</strong>
-                <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0.3rem 0 0 0;">Tailored features for your needs</p>
-            </div>
-            <div style="background: rgba(0,0,0,0.2); padding: 1rem 1.5rem; border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.3);">
-                <div style="font-size: 1.5rem; margin-bottom: 0.3rem;">🤝</div>
-                <strong style="color: var(--text-primary);">Consulting & Support</strong>
-                <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0.3rem 0 0 0;">Expert guidance & training</p>
-            </div>
-        </div>
-        <a href="mailto:fotsakir@smartnav.gr" style="display: inline-block; padding: 12px 28px; background: #f59e0b; color: #000; font-weight: 600; border-radius: 8px; text-decoration: none; font-size: 1rem;">
-            📧 Contact Us
-        </a>
     </section>
 
     <!-- CTA Section -->
