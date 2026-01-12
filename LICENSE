@@ -1,16 +1,84 @@
-MIT License
+# CodeHero Dual License
 
-Copyright (c) 2026 Fotios Tsakiridis / Smartnav Telematic Services Cyprus Ltd
+Copyright (c) 2025 Fotios Tsakiridis / Smartnav Telematic Services Cyprus Ltd
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+## Summary
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+- **Personal Use**: FREE
+- **Commercial Use (Revenue < €100K/year)**: FREE
+- **Commercial Use (Revenue ≥ €100K/year)**: Requires Commercial License
+
+---
+
+## Community License (Free)
+
+Permission is hereby granted, free of charge, to any individual or organization
+meeting the criteria below, to use, copy, modify, and distribute this software:
+
+### You CAN use CodeHero for FREE if:
+
+1. **Personal Use** - You are an individual using it for personal, non-commercial projects
+2. **Education** - You are a student, teacher, or educational institution
+3. **Non-Profit** - You are a registered non-profit organization
+4. **Small Business** - Your organization has less than €100,000 annual revenue
+5. **Evaluation** - You are evaluating the software for potential commercial use (up to 30 days)
+
+### Under this license you may:
+
+- Use the software for unlimited projects
+- Modify the source code for your own use
+- Share the software with others (under the same license terms)
+
+### Under this license you may NOT:
+
+- Remove or alter the copyright notices
+- Use the software for commercial purposes if your revenue exceeds €100,000/year
+- Sell, sublicense, or redistribute the software as a commercial product
+- Offer the software as a hosted service to third parties for payment
+
+---
+
+## Commercial License (Paid)
+
+A Commercial License is REQUIRED if:
+
+1. Your organization has €100,000 or more in annual revenue
+2. You want to offer CodeHero as a service to others
+3. You want to remove CodeHero branding (white-label)
+4. You want to integrate CodeHero into a commercial product
+
+### Commercial License includes:
+
+- Full rights to use in production environments
+- Priority email support
+- Access to future updates
+- Optional: Custom feature development
+- Optional: On-premise installation support
+- Optional: White-label rights
+
+### Pricing
+
+Contact us for commercial licensing:
+
+- **Email**: info@routeplanner.gr
+- **Website**: https://routeplanner.gr/en/
+
+---
+
+## Attribution Requirement
+
+All users (free and commercial) must:
+
+1. Keep the "Powered by CodeHero" attribution visible in the dashboard footer
+2. Retain all copyright notices in the source code
+3. Include this LICENSE file in any redistribution
+
+Commercial license holders may request removal of attribution as part of
+white-label licensing.
+
+---
+
+## Disclaimer
 
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -19,3 +87,15 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+## Questions?
+
+If you're unsure whether your use case requires a commercial license,
+please contact us at info@routeplanner.gr - we're happy to help!
+
+---
+
+**CodeHero** - The Developer That Never Rests
+https://github.com/fotsakir/codehero
