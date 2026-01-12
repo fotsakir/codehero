@@ -671,6 +671,34 @@
             </p>
         </details>
 
+        <!-- WSL2 Install Section (Windows) -->
+        <details open style="margin-top: 1.5rem; text-align: left; max-width: 750px; margin-left: auto; margin-right: auto; background: linear-gradient(135deg, rgba(0, 120, 212, 0.15), rgba(34, 211, 238, 0.15)); border-radius: 12px; border: 1px solid rgba(0, 120, 212, 0.3); padding: 1.5rem;">
+            <summary style="cursor: pointer; color: #0078d4; font-size: 1.2rem; font-weight: 600; list-style: none; display: flex; align-items: center; gap: 0.5rem;">
+                <span style="font-size: 1.3rem;">🪟</span> Windows with WSL2
+                <span style="margin-left: auto; font-size: 0.75rem; background: #0078d4; color: white; padding: 2px 8px; border-radius: 4px;">WINDOWS</span>
+            </summary>
+            <p style="margin: 1rem 0 0.5rem 0; font-size: 0.9rem; color: var(--text-secondary);">
+                Run natively on Windows using <strong>WSL2</strong> (Windows Subsystem for Linux). Built into Windows 10/11 - no extra software needed.
+            </p>
+            <div class="code-block" style="margin-top: 0.8rem;">
+                <span class="comment"># Step 1: Install WSL2 with Ubuntu (PowerShell as Admin)</span><br>
+                <span class="command">wsl --install -d Ubuntu-24.04</span><br><br>
+                <span class="comment"># Step 2: Restart Windows, then open Ubuntu from Start Menu</span><br><br>
+                <span class="comment"># Step 3: Inside Ubuntu terminal, run:</span><br>
+                <span class="command">sudo su</span><br>
+                <span class="command">apt-get update && apt-get install -y unzip wget net-tools</span><br>
+                <span class="command">cd /root</span><br>
+                <span class="command">wget https://github.com/fotsakir/Claude-AI-developer/releases/latest/download/fotios-claude-system-2.48.1.zip</span><br>
+                <span class="command">unzip fotios-claude-system-*.zip && cd fotios-claude-system</span><br>
+                <span class="command">./setup.sh</span><br><br>
+                <span class="comment"># Step 4: Get IP address</span><br>
+                <span class="command">hostname -I</span>
+            </div>
+            <p style="margin: 0.8rem 0 0 0; font-size: 0.85rem; color: var(--text-muted); text-align: center;">
+                Open <strong>https://YOUR_IP:9453</strong> in your Windows browser
+            </p>
+        </details>
+
         <!-- One-Click Install Section (Experimental) -->
         <details style="margin-top: 1.5rem; text-align: left; max-width: 750px; margin-left: auto; margin-right: auto; background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(251, 191, 36, 0.1)); border-radius: 12px; border: 1px solid rgba(245, 158, 11, 0.3); padding: 1.5rem;">
             <summary style="cursor: pointer; color: #f59e0b; font-size: 1.2rem; font-weight: 600; list-style: none; display: flex; align-items: center; gap: 0.5rem;">
