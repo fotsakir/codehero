@@ -5,6 +5,28 @@ All notable changes to the Fotios Claude System will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.52.0] - 2026-01-12
+
+### Added
+- **Rebrand to CodeHero** - New name and tagline: "The Developer That Never Sleeps"
+- **Comprehensive Installation Guides**
+  - WSL2 guide with full troubleshooting
+  - Multipass guide for macOS/Linux
+  - "How to Find Your VM's IP Address" section for all platforms
+  - "Start, Stop & Delete VMs" section for all platforms
+- **Live Installation Progress** - Multipass installers now show real-time installation output
+- **Daemon Startup Check** - Installers wait for Multipass daemon to be ready
+
+### Fixed
+- **macOS Installer**: Start Multipass daemon after installation
+- **Linux Installer**: Add daemon startup check
+- **Cloud-init**: Install Claude Code without trying to run it (fixes non-interactive error)
+- **Update Countdown**: Increased from 30 to 45 seconds for more reliable reload
+
+### Changed
+- **Website**: New branding with CodeHero name and improved tagline
+- **Usage Analytics**: Added to Core Features on website and README
+
 ## [2.51.0] - 2026-01-12
 
 ### Fixed
