@@ -2044,12 +2044,12 @@
 
                 if (data.success) {
                     document.getElementById('updateBadge').style.display = 'none';
-                    let countdown = 30;
+                    let countdown = 45;
                     document.getElementById('updateResult').innerHTML = `
                         <div style="text-align: center; padding: 20px;">
                             <div style="font-size: 3rem; margin-bottom: 16px;">⏳</div>
                             <div style="font-size: 1.2rem; color: var(--accent-green); margin-bottom: 8px;">Update Installing...</div>
-                            <div style="color: var(--text-secondary); margin-bottom: 16px;">Page will reload in <span id="countdown">30</span> seconds</div>
+                            <div style="color: var(--text-secondary); margin-bottom: 16px;">Page will reload in <span id="countdown">45</span> seconds</div>
                             <button class="activation-btn activation-btn-primary" onclick="location.reload()">Reload Now</button>
                         </div>
                     `;
