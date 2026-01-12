@@ -1,11 +1,11 @@
 <p align="center">
-  <span style="font-size: 80px;">🦸‍♂️</span>
+  <img src="assets/hero-icon.svg" width="80" height="96" alt="CodeHero">
 </p>
 
 <h1 align="center">CodeHero</h1>
 
 <p align="center">
-  <strong>The Developer That Never Sleeps</strong><br>
+  <strong>The Developer That Never Rests</strong><br>
   <em>Powered by Claude AI</em>
 </p>
 
