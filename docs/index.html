@@ -244,59 +244,68 @@
             filter: drop-shadow(0 0 30px rgba(99, 102, 241, 0.3));
         }
 
-        /* 24-Hour Story Scene */
+        /* 24-Hour Story Scene - Seamless Design */
         .day-scene {
             position: relative;
             width: 100%;
-            max-width: 600px;
-            height: 280px;
-            margin-bottom: 30px;
-            border-radius: 20px;
-            background: rgba(10, 10, 26, 0.6);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(99, 102, 241, 0.2);
-            overflow: hidden;
+            max-width: 700px;
+            height: 320px;
+            margin-bottom: 40px;
+            /* No border, no background - fully transparent */
+            overflow: visible;
         }
 
-        /* Animated clock */
+        /* Soft glow behind the scene */
+        .day-scene::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: 60%;
+            background: radial-gradient(ellipse at center, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        /* Clock - larger and more prominent */
         .scene-clock {
             position: absolute;
-            top: 15px;
-            left: 20px;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
             font-family: 'JetBrains Mono', monospace;
-            font-size: 1.8rem;
-            font-weight: 600;
+            font-size: 2.5rem;
+            font-weight: 700;
             color: #22d3ee;
-            text-shadow: 0 0 15px rgba(34, 211, 238, 0.5);
-            animation: cycleTime 24s linear infinite;
-        }
-
-        @keyframes cycleTime {
-            0% { content: "8:00 AM"; }
-            100% { content: "8:00 AM"; }
+            text-shadow: 0 0 30px rgba(34, 211, 238, 0.6);
+            letter-spacing: 2px;
         }
 
         .scene-label {
             position: absolute;
-            top: 50px;
-            left: 20px;
-            font-size: 0.9rem;
+            top: 55px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 1.1rem;
             color: #a78bfa;
             font-weight: 500;
-            animation: cycleLabel 24s linear infinite;
+            text-align: center;
+            text-shadow: 0 0 20px rgba(167, 139, 250, 0.5);
         }
 
-        /* Scene container for transitions */
+        /* Scene container */
         .scene-content {
             position: absolute;
-            bottom: 0;
+            top: 100px;
             left: 0;
             right: 0;
-            height: 200px;
+            bottom: 60px;
             display: flex;
-            align-items: flex-end;
-            justify-content: space-around;
-            padding: 0 30px 20px;
+            align-items: center;
+            justify-content: center;
+            gap: 60px;
         }
 
         /* Human side */
@@ -304,150 +313,137 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            width: 45%;
+            text-align: center;
         }
 
         .human-activity {
-            font-size: 3rem;
-            animation: cycleActivity 24s linear infinite;
-            filter: drop-shadow(0 0 10px rgba(255,255,255,0.3));
+            font-size: 5rem;
+            filter: drop-shadow(0 0 20px rgba(255,255,255,0.2));
+            transition: transform 0.5s ease, opacity 0.5s ease;
         }
 
         .human-status {
-            margin-top: 10px;
-            font-size: 0.85rem;
+            margin-top: 12px;
+            font-size: 1rem;
             color: #94a3b8;
-            text-align: center;
-            animation: cycleStatus 24s linear infinite;
+            font-weight: 500;
         }
 
-        /* Laptop side - always working */
+        /* Divider - subtle glow line */
+        .scene-divider {
+            width: 1px;
+            height: 120px;
+            background: linear-gradient(180deg,
+                transparent 0%,
+                rgba(99, 102, 241, 0.4) 30%,
+                rgba(99, 102, 241, 0.4) 70%,
+                transparent 100%);
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
+        }
+
+        /* Laptop side */
         .laptop-side {
             display: flex;
             flex-direction: column;
             align-items: center;
-            width: 45%;
         }
 
         .mini-laptop {
-            width: 100px;
-            height: 70px;
-            background: #0d0d1a;
-            border: 2px solid #3a3a5a;
-            border-radius: 6px 6px 0 0;
+            width: 140px;
+            height: 95px;
+            background: rgba(13, 13, 26, 0.8);
+            border: 2px solid rgba(58, 58, 90, 0.6);
+            border-radius: 8px 8px 0 0;
             position: relative;
-            box-shadow: 0 0 25px rgba(34, 211, 238, 0.4);
+            box-shadow:
+                0 0 40px rgba(34, 211, 238, 0.3),
+                inset 0 0 30px rgba(34, 211, 238, 0.1);
+            backdrop-filter: blur(5px);
         }
 
         .mini-laptop::after {
             content: '';
             position: absolute;
-            bottom: -8px;
-            left: -5px;
-            width: 110px;
-            height: 8px;
-            background: linear-gradient(180deg, #4a4a6a 0%, #3a3a5a 100%);
-            border-radius: 0 0 4px 4px;
+            bottom: -10px;
+            left: -8px;
+            width: 156px;
+            height: 10px;
+            background: linear-gradient(180deg, rgba(74, 74, 106, 0.8) 0%, rgba(58, 58, 90, 0.6) 100%);
+            border-radius: 0 0 6px 6px;
         }
 
         .mini-screen-code {
-            padding: 6px;
+            padding: 10px;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 0.4rem;
+            font-size: 0.55rem;
             color: #22d3ee;
-            line-height: 1.3;
-            animation: typeCode 2s steps(20) infinite;
-        }
-
-        @keyframes typeCode {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
+            line-height: 1.5;
         }
 
         .laptop-status {
-            margin-top: 15px;
-            font-size: 0.85rem;
+            margin-top: 18px;
+            font-size: 1rem;
             color: #10b981;
-            font-weight: 500;
+            font-weight: 600;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
+            text-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
         }
 
         .status-dot {
-            width: 8px;
-            height: 8px;
+            width: 10px;
+            height: 10px;
             background: #10b981;
             border-radius: 50%;
-            animation: pulse 1s ease-in-out infinite;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.8);
+            animation: pulse 1.5s ease-in-out infinite;
         }
 
         @keyframes pulse {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.2); opacity: 0.7; }
+            0%, 100% { transform: scale(1); box-shadow: 0 0 10px rgba(16, 185, 129, 0.8); }
+            50% { transform: scale(1.3); box-shadow: 0 0 20px rgba(16, 185, 129, 1); }
         }
 
-        /* Divider */
-        .scene-divider {
-            width: 2px;
-            height: 150px;
-            background: linear-gradient(180deg, transparent, rgba(99, 102, 241, 0.5), transparent);
-        }
-
-        /* Benefits bar */
+        /* Benefits bar - floating at bottom */
         .benefits-bar {
             position: absolute;
             bottom: 0;
-            left: 0;
-            right: 0;
-            height: 40px;
-            background: rgba(16, 185, 129, 0.1);
-            border-top: 1px solid rgba(16, 185, 129, 0.3);
+            left: 50%;
+            transform: translateX(-50%);
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 30px;
-            font-size: 0.75rem;
+            gap: 40px;
+            padding: 12px 30px;
+            background: transparent;
         }
 
         .benefit {
             display: flex;
             align-items: center;
-            gap: 6px;
-            color: #10b981;
+            gap: 8px;
+            color: rgba(16, 185, 129, 0.9);
+            font-size: 0.9rem;
+            font-weight: 500;
         }
 
         .benefit-icon {
-            font-size: 1rem;
+            font-size: 1.2rem;
+            filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.5));
         }
 
-        /* Scene animations - 24 second cycle (1 sec = 1 hour) */
+        /* Scene frame transitions - smoother */
         .scene-frame {
             position: absolute;
             inset: 0;
             opacity: 0;
-            transition: opacity 0.5s ease;
+            transition: opacity 1s ease-in-out;
+            pointer-events: none;
         }
 
-        .scene-frame.active {
+        .scene-frame:first-child {
             opacity: 1;
-        }
-
-        /* Individual scenes */
-        .scene-1, .scene-2, .scene-3, .scene-4, .scene-5, .scene-6 {
-            animation: sceneSwitch 24s linear infinite;
-        }
-
-        .scene-1 { animation-delay: 0s; }
-        .scene-2 { animation-delay: 4s; }
-        .scene-3 { animation-delay: 8s; }
-        .scene-4 { animation-delay: 12s; }
-        .scene-5 { animation-delay: 16s; }
-        .scene-6 { animation-delay: 20s; }
-
-        @keyframes sceneSwitch {
-            0%, 12% { opacity: 1; }
-            16.66%, 100% { opacity: 0; }
         }
 
         /* Hero Character */
@@ -1563,7 +1559,7 @@
             }, 250);
         });
 
-        // 24-Hour Scene Animation
+        // 24-Hour Scene Animation - Smooth transitions
         const scenes = [
             { time: "9:00 AM", label: "while you work..." },
             { time: "11:00 AM", label: "while you take a break..." },
@@ -1579,11 +1575,23 @@
         const frames = document.querySelectorAll('.scene-frame');
 
         function updateScene() {
-            // Update clock and label
-            clock.textContent = scenes[currentScene].time;
-            label.textContent = scenes[currentScene].label;
+            // Fade out current
+            clock.style.opacity = '0';
+            label.style.opacity = '0';
+            clock.style.transition = 'opacity 0.5s ease';
+            label.style.transition = 'opacity 0.5s ease';
 
-            // Update frame visibility
+            setTimeout(() => {
+                // Update content
+                clock.textContent = scenes[currentScene].time;
+                label.textContent = scenes[currentScene].label;
+
+                // Fade in
+                clock.style.opacity = '1';
+                label.style.opacity = '1';
+            }, 500);
+
+            // Update frame visibility with smooth transition
             frames.forEach((frame, i) => {
                 frame.style.opacity = i === currentScene ? '1' : '0';
             });
