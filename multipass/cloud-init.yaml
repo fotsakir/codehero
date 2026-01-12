@@ -1,0 +1,75 @@
+#cloud-config
+# Fotios Claude System - Automatic Installation
+# This cloud-init script installs everything automatically
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - unzip
+  - wget
+  - curl
+  - net-tools
+
+users:
+  - name: claude
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    groups: [sudo]
+
+write_files:
+  - path: /root/install-claude-system.sh
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      set -e
+
+      echo "=========================================="
+      echo "  Fotios Claude System - Auto Installer  "
+      echo "=========================================="
+      echo ""
+
+      cd /root
+
+      # Download latest release
+      echo "[1/4] Downloading latest release..."
+      LATEST_URL=$(curl -s https://api.github.com/repos/fotsakir/Claude-AI-developer/releases/latest | grep "browser_download_url.*zip" | cut -d '"' -f 4)
+      wget -q --show-progress "$LATEST_URL" -O fotios-claude-system.zip
+
+      # Extract
+      echo "[2/4] Extracting..."
+      unzip -q -o fotios-claude-system.zip
+      cd fotios-claude-system
+
+      # Run setup
+      echo "[3/4] Running setup (this takes 10-15 minutes)..."
+      chmod +x setup.sh
+      ./setup.sh
+
+      # Install Claude Code CLI
+      echo "[4/4] Installing Claude Code CLI..."
+      /opt/fotios-claude/scripts/install-claude-code.sh
+
+      # Get IP address
+      IP=$(hostname -I | awk '{print $1}')
+
+      echo ""
+      echo "=========================================="
+      echo "  Installation Complete!"
+      echo "=========================================="
+      echo ""
+      echo "  Dashboard: https://$IP:9453"
+      echo "  Username:  admin"
+      echo "  Password:  admin123"
+      echo ""
+      echo "  IMPORTANT: Change passwords after login:"
+      echo "  sudo /opt/fotios-claude/scripts/change-passwords.sh"
+      echo ""
+      echo "  To activate Claude Code:"
+      echo "  1. Open dashboard and click 'Activate Claude'"
+      echo "  2. Or SSH: su - claude && claude"
+      echo ""
+      echo "=========================================="
+
+runcmd:
+  - /root/install-claude-system.sh

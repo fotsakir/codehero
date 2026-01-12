@@ -197,14 +197,30 @@ Full Linux terminal in your browser:
 
 ## Quick Start
 
-### Requirements
+### One-Click Install (Recommended)
+
+**No technical knowledge required!** Works on Windows, macOS, and Linux.
+
+| Platform | Download | Instructions |
+|----------|----------|--------------|
+| **Windows** | [install-windows.ps1](https://raw.githubusercontent.com/fotsakir/Claude-AI-developer/main/multipass/install-windows.ps1) | Right-click → Run with PowerShell |
+| **macOS** | [install-macos.command](https://raw.githubusercontent.com/fotsakir/Claude-AI-developer/main/multipass/install-macos.command) | Double-click to run |
+| **Linux** | `curl -sL https://raw.githubusercontent.com/fotsakir/Claude-AI-developer/main/multipass/install-linux.sh \| bash` | Run in terminal |
+
+Wait 15-20 minutes. Done! [Full guide →](docs/MULTIPASS_INSTALL.md)
+
+---
+
+### Manual Install (Ubuntu Server)
+
+#### Requirements
 
 - Ubuntu 22.04 or 24.04 LTS (server or desktop)
 - 2GB+ RAM recommended
 - Root/sudo access
 - Internet connection
 
-### One-Command Install
+#### One-Command Install
 
 ```bash
 # Download, extract, and run
@@ -371,6 +387,7 @@ REVIEW_DEADLINE_DAYS=7
 
 | Document | Description |
 |----------|-------------|
+| [One-Click Install](docs/MULTIPASS_INSTALL.md) | Easiest install for Windows, macOS, Linux |
 | [User Guide](docs/USER_GUIDE.md) | How to use the admin panel (with screenshots) |
 | [Telegram Setup](docs/TELEGRAM_SETUP.md) | Get instant alerts on your phone |
 | [VM Installation](docs/VM_INSTALLATION.md) | Install on VMware, Hyper-V, VirtualBox, UTM, Parallels |
