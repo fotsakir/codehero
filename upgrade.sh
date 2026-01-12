@@ -370,7 +370,12 @@ cp "${SOURCE_DIR}/CLAUDE.md" "${INSTALL_DIR}/" 2>/dev/null || true
 
 log_success "Files copied"
 
-# Step 6: Start services
+# Step 6: Fix log file permissions (in case they were created as root)
+log_info "Fixing log file permissions..."
+touch /var/log/fotios-claude/daemon.log /var/log/fotios-claude/web.log 2>/dev/null || true
+chown claude:claude /var/log/fotios-claude/daemon.log /var/log/fotios-claude/web.log 2>/dev/null || true
+
+# Step 7: Start services
 log_info "Starting services..."
 systemctl start fotios-claude-daemon
 sleep 1

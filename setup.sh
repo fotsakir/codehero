@@ -385,6 +385,9 @@ chown -R ${CLAUDE_USER}:${CLAUDE_USER} ${WEB_ROOT}
 chown -R ${CLAUDE_USER}:${CLAUDE_USER} ${APP_ROOT}
 chown -R ${CLAUDE_USER}:${CLAUDE_USER} ${INSTALL_DIR}
 chown -R ${CLAUDE_USER}:${CLAUDE_USER} ${LOG_DIR}
+# Pre-create log files with correct ownership (systemd creates as root otherwise)
+touch ${LOG_DIR}/daemon.log ${LOG_DIR}/web.log
+chown ${CLAUDE_USER}:${CLAUDE_USER} ${LOG_DIR}/daemon.log ${LOG_DIR}/web.log
 chown -R ${CLAUDE_USER}:${CLAUDE_USER} /var/run/fotios-claude
 chown -R ${CLAUDE_USER}:${CLAUDE_USER} /var/backups/fotios-claude
 chown -R ${CLAUDE_USER}:${CLAUDE_USER} /home/${CLAUDE_USER}
