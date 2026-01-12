@@ -486,6 +486,137 @@
             border-radius: 2px;
         }
 
+        /* Hero Character */
+        .hero-title-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+        }
+
+        .hero-character {
+            position: relative;
+            width: 70px;
+            height: 80px;
+        }
+
+        .hero-body {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 35px;
+            height: 45px;
+            background: linear-gradient(180deg, #6366f1 0%, #4f46e5 100%);
+            border-radius: 8px 8px 4px 4px;
+            box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
+        }
+
+        .hero-body::before {
+            content: '</>';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.6rem;
+            font-weight: bold;
+            color: #22d3ee;
+            text-shadow: 0 0 8px rgba(34, 211, 238, 0.8);
+        }
+
+        .hero-head {
+            position: absolute;
+            bottom: 42px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 28px;
+            height: 28px;
+            background: linear-gradient(180deg, #818cf8 0%, #6366f1 100%);
+            border-radius: 50%;
+            box-shadow: 0 0 15px rgba(129, 140, 248, 0.4);
+        }
+
+        .hero-mask {
+            position: absolute;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 22px;
+            height: 8px;
+            background: #0f0f23;
+            border-radius: 4px;
+        }
+
+        .hero-mask::before,
+        .hero-mask::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            width: 6px;
+            height: 4px;
+            background: #22d3ee;
+            border-radius: 2px;
+            animation: eyeGlow 2s ease-in-out infinite;
+        }
+
+        .hero-mask::before { left: 3px; }
+        .hero-mask::after { right: 3px; animation-delay: 0.1s; }
+
+        @keyframes eyeGlow {
+            0%, 100% { box-shadow: 0 0 4px rgba(34, 211, 238, 0.8); }
+            50% { box-shadow: 0 0 10px rgba(34, 211, 238, 1), 0 0 20px rgba(34, 211, 238, 0.5); }
+        }
+
+        .hero-cape {
+            position: absolute;
+            bottom: 5px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(180deg, #a78bfa 0%, #7c3aed 100%);
+            clip-path: polygon(15% 0%, 85% 0%, 100% 100%, 50% 80%, 0% 100%);
+            animation: capeWave 3s ease-in-out infinite;
+            transform-origin: top center;
+            z-index: -1;
+        }
+
+        @keyframes capeWave {
+            0%, 100% {
+                transform: translateX(-50%) skewX(0deg);
+                clip-path: polygon(15% 0%, 85% 0%, 100% 100%, 50% 80%, 0% 100%);
+            }
+            25% {
+                transform: translateX(-50%) skewX(3deg);
+                clip-path: polygon(15% 0%, 85% 0%, 95% 100%, 50% 85%, 5% 100%);
+            }
+            75% {
+                transform: translateX(-50%) skewX(-3deg);
+                clip-path: polygon(15% 0%, 85% 0%, 105% 100%, 50% 75%, -5% 100%);
+            }
+        }
+
+        .hero-arm {
+            position: absolute;
+            width: 8px;
+            height: 25px;
+            background: linear-gradient(180deg, #6366f1 0%, #4f46e5 100%);
+            border-radius: 4px;
+        }
+
+        .hero-arm.left {
+            bottom: 15px;
+            left: 5px;
+            transform: rotate(15deg);
+        }
+
+        .hero-arm.right {
+            bottom: 15px;
+            right: 5px;
+            transform: rotate(-15deg);
+        }
+
         .hero h1 {
             font-size: clamp(2.5rem, 5vw, 4rem);
             font-weight: 700;
@@ -930,7 +1061,18 @@
             <div class="no-coffee">☕</div>
         </div>
 
-        <h1>CodeHero</h1>
+        <div class="hero-title-row">
+            <div class="hero-character">
+                <div class="hero-cape"></div>
+                <div class="hero-body"></div>
+                <div class="hero-head">
+                    <div class="hero-mask"></div>
+                </div>
+                <div class="hero-arm left"></div>
+                <div class="hero-arm right"></div>
+            </div>
+            <h1>CodeHero</h1>
+        </div>
         <div style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 16px;">
             <span style="background: linear-gradient(135deg, #8b5cf6, #6366f1); padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; color: white; display: flex; align-items: center; gap: 6px;">
                 ⚡ Powered by Claude AI
