@@ -58,15 +58,33 @@ if (-not $ubuntuInstalled) {
 # Initialize Ubuntu with root as default user (skip user creation prompt)
 Write-Host "[3/4] Initializing Ubuntu..." -ForegroundColor Yellow
 
-# Set root as default user to skip the interactive user creation
+# Create wsl.conf to set root as default user
 Write-Host "      Configuring default user..." -ForegroundColor Gray
-ubuntu2404.exe config --default-user root 2>$null
+$wslConf = @"
+[user]
+default=root
+"@
+$wslConfPath = "$env:TEMP\wsl.conf"
+$wslConf | Out-File -FilePath $wslConfPath -Encoding ascii -NoNewline
 
-# Start WSL to initialize it
-Write-Host "      Starting Ubuntu..." -ForegroundColor Gray
-wsl -d Ubuntu-24.04 -u root -- echo "Ubuntu initialized" 2>$null
+# Copy wsl.conf to Ubuntu (need to do initial launch first)
+wsl -d Ubuntu-24.04 -u root -- bash -c "echo 'Initializing...'" 2>$null
+if ($LASTEXITCODE -ne 0) {
+    # First launch - need to set up via import or direct config
+    Write-Host "      First time setup..." -ForegroundColor Gray
+    # Use powershell to write directly to the WSL filesystem
+    $wslEtcPath = "\\wsl$\Ubuntu-24.04\etc\wsl.conf"
+    $wslConf | Out-File -FilePath $wslEtcPath -Encoding ascii -NoNewline -ErrorAction SilentlyContinue
+    # Terminate and restart to apply
+    wsl --terminate Ubuntu-24.04 2>$null
+    Start-Sleep -Seconds 2
+}
 
+# Now run as root
+wsl -d Ubuntu-24.04 -u root -- echo "Ubuntu ready" 2>$null
 Write-Host "      Ubuntu ready!" -ForegroundColor Green
+
+Remove-Item $wslConfPath -Force -ErrorAction SilentlyContinue
 
 # Run the installation inside WSL
 Write-Host "[4/4] Installing Fotios Claude System inside WSL..." -ForegroundColor Yellow
