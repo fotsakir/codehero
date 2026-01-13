@@ -1652,16 +1652,16 @@
         setInterval(loadUsageStats, 30000);
 
         // Full page refresh every 60 seconds (only if no modal is open)
-        function schedulePageRefresh() {
+        function schedulePageRefresh(delay = 60000) {
             setTimeout(() => {
                 const modalOpen = document.querySelector('.modal-overlay.show');
                 if (!modalOpen) {
                     location.reload();
                 } else {
-                    // Modal is open, try again in 10 seconds
-                    schedulePageRefresh();
+                    // Modal is open, check again in 10 seconds
+                    schedulePageRefresh(10000);
                 }
-            }, 60000);
+            }, delay);
         }
         schedulePageRefresh();
 
