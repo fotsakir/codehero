@@ -12,7 +12,7 @@
 
 ```bash
 cd /root
-unzip codehero-2.58.0.zip
+unzip codehero-2.59.2.zip
 cd codehero
 ```
 
@@ -98,7 +98,7 @@ To upgrade from a previous version:
 ```bash
 # Download and extract new version
 cd /root
-unzip codehero-2.58.0.zip
+unzip codehero-2.59.2.zip
 cd codehero
 
 # Preview what will change (recommended)

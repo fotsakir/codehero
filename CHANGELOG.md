@@ -5,6 +5,12 @@ All notable changes to CodeHero will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.59.2] - 2026-01-13
+
+### Changed
+- **Stable Release** - Reverted to 2.58.0 codebase for stability
+- Removed experimental activation popup and keyring features
+
 ## [2.58.0] - 2026-01-13
 
 ### Changed
