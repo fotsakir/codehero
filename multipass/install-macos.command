@@ -94,7 +94,7 @@ echo ""
 
 # Launch VM in background so we can show progress
 # Using conservative resources for compatibility
-multipass launch 24.04 --name claude-dev --memory 4G --disk 64G --cpus 2 --timeout 2400 --cloud-init "$CLOUD_INIT_PATH" &
+multipass launch 24.04 --name claude-dev --memory 4G --disk 64G --cpus 2 --timeout 3600 --cloud-init "$CLOUD_INIT_PATH" &
 LAUNCH_PID=$!
 
 # Wait for VM to be running
