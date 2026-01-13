@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activate Claude - CodeHero</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css">
+    <style>
+        :root {
+            --bg-primary: #07070d;
+            --bg-secondary: #0d0d16;
+            --bg-card: rgba(18, 18, 32, 0.9);
+            --border-subtle: rgba(99, 102, 241, 0.15);
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-primary: #6366f1;
+            --accent-secondary: #8b5cf6;
+            --accent-orange: #f59e0b;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --glow-primary: 0 0 20px rgba(99, 102, 241, 0.3);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h1 svg {
+            width: 32px;
+            height: 38px;
+        }
+
+        .activation-tabs {
+            display: flex;
+            margin-bottom: 20px;
+        }
+
+        .activation-tab {
+            flex: 1;
+            padding: 12px 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .activation-tab:first-child { border-radius: 8px 0 0 8px; }
+        .activation-tab:last-child { border-radius: 0 8px 8px 0; border-left: none; }
+        .activation-tab.active {
+            background: var(--accent-primary);
+            color: white;
+            border-color: var(--accent-primary);
+        }
+
+        .activation-panel { display: none; }
+        .activation-panel.active { display: block; }
+
+        .info-text {
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            line-height: 1.5;
+        }
+
+        .warning-text {
+            color: var(--accent-orange);
+            font-size: 13px;
+            margin-bottom: 16px;
+        }
+
+        .activation-terminal {
+            height: 300px;
+            background: #000;
+            border-radius: 8px;
+            padding: 8px;
+            margin-bottom: 16px;
+        }
+
+        .activation-controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .activation-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .activation-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .activation-btn-primary {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+        }
+
+        .activation-btn-primary:hover:not(:disabled) { box-shadow: var(--glow-primary); }
+
+        .activation-btn-secondary {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border-subtle);
+        }
+
+        .activation-btn-danger {
+            background: var(--accent-red);
+            color: white;
+            margin-left: auto;
+        }
+
+        .apikey-input {
+            display: flex;
+            gap: 10px;
+        }
+
+        .apikey-input input {
+            flex: 1;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .apikey-input input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+
+        #activationStatus {
+            margin-top: 16px;
+            padding: 12px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        #activationStatus.success {
+            background: rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #6ee7b7;
+        }
+
+        #activationStatus.error {
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fca5a5;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            background: var(--bg-card);
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--accent-red);
+        }
+
+        .status-dot.active {
+            background: var(--accent-green);
+            box-shadow: 0 0 10px var(--accent-green);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 120">
+                <defs>
+                    <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style="stop-color:#6366f1"/>
+                        <stop offset="100%" style="stop-color:#4f46e5"/>
+                    </linearGradient>
+                    <linearGradient id="headGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style="stop-color:#818cf8"/>
+                        <stop offset="100%" style="stop-color:#6366f1"/>
+                    </linearGradient>
+                    <linearGradient id="capeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style="stop-color:#a78bfa"/>
+                        <stop offset="100%" style="stop-color:#7c3aed"/>
+                    </linearGradient>
+                </defs>
+                <path d="M25 45 L50 40 L75 45 L85 110 L50 95 L15 110 Z" fill="url(#capeGrad)"/>
+                <rect x="32" y="50" width="36" height="50" rx="8" fill="url(#bodyGrad)"/>
+                <text x="50" y="82" font-family="monospace" font-size="14" font-weight="bold" fill="#22d3ee" text-anchor="middle">&lt;/&gt;</text>
+                <circle cx="50" cy="30" r="22" fill="url(#headGrad)"/>
+                <rect x="35" y="24" width="30" height="12" rx="4" fill="#0f0f23"/>
+                <rect x="38" y="27" width="8" height="6" rx="2" fill="#22d3ee"/>
+                <rect x="54" y="27" width="8" height="6" rx="2" fill="#22d3ee"/>
+                <rect x="20" y="55" width="12" height="30" rx="4" fill="url(#bodyGrad)" transform="rotate(15, 26, 55)"/>
+                <rect x="68" y="55" width="12" height="30" rx="4" fill="url(#bodyGrad)" transform="rotate(-15, 74, 55)"/>
+            </svg>
+            Claude License Activation
+        </h1>
+
+        <div class="status-indicator">
+            <span class="status-dot" id="statusDot"></span>
+            <span id="statusText">Not activated</span>
+        </div>
+
+        <div class="activation-tabs">
+            <button class="activation-tab active" onclick="showTab('subscription')">Subscription</button>
+            <button class="activation-tab" onclick="showTab('apikey')">API Key</button>
+        </div>
+
+        <!-- Subscription Tab -->
+        <div class="activation-panel active" id="panel-subscription">
+            <p class="info-text">
+                Activate with your Claude Pro/Max subscription. Copy the URL, authorize in browser, then paste the code.
+            </p>
+            <p class="warning-text">
+                <strong>Note:</strong> Use right-click for copy/paste, NOT Ctrl+C/Ctrl+V
+            </p>
+            <div id="activation-terminal" class="activation-terminal"></div>
+            <div class="activation-controls">
+                <button class="activation-btn activation-btn-primary" id="startBtn" onclick="startActivation()">Start Activation</button>
+                <button class="activation-btn activation-btn-secondary" id="stopBtn" onclick="stopActivation()" disabled>Stop</button>
+                <button class="activation-btn activation-btn-danger" id="deactivateBtn" onclick="deactivateLicense()" style="display: none;">Deactivate</button>
+            </div>
+        </div>
+
+        <!-- API Key Tab -->
+        <div class="activation-panel" id="panel-apikey">
+            <p class="info-text">
+                Activate with an Anthropic API key from console.anthropic.com
+            </p>
+            <div class="apikey-input">
+                <input type="password" id="apiKeyInput" placeholder="sk-ant-api03-...">
+                <button class="activation-btn activation-btn-primary" onclick="saveApiKey()">Save API Key</button>
+            </div>
+        </div>
+
+        <div id="activationStatus"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+    <script>
+        let term = null;
+        let fitAddon = null;
+        let sessionId = null;
+        let pollInterval = null;
+
+        // Initialize terminal
+        function initTerminal() {
+            term = new Terminal({
+                cursorBlink: true,
+                fontSize: 14,
+                fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+                theme: {
+                    background: '#000000',
+                    foreground: '#e2e8f0',
+                    cursor: '#6366f1',
+                    selection: 'rgba(99, 102, 241, 0.3)'
+                }
+            });
+            fitAddon = new FitAddon.FitAddon();
+            term.loadAddon(fitAddon);
+            term.open(document.getElementById('activation-terminal'));
+            fitAddon.fit();
+
+            term.onData(data => {
+                if (sessionId) {
+                    fetch(`/api/claude/activate/input/${sessionId}`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({input: data})
+                    });
+                }
+            });
+
+            window.addEventListener('resize', () => fitAddon.fit());
+        }
+
+        // Check status on load
+        async function checkStatus() {
+            try {
+                const resp = await fetch('/api/claude/status');
+                const data = await resp.json();
+                const dot = document.getElementById('statusDot');
+                const text = document.getElementById('statusText');
+                const deactivateBtn = document.getElementById('deactivateBtn');
+
+                if (data.activated) {
+                    dot.classList.add('active');
+                    text.textContent = data.plan ? `Activated (${data.plan})` : 'Activated';
+                    deactivateBtn.style.display = 'block';
+                } else {
+                    dot.classList.remove('active');
+                    text.textContent = 'Not activated';
+                    deactivateBtn.style.display = 'none';
+                }
+            } catch (e) {
+                console.error('Status check failed:', e);
+            }
+        }
+
+        function showTab(tab) {
+            document.querySelectorAll('.activation-tab').forEach((t, i) => {
+                t.classList.toggle('active', (tab === 'subscription' && i === 0) || (tab === 'apikey' && i === 1));
+            });
+            document.getElementById('panel-subscription').classList.toggle('active', tab === 'subscription');
+            document.getElementById('panel-apikey').classList.toggle('active', tab === 'apikey');
+        }
+
+        function showStatus(type, message) {
+            const status = document.getElementById('activationStatus');
+            status.className = type;
+            status.textContent = message;
+            status.style.display = 'block';
+            if (type === 'success') {
+                setTimeout(() => { status.style.display = 'none'; }, 5000);
+            }
+        }
+
+        async function startActivation() {
+            try {
+                document.getElementById('startBtn').disabled = true;
+                const resp = await fetch('/api/claude/activate/start', { method: 'POST' });
+                const data = await resp.json();
+                if (data.session_id) {
+                    sessionId = data.session_id;
+                    term.clear();
+                    term.focus();
+                    document.getElementById('stopBtn').disabled = false;
+                    pollInterval = setInterval(pollOutput, 100);
+                } else {
+                    showStatus('error', 'Failed to start: ' + (data.error || 'Unknown'));
+                    document.getElementById('startBtn').disabled = false;
+                }
+            } catch (e) {
+                showStatus('error', 'Failed to start activation');
+                document.getElementById('startBtn').disabled = false;
+            }
+        }
+
+        async function pollOutput() {
+            if (!sessionId) return;
+            try {
+                const resp = await fetch(`/api/claude/activate/output/${sessionId}`);
+                const data = await resp.json();
+                if (data.output) {
+                    term.write(data.output);
+                }
+                if (data.status === 'completed' || data.status === 'error') {
+                    clearInterval(pollInterval);
+                    sessionId = null;
+                    document.getElementById('startBtn').disabled = false;
+                    document.getElementById('stopBtn').disabled = true;
+                    if (data.status === 'completed') {
+                        showStatus('success', 'Activation completed! Checking status...');
+                        setTimeout(checkStatus, 1000);
+                    }
+                }
+            } catch (e) {
+                console.error('Poll error:', e);
+            }
+        }
+
+        async function stopActivation() {
+            if (!sessionId) return;
+            try {
+                await fetch(`/api/claude/activate/stop/${sessionId}`, { method: 'POST' });
+                clearInterval(pollInterval);
+                sessionId = null;
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+                showStatus('error', 'Activation stopped');
+            } catch (e) {
+                console.error('Stop error:', e);
+            }
+        }
+
+        async function saveApiKey() {
+            const key = document.getElementById('apiKeyInput').value.trim();
+            if (!key) {
+                showStatus('error', 'Please enter an API key');
+                return;
+            }
+            try {
+                const resp = await fetch('/api/claude/apikey', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({api_key: key})
+                });
+                const data = await resp.json();
+                if (data.success) {
+                    showStatus('success', 'API key saved successfully!');
+                    document.getElementById('apiKeyInput').value = '';
+                    checkStatus();
+                } else {
+                    showStatus('error', data.error || 'Failed to save API key');
+                }
+            } catch (e) {
+                showStatus('error', 'Failed to save API key');
+            }
+        }
+
+        async function deactivateLicense() {
+            if (!confirm('Deactivate Claude license?')) return;
+            try {
+                const resp = await fetch('/api/claude/deactivate', { method: 'POST' });
+                const data = await resp.json();
+                if (data.success) {
+                    showStatus('success', 'License deactivated');
+                    checkStatus();
+                } else {
+                    showStatus('error', data.error || 'Failed to deactivate');
+                }
+            } catch (e) {
+                showStatus('error', 'Failed to deactivate');
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initTerminal();
+            checkStatus();
+        });
+    </script>
+</body>
+</html>

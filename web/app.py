@@ -3035,6 +3035,12 @@ def internal_broadcast():
 
 # ============ CLAUDE ACTIVATION ============
 
+@app.route('/activate')
+@login_required
+def activate_popup():
+    """Standalone activation page for popup window"""
+    return render_template('activate_popup.html')
+
 # Store terminal sessions for activation
 activation_sessions = {}
 # Store Claude chat sessions
