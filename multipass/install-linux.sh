@@ -101,13 +101,15 @@ fi
 # Create VM
 echo "[4/5] Creating VM and installing software..."
 echo "      - Name: claude-dev"
-echo "      - Memory: 6GB"
+echo "      - Memory: 4GB"
 echo "      - Disk: 64GB"
+echo "      - CPUs: 2"
 echo "      - OS: Ubuntu 24.04 LTS"
 echo ""
 
 # Launch VM in background so we can show progress
-multipass launch 24.04 --name claude-dev --memory 6G --disk 64G --cpus 4 --timeout 1800 --cloud-init "$CLOUD_INIT_PATH" &
+# Using conservative resources for compatibility
+multipass launch 24.04 --name claude-dev --memory 4G --disk 64G --cpus 2 --timeout 2400 --cloud-init "$CLOUD_INIT_PATH" &
 LAUNCH_PID=$!
 
 # Wait for VM to be running
