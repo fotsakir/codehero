@@ -5,6 +5,18 @@ All notable changes to CodeHero will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.57.0] - 2026-01-13
+
+### Changed
+- **Website Mobile Layout** - Reordered hero section for mobile (CodeHero title first, animation below)
+- **Website Desktop Layout** - Same order as mobile for consistency
+- **Hero Icon Mobile** - Centered above title on mobile screens
+- **Family Emoji Fix** - Changed to 🏠 for better cross-platform support
+- **Multipass Scripts** - Simplified installation, removed background processes for stability
+- **Install Commands** - Simplified to `curl | bash` format
+- **Resources** - Reduced VM resources (4GB RAM, 2 CPUs) for better compatibility
+- **Timeout** - Increased to 1 hour for slower connections
+
 ## [2.56.0] - 2026-01-12
 
 ### Changed
