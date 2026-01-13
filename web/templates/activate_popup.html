@@ -383,13 +383,17 @@
                 if (data.output) {
                     term.write(data.output);
                 }
-                if (data.status === 'completed' || data.status === 'error') {
+                // Check if process finished (running === false)
+                if (data.running === false) {
                     clearInterval(pollInterval);
                     sessionId = null;
                     document.getElementById('startBtn').disabled = false;
                     document.getElementById('stopBtn').disabled = true;
-                    if (data.status === 'completed') {
-                        showStatus('success', 'Activation completed! Checking status...');
+                    if (data.activated) {
+                        showStatus('success', 'Activation completed successfully!');
+                        setTimeout(checkStatus, 1000);
+                    } else {
+                        // Process ended but check status anyway
                         setTimeout(checkStatus, 1000);
                     }
                 }
