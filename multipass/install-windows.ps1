@@ -19,7 +19,7 @@ if (-not $isAdmin) {
 }
 
 # Check if Hyper-V is available (Windows Pro/Enterprise) or need VirtualBox (Windows Home)
-Write-Host "[1/6] Checking Windows edition..." -ForegroundColor Yellow
+Write-Host "[1/7] Checking Windows edition..." -ForegroundColor Yellow
 $hyperv = Get-WindowsOptionalFeature -Online -FeatureName Microsoft-Hyper-V -ErrorAction SilentlyContinue
 $needsVirtualBox = $false
 
@@ -47,7 +47,7 @@ if (-not $hyperv -or $hyperv.State -ne "Enabled") {
 
 # Install VirtualBox if needed (Windows Home)
 if ($needsVirtualBox) {
-    Write-Host "[2/6] Checking for VirtualBox..." -ForegroundColor Yellow
+    Write-Host "[2/7] Checking for VirtualBox..." -ForegroundColor Yellow
     $vbox = Get-Command VBoxManage -ErrorAction SilentlyContinue
 
     if (-not $vbox) {
@@ -67,7 +67,7 @@ if ($needsVirtualBox) {
 }
 
 # Check if Multipass is installed
-Write-Host "[3/6] Checking for Multipass..." -ForegroundColor Yellow
+Write-Host "[3/7] Checking for Multipass..." -ForegroundColor Yellow
 $multipass = Get-Command multipass -ErrorAction SilentlyContinue
 $freshInstall = $false
 
@@ -185,15 +185,70 @@ driver=virtualbox
     }
 }
 
-# Download cloud-init
-Write-Host "[4/6] Downloading configuration..." -ForegroundColor Yellow
+# Setup SSH key for VM
+Write-Host "[4/7] Setting up SSH key for VM access..." -ForegroundColor Yellow
+$sshDir = "$env:USERPROFILE\.ssh"
+$sshKeyPath = "$sshDir\codehero_vm"
+
+# Ensure .ssh directory exists
+if (-not (Test-Path $sshDir)) {
+    New-Item -ItemType Directory -Path $sshDir -Force | Out-Null
+}
+
+if (Test-Path $sshKeyPath) {
+    Write-Host "      SSH key already exists at $sshKeyPath" -ForegroundColor Green
+} else {
+    Write-Host "      Generating new SSH key..." -ForegroundColor Gray
+    
+    # Use ssh-keygen (available in Windows 10+)
+    $sshKeygen = Get-Command ssh-keygen -ErrorAction SilentlyContinue
+    if ($sshKeygen) {
+        & ssh-keygen -t rsa -b 4096 -f $sshKeyPath -N '""' -C "codehero-vm-$(Get-Date -Format 'yyyyMMdd')" | Out-Null
+        Write-Host "      SSH key created: $sshKeyPath" -ForegroundColor Green
+    } else {
+        Write-Host "      ERROR: ssh-keygen not found. OpenSSH may not be installed." -ForegroundColor Red
+        Write-Host "      Install OpenSSH Client from Windows Settings > Apps > Optional Features" -ForegroundColor Yellow
+        Read-Host "Press Enter to exit"
+        exit 1
+    }
+}
+
+# Start ssh-agent and add key
+Write-Host "      Adding key to ssh-agent..." -ForegroundColor Gray
+$sshAgent = Get-Service ssh-agent -ErrorAction SilentlyContinue
+if ($sshAgent) {
+    if ($sshAgent.Status -ne 'Running') {
+        Set-Service ssh-agent -StartupType Manual
+        Start-Service ssh-agent
+    }
+    & ssh-add $sshKeyPath 2>&1 | Out-Null
+    Write-Host "      Key added to ssh-agent." -ForegroundColor Green
+} else {
+    Write-Host "      Warning: ssh-agent service not available" -ForegroundColor Yellow
+}
+
+# Read the public key
+$sshPubKey = Get-Content "${sshKeyPath}.pub" -Raw
+$sshPubKey = $sshPubKey.Trim()
+Write-Host "      Public key ready for VM." -ForegroundColor Green
+
+# Download cloud-init and inject SSH key
+Write-Host "[5/7] Preparing VM configuration..." -ForegroundColor Yellow
 $cloudInitUrl = "https://raw.githubusercontent.com/fotsakir/codehero/main/multipass/cloud-init.yaml"
 $cloudInitPath = "$env:TEMP\cloud-init.yaml"
+
+# Download the template
 Invoke-WebRequest -Uri $cloudInitUrl -OutFile $cloudInitPath
-Write-Host "      Done." -ForegroundColor Green
+
+# Replace the placeholder with actual SSH key (both occurrences)
+$cloudInitContent = Get-Content $cloudInitPath -Raw
+$cloudInitContent = $cloudInitContent -replace 'PASTE_YOUR_SSH_PUBLIC_KEY_HERE', $sshPubKey
+$cloudInitContent | Out-File -FilePath $cloudInitPath -Encoding utf8 -NoNewline
+
+Write-Host "      Configuration ready with SSH key." -ForegroundColor Green
 
 # Check if VM already exists
-Write-Host "[5/6] Checking for existing VM..." -ForegroundColor Yellow
+Write-Host "[6/7] Checking for existing VM..." -ForegroundColor Yellow
 $ErrorActionPreference = "SilentlyContinue"
 $existingVm = & multipass list --format csv 2>&1 | Select-String "claude-dev"
 $ErrorActionPreference = "Stop"
@@ -214,7 +269,7 @@ if ($existingVm) {
 }
 
 # Create VM
-Write-Host "[6/6] Creating VM (this takes 15-20 minutes)..." -ForegroundColor Yellow
+Write-Host "[7/7] Creating VM (this takes 15-20 minutes)..." -ForegroundColor Yellow
 Write-Host "      - Name: claude-dev" -ForegroundColor Gray
 Write-Host "      - Memory: 6GB" -ForegroundColor Gray
 Write-Host "      - Disk: 64GB" -ForegroundColor Gray
@@ -302,6 +357,35 @@ if (-not $ip) {
     Write-Host ""
 }
 
+# Setup SSH config for easy connection
+Write-Host ""
+Write-Host "Setting up SSH configuration..." -ForegroundColor Yellow
+$sshConfigFile = "$sshDir\config"
+
+$sshConfigEntry = @"
+# CodeHero VM
+Host codehero
+    HostName $ip
+    User claude
+    IdentityFile $sshKeyPath
+    StrictHostKeyChecking no
+    UserKnownHostsFile=NUL
+"@
+
+# Check if config file exists and if entry already exists
+if (Test-Path $sshConfigFile) {
+    $configContent = Get-Content $sshConfigFile -Raw
+    if ($configContent -match "# CodeHero VM") {
+        # Remove old entry
+        $configContent = $configContent -replace "(?ms)# CodeHero VM.*?UserKnownHostsFile=NUL\r?\n?", ""
+        $configContent | Out-File -FilePath $sshConfigFile -Encoding utf8 -NoNewline
+    }
+}
+
+# Add new entry
+Add-Content -Path $sshConfigFile -Value "`n$sshConfigEntry" -Encoding utf8
+Write-Host "SSH configuration added!" -ForegroundColor Green
+
 # Cleanup
 Remove-Item $cloudInitPath -Force -ErrorAction SilentlyContinue
 
@@ -325,11 +409,16 @@ Write-Host "  LOGIN:" -ForegroundColor Yellow
 Write-Host "  Username:  admin" -ForegroundColor White
 Write-Host "  Password:  admin123" -ForegroundColor White
 Write-Host ""
+Write-Host "  SSH ACCESS:" -ForegroundColor Yellow
+Write-Host "  Connect:      ssh codehero" -ForegroundColor White
+Write-Host "  Or:           ssh claude@$ip" -ForegroundColor White
+Write-Host "  VS Code:      Use 'Remote-SSH' extension with host 'codehero'" -ForegroundColor White
+Write-Host ""
 Write-Host "  VM COMMANDS:" -ForegroundColor Yellow
-Write-Host "  Start VM:   multipass start claude-dev" -ForegroundColor White
-Write-Host "  Stop VM:    multipass stop claude-dev" -ForegroundColor White
-Write-Host "  VM Shell:   multipass shell claude-dev" -ForegroundColor White
-Write-Host "  VM Status:  multipass list" -ForegroundColor White
+Write-Host "  Start VM:     multipass start claude-dev" -ForegroundColor White
+Write-Host "  Stop VM:      multipass stop claude-dev" -ForegroundColor White
+Write-Host "  VM Shell:     multipass shell claude-dev" -ForegroundColor White
+Write-Host "  VM Status:    multipass list" -ForegroundColor White
 Write-Host ""
 Write-Host "  CHANGE PASSWORDS (after setup completes):" -ForegroundColor Red
 Write-Host "  sudo /opt/codehero/scripts/change-passwords.sh" -ForegroundColor White
@@ -386,6 +475,28 @@ pause >nul
 "@
 $startVmContent | Out-File -FilePath $startVmPath -Encoding ascii
 Write-Host "Desktop shortcut created: Claude AI Developer.bat" -ForegroundColor Green
+
+# Create SSH connection batch file
+$sshVmPath = Join-Path $desktopPath "SSH to Claude VM.bat"
+$sshVmContent = @"
+@echo off
+title SSH to Claude AI Developer VM
+echo.
+echo Connecting to Claude AI Developer VM...
+echo.
+
+REM Check if VM is running
+multipass list 2>nul | findstr /C:"claude-dev" | findstr /C:"Running" >nul
+if %ERRORLEVEL% NEQ 0 (
+    echo VM is not running. Starting...
+    multipass start claude-dev
+    timeout /t 10 /nobreak >nul
+)
+
+ssh codehero
+"@
+$sshVmContent | Out-File -FilePath $sshVmPath -Encoding ascii
+Write-Host "Desktop shortcut created: SSH to Claude VM.bat" -ForegroundColor Green
 
 # Only create URL shortcut if we have a valid IP
 if ($ip -match "^\d+\.\d+\.\d+\.\d+$") {

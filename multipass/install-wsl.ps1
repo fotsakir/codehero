@@ -19,7 +19,7 @@ if (-not $isAdmin) {
 }
 
 # Check if WSL is installed
-Write-Host "[1/4] Checking WSL status..." -ForegroundColor Yellow
+Write-Host "[1/5] Checking WSL status..." -ForegroundColor Yellow
 $wslInstalled = $false
 try {
     $wslStatus = wsl --status 2>&1
@@ -41,7 +41,7 @@ if (-not $wslInstalled) {
 }
 
 # Check if Ubuntu-24.04 is installed
-Write-Host "[2/4] Checking for Ubuntu 24.04..." -ForegroundColor Yellow
+Write-Host "[2/5] Checking for Ubuntu 24.04..." -ForegroundColor Yellow
 $ubuntuInstalled = $false
 $distros = wsl --list --quiet 2>$null
 if ($distros -match "Ubuntu-24.04") {
@@ -56,13 +56,11 @@ if (-not $ubuntuInstalled) {
 }
 
 # Initialize Ubuntu with root as default user (skip user creation prompt)
-Write-Host "[3/4] Initializing Ubuntu..." -ForegroundColor Yellow
+Write-Host "[3/5] Initializing Ubuntu..." -ForegroundColor Yellow
 
 # Use --exec to bypass the interactive OOBE (first-run user creation)
-# This runs the command directly without starting an interactive shell
 Write-Host "      Configuring root as default user..." -ForegroundColor Gray
 
-# First, try to configure wsl.conf using --exec (bypasses OOBE)
 # Enable systemd and set root as default user
 $configResult = wsl -d Ubuntu-24.04 --exec /bin/bash -c "echo -e '[boot]\nsystemd=true\n\n[user]\ndefault=root' > /etc/wsl.conf" 2>&1
 if ($LASTEXITCODE -ne 0) {
@@ -86,19 +84,85 @@ if ($testResult -match "root") {
     Write-Host "      Ubuntu ready!" -ForegroundColor Green
 }
 
-# Run the installation inside WSL
-Write-Host "[4/4] Installing CodeHero inside WSL..." -ForegroundColor Yellow
+# Setup SSH key for WSL access
+Write-Host "[4/5] Setting up SSH key for WSL access..." -ForegroundColor Yellow
+$sshDir = "$env:USERPROFILE\.ssh"
+$sshKeyPath = "$sshDir\codehero_wsl"
+
+# Ensure .ssh directory exists
+if (-not (Test-Path $sshDir)) {
+    New-Item -ItemType Directory -Path $sshDir -Force | Out-Null
+}
+
+if (Test-Path $sshKeyPath) {
+    Write-Host "      SSH key already exists at $sshKeyPath" -ForegroundColor Green
+} else {
+    Write-Host "      Generating new SSH key..." -ForegroundColor Gray
+    
+    # Use ssh-keygen (available in Windows 10+)
+    $sshKeygen = Get-Command ssh-keygen -ErrorAction SilentlyContinue
+    if ($sshKeygen) {
+        & ssh-keygen -t rsa -b 4096 -f $sshKeyPath -N '""' -C "codehero-wsl-$(Get-Date -Format 'yyyyMMdd')" | Out-Null
+        Write-Host "      SSH key created: $sshKeyPath" -ForegroundColor Green
+    } else {
+        Write-Host "      ERROR: ssh-keygen not found. OpenSSH may not be installed." -ForegroundColor Red
+        Write-Host "      Install OpenSSH Client from Windows Settings > Apps > Optional Features" -ForegroundColor Yellow
+        Read-Host "Press Enter to exit"
+        exit 1
+    }
+}
+
+# Start ssh-agent and add key
+Write-Host "      Adding key to ssh-agent..." -ForegroundColor Gray
+$sshAgent = Get-Service ssh-agent -ErrorAction SilentlyContinue
+if ($sshAgent) {
+    if ($sshAgent.Status -ne 'Running') {
+        Set-Service ssh-agent -StartupType Manual
+        Start-Service ssh-agent
+    }
+    & ssh-add $sshKeyPath 2>&1 | Out-Null
+    Write-Host "      Key added to ssh-agent." -ForegroundColor Green
+} else {
+    Write-Host "      Warning: ssh-agent service not available" -ForegroundColor Yellow
+}
+
+# Read the public key
+$sshPubKey = Get-Content "${sshKeyPath}.pub" -Raw
+$sshPubKey = $sshPubKey.Trim()
+Write-Host "      Public key ready for WSL." -ForegroundColor Green
+
+# Run the installation inside WSL with SSH key
+Write-Host "[5/5] Installing CodeHero inside WSL..." -ForegroundColor Yellow
 Write-Host "      This takes about 10-15 minutes..." -ForegroundColor Gray
 Write-Host ""
 
-# Create install script file and copy to WSL
+# Create install script with SSH key setup
 $installScriptContent = @"
 #!/bin/bash
 set -e
 cd /root
 echo "Updating packages..."
 apt-get update
-apt-get install -y unzip wget net-tools curl
+apt-get install -y unzip wget net-tools curl openssh-server
+
+echo "Setting up SSH..."
+# Enable and start SSH
+systemctl enable ssh
+systemctl start ssh
+
+# Create claude user
+if ! id "claude" &>/dev/null; then
+    useradd -m -s /bin/bash claude
+    echo "claude ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers.d/claude
+fi
+
+# Setup SSH key for claude user
+mkdir -p /home/claude/.ssh
+echo "$sshPubKey" > /home/claude/.ssh/authorized_keys
+chmod 700 /home/claude/.ssh
+chmod 600 /home/claude/.ssh/authorized_keys
+chown -R claude:claude /home/claude/.ssh
+
 echo "Downloading latest release..."
 LATEST_URL=`$(curl -s https://api.github.com/repos/fotsakir/codehero/releases/latest | grep "browser_download_url.*zip" | cut -d '"' -f 4)
 wget -q "`$LATEST_URL" -O codehero.zip
@@ -115,7 +179,7 @@ echo "done" > /root/install-complete
 $tempScript = "$env:TEMP\wsl-install.sh"
 $installScriptContent | Out-File -FilePath $tempScript -Encoding utf8 -NoNewline
 
-# Convert to Unix line endings and copy to WSL (use --exec to bypass OOBE)
+# Convert to Unix line endings and copy to WSL
 $wslPath = wsl -d Ubuntu-24.04 --exec /bin/bash -c "wslpath -u '$tempScript'"
 wsl -d Ubuntu-24.04 --exec /bin/bash -c "cat '$wslPath' | tr -d '\r' > /root/install-codehero.sh && chmod +x /root/install-codehero.sh && /root/install-codehero.sh"
 
@@ -131,6 +195,35 @@ if (-not $ip) {
     $ip = "[Run: wsl hostname -I]"
 }
 
+# Setup SSH config for easy connection
+Write-Host ""
+Write-Host "Setting up SSH configuration..." -ForegroundColor Yellow
+$sshConfigFile = "$sshDir\config"
+
+$sshConfigEntry = @"
+# CodeHero WSL
+Host codehero-wsl
+    HostName $ip
+    User claude
+    IdentityFile $sshKeyPath
+    StrictHostKeyChecking no
+    UserKnownHostsFile=NUL
+"@
+
+# Check if config file exists and if entry already exists
+if (Test-Path $sshConfigFile) {
+    $configContent = Get-Content $sshConfigFile -Raw
+    if ($configContent -match "# CodeHero WSL") {
+        # Remove old entry
+        $configContent = $configContent -replace "(?ms)# CodeHero WSL.*?UserKnownHostsFile=NUL\r?\n?", ""
+        $configContent | Out-File -FilePath $sshConfigFile -Encoding utf8 -NoNewline
+    }
+}
+
+# Add new entry
+Add-Content -Path $sshConfigFile -Value "`n$sshConfigEntry" -Encoding utf8
+Write-Host "SSH configuration added!" -ForegroundColor Green
+
 Write-Host ""
 Write-Host "==========================================" -ForegroundColor Green
 Write-Host "  Installation Complete!" -ForegroundColor Green
@@ -143,6 +236,11 @@ Write-Host ""
 Write-Host "  LOGIN:" -ForegroundColor Yellow
 Write-Host "  Username:  admin" -ForegroundColor White
 Write-Host "  Password:  admin123" -ForegroundColor White
+Write-Host ""
+Write-Host "  SSH ACCESS:" -ForegroundColor Yellow
+Write-Host "  Connect:      ssh codehero-wsl" -ForegroundColor White
+Write-Host "  Or:           ssh claude@$ip" -ForegroundColor White
+Write-Host "  VS Code:      Use 'Remote-SSH' extension with host 'codehero-wsl'" -ForegroundColor White
 Write-Host ""
 Write-Host "  WSL COMMANDS:" -ForegroundColor Yellow
 Write-Host "  Open terminal:  wsl -d Ubuntu-24.04" -ForegroundColor White
@@ -192,6 +290,23 @@ pause >nul
 "@
 $batchContent | Out-File -FilePath $batchPath -Encoding ascii
 Write-Host "Desktop shortcut created: Claude AI Developer (WSL).bat" -ForegroundColor Green
+
+# Create SSH connection batch file
+$sshBatchPath = Join-Path $desktopPath "SSH to Claude WSL.bat"
+$sshBatchContent = @"
+@echo off
+title SSH to Claude AI Developer (WSL)
+echo.
+echo Connecting to Claude AI Developer (WSL)...
+echo.
+
+REM Ensure services are running
+wsl -d Ubuntu-24.04 --exec /bin/bash -c "systemctl start ssh codehero-web codehero-daemon" 2>nul
+
+ssh codehero-wsl
+"@
+$sshBatchContent | Out-File -FilePath $sshBatchPath -Encoding ascii
+Write-Host "Desktop shortcut created: SSH to Claude WSL.bat" -ForegroundColor Green
 
 # Also create URL shortcut if we have valid IP
 if ($ip -match "^\d+\.\d+\.\d+\.\d+$") {
