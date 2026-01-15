@@ -12,7 +12,7 @@
 
 ```bash
 cd /root
-unzip codehero-2.61.1.zip
+unzip codehero-2.61.2.zip
 cd codehero
 ```
 
@@ -115,7 +115,7 @@ To upgrade from a previous version:
 ```bash
 # Download and extract new version
 cd /root
-unzip codehero-2.61.1.zip
+unzip codehero-2.61.2.zip
 cd codehero
 
 # Preview what will change (recommended)
@@ -180,4 +180,4 @@ curl -fsSL https://claude.ai/install.sh | sh
 
 ---
 
-**Version:** 2.61.1
+**Version:** 2.61.2

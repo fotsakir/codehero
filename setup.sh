@@ -629,10 +629,10 @@ fi
 echo -e "${CYAN}Starting services...${NC}"
 
 systemctl start mysql 2>/dev/null || true
-systemctl start php8.3-fpm 2>/dev/null || true
-systemctl start codehero-web 2>/dev/null || true
-systemctl start nginx 2>/dev/null || true
-systemctl start codehero-daemon 2>/dev/null || true
+systemctl restart php8.3-fpm 2>/dev/null || true
+systemctl restart codehero-web 2>/dev/null || true
+systemctl restart nginx 2>/dev/null || true
+systemctl restart codehero-daemon 2>/dev/null || true
 
 sleep 3
 

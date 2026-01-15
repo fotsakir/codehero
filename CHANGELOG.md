@@ -5,6 +5,13 @@ All notable changes to CodeHero will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.61.2] - 2026-01-15
+
+### Fixed
+- **Setup Script** - Changed `systemctl start` to `systemctl restart` for nginx, php-fpm, and codehero services
+  - Fixes issue where admin panel was not accessible after fresh install until reboot
+  - Services now properly reload configs immediately after installation
+
 ## [2.61.1] - 2026-01-15
 
 ### Added
