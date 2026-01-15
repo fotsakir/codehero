@@ -230,7 +230,7 @@ CREATE TABLE `projects` (
   `name` varchar(200) NOT NULL,
   `code` varchar(10) NOT NULL,
   `description` text,
-  `project_type` enum('web','app','hybrid','api','capacitor','react_native','flutter','native_android','dotnet','other') DEFAULT 'web',
+  `project_type` enum('web','app','hybrid','api','other','capacitor_ionic_vue','react_native','flutter','kotlin_multiplatform','android_java_xml','android_kotlin_xml','android_kotlin_compose') DEFAULT 'web',
   `tech_stack` varchar(255) DEFAULT NULL,
   `web_path` varchar(500) DEFAULT NULL,
   `preview_url` varchar(500) DEFAULT NULL,

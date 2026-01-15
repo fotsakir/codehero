@@ -10,6 +10,22 @@ packages:
   - wget
   - curl
   - net-tools
+  # Mobile Development Tools (Android/Flutter/React Native)
+  - openjdk-17-jdk
+  - git
+  - build-essential
+  - libglu1-mesa
+  - libpulse0
+  - libstdc++6
+  - libc6
+  - android-sdk-platform-tools-common
+  - adb
+  - clang
+  - cmake
+  - ninja-build
+  - pkg-config
+  - libgtk-3-dev
+  - liblzma-dev
 
 users:
   - name: claude
@@ -18,6 +34,337 @@ users:
     groups: [sudo]
 
 write_files:
+  - path: /root/install-mobile-dev-tools.sh
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      set -e
+
+      echo "=========================================="
+      echo "  Mobile Development Tools Setup         "
+      echo "=========================================="
+      echo ""
+      echo "Installing Android development tools..."
+      echo "Note: iOS development is not supported (requires macOS)"
+      echo ""
+
+      ANDROID_HOME=/opt/android-sdk
+      FLUTTER_HOME=/opt/flutter
+
+      # 1. Install Android Command Line Tools
+      echo "[1/3] Installing Android SDK Command Line Tools..."
+      mkdir -p $ANDROID_HOME
+      cd /tmp
+      wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmdtools.zip
+      unzip -q cmdtools.zip
+      mkdir -p $ANDROID_HOME/cmdline-tools
+      mv cmdline-tools $ANDROID_HOME/cmdline-tools/latest
+      rm cmdtools.zip
+
+      # Accept licenses and install SDK components
+      export ANDROID_HOME=$ANDROID_HOME
+      export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools
+
+      yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses > /dev/null 2>&1 || true
+      $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0" "emulator" "system-images;android-34;google_apis;x86_64"
+
+      echo "Android SDK installed at: $ANDROID_HOME"
+
+      # 2. Install Flutter SDK
+      echo "[2/3] Installing Flutter SDK..."
+      cd /opt
+      git clone -b stable --depth 1 https://github.com/flutter/flutter.git $FLUTTER_HOME
+      $FLUTTER_HOME/bin/flutter precache
+      $FLUTTER_HOME/bin/flutter config --no-analytics
+      $FLUTTER_HOME/bin/flutter doctor || true
+
+      echo "Flutter SDK installed at: $FLUTTER_HOME"
+
+      # 3. Setup Environment Variables
+      echo "[3/3] Setting up environment variables..."
+
+      # Add to system profile
+      cat >> /etc/profile.d/mobile-dev.sh << 'EOF'
+      # Android SDK
+      export ANDROID_HOME=/opt/android-sdk
+      export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
+      export PATH=$PATH:$ANDROID_HOME/platform-tools
+      export PATH=$PATH:$ANDROID_HOME/emulator
+
+      # Flutter SDK
+      export FLUTTER_HOME=/opt/flutter
+      export PATH=$PATH:$FLUTTER_HOME/bin
+
+      # React Native (uses Node.js, already installed)
+      export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+      EOF
+
+      chmod +x /etc/profile.d/mobile-dev.sh
+
+      # Add for claude user
+      if id "claude" &>/dev/null; then
+        cat >> /home/claude/.bashrc << 'EOF'
+
+      # Mobile Development Environment
+      export ANDROID_HOME=/opt/android-sdk
+      export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
+      export PATH=$PATH:$ANDROID_HOME/platform-tools
+      export PATH=$PATH:$ANDROID_HOME/emulator
+      export FLUTTER_HOME=/opt/flutter
+      export PATH=$PATH:$FLUTTER_HOME/bin
+      export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+      EOF
+        chown claude:claude /home/claude/.bashrc
+      fi
+
+      # Set permissions
+      chmod -R 755 $ANDROID_HOME
+      chmod -R 755 $FLUTTER_HOME
+
+      # Copy mobile dev guide to accessible location
+      if [ -f /root/MOBILE_DEV_GUIDE.md ]; then
+        cp /root/MOBILE_DEV_GUIDE.md /opt/codehero/MOBILE_DEV_GUIDE.md
+        cp /root/MOBILE_DEV_GUIDE.md /home/claude/MOBILE_DEV_GUIDE.md 2>/dev/null || true
+        chown claude:claude /home/claude/MOBILE_DEV_GUIDE.md 2>/dev/null || true
+      fi
+
+      echo ""
+      echo "Mobile development tools installed successfully!"
+      echo ""
+      echo "Available tools:"
+      echo "  - Android SDK: $ANDROID_HOME"
+      echo "  - Flutter: $FLUTTER_HOME"
+      echo "  - React Native: npm install -g react-native-cli (run as needed)"
+      echo "  - Java/Kotlin: $(java -version 2>&1 | head -n 1)"
+      echo ""
+      echo "📖 See /opt/codehero/MOBILE_DEV_GUIDE.md for detailed instructions"
+      echo ""
+
+  - path: /root/MOBILE_DEV_GUIDE.md
+    permissions: '0644'
+    content: |
+      # Mobile Development Guide - CodeHero
+
+      ## Platform Capabilities
+
+      ### ✅ Supported - Android Development
+      Full support for all Android project types:
+      - Native Android (Java/Kotlin with XML or Jetpack Compose)
+      - React Native (Android builds)
+      - Flutter (Android builds)
+      - Capacitor/Ionic (Android builds + web preview)
+      - Kotlin Multiplatform (Android side)
+
+      **Note:** iOS development is not supported as it requires macOS and Xcode.
+
+      ---
+
+      ## Installed Tools
+
+      ### Android SDK
+      - **Location**: `/opt/android-sdk`
+      - **Tools**: Command line tools, platform-tools, build-tools
+      - **Platform**: Android 34 (API Level 34)
+      - **Emulator**: System image included (x86_64)
+
+      **Environment Variables:**
+      ```bash
+      export ANDROID_HOME=/opt/android-sdk
+      export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin
+      export PATH=$PATH:$ANDROID_HOME/platform-tools
+      export PATH=$PATH:$ANDROID_HOME/emulator
+      ```
+
+      ### Flutter SDK
+      - **Location**: `/opt/flutter`
+      - **Channel**: Stable
+      - **Configuration**: Analytics disabled
+
+      **Environment Variables:**
+      ```bash
+      export FLUTTER_HOME=/opt/flutter
+      export PATH=$PATH:$FLUTTER_HOME/bin
+      ```
+
+      ### React Native
+      - **Node.js**: v22.x (already installed)
+      - **Package Manager**: npm
+      - **Installation**: Install CLI globally when needed: `npm install -g react-native-cli`
+
+      ### Java/Kotlin
+      - **Java Version**: OpenJDK 17
+      - **Location**: `/usr/lib/jvm/java-17-openjdk-amd64`
+
+      ---
+
+      ## Quick Start Commands
+
+      ### React Native (Android)
+      ```bash
+      # Create new project
+      npx react-native init MyApp
+      cd MyApp
+
+      # Run on Android
+      npx react-native run-android
+
+      # Or with Expo
+      npx create-expo-app MyApp
+      cd MyApp
+      npx expo start
+      ```
+
+      ### Flutter (Android)
+      ```bash
+      # Create new project
+      flutter create my_app
+      cd my_app
+
+      # Run on Android device/emulator
+      flutter run
+
+      # Build APK
+      flutter build apk
+      ```
+
+      ### Capacitor + Ionic (Android)
+      ```bash
+      # Create new project
+      npm install -g @ionic/cli
+      ionic start myApp tabs --type=vue --capacitor
+      cd myApp
+
+      # Web preview
+      ionic serve
+
+      # Add Android platform
+      ionic cap add android
+
+      # Sync and run
+      ionic cap sync
+      ionic cap run android
+      ```
+
+      ### Native Android (Kotlin + Compose)
+      ```bash
+      # Use Android Studio or create with Gradle
+      # Example: Clone a starter template
+      git clone https://github.com/android/compose-samples.git
+      cd compose-samples/Jetcaster
+
+      # Build with Gradle
+      ./gradlew assembleDebug
+
+      # Install on device
+      ./gradlew installDebug
+      ```
+
+      ---
+
+      ## Connecting Android Devices
+
+      ### Physical Device via USB
+      1. Enable Developer Options on Android device
+      2. Enable USB Debugging
+      3. Connect device via USB
+      4. Accept the debugging prompt on device
+      5. Verify: `adb devices`
+
+      ### Android Emulator
+      ```bash
+      # List available AVDs
+      emulator -list-avds
+
+      # Create AVD
+      avdmanager create avd -n MyAVD -k "system-images;android-34;google_apis;x86_64"
+
+      # Start emulator
+      emulator -avd MyAVD
+      ```
+
+      ---
+
+      ## Testing Your Setup
+
+      ### Check Android SDK
+      ```bash
+      sdkmanager --list
+      adb version
+      ```
+
+      ### Check Flutter
+      ```bash
+      flutter doctor
+      flutter devices
+      ```
+
+      ### Check React Native
+      ```bash
+      npx react-native doctor
+      ```
+
+      ---
+
+      ## Working with CodeHero Projects
+
+      When creating a mobile project in CodeHero:
+
+      1. **Choose Project Type:**
+         - Capacitor + Ionic (Vue)
+         - React Native
+         - Flutter
+         - Kotlin Multiplatform (KMP)
+         - Native Android (Java/Kotlin)
+
+      2. **Project Path:**
+         - Source code: `/opt/apps/{PROJECT_CODE}`
+         - Web output (Capacitor): `/var/www/projects/{PROJECT_CODE}`
+
+      3. **Claude AI Integration:**
+         - Claude can help scaffold projects
+         - Write code for Android features
+         - Debug Android-specific issues
+         - Set up build configurations
+
+      ---
+
+      ## Limitations & Workarounds
+
+      ### Emulator Performance
+      **Problem**: Android emulator may be slow in VM
+      **Workarounds**:
+      - Use physical Android device via USB
+      - Use cloud testing services (Firebase Test Lab, BrowserStack)
+      - Enable hardware acceleration if supported by host
+
+      ---
+
+      ## Additional Resources
+
+      - **Android Developers**: https://developer.android.com
+      - **Flutter Docs**: https://flutter.dev/docs
+      - **React Native Docs**: https://reactnative.dev/docs
+      - **Ionic Framework**: https://ionicframework.com/docs
+      - **Capacitor**: https://capacitorjs.com/docs
+
+      ---
+
+      ## Need Help?
+
+      Run these diagnostic commands and share output:
+      ```bash
+      flutter doctor -v
+      adb devices
+      java -version
+      sdkmanager --list | head -20
+      ```
+
+      Check CodeHero logs:
+      ```bash
+      sudo journalctl -u codehero-web -n 50
+      sudo journalctl -u codehero-daemon -n 50
+      ```
+
   - path: /root/install-claude-system.sh
     permissions: '0755'
     content: |
@@ -32,22 +379,22 @@ write_files:
       cd /root
 
       # Download latest release
-      echo "[1/4] Downloading latest release..."
+      echo "[1/5] Downloading latest release..."
       LATEST_URL=$(curl -s https://api.github.com/repos/fotsakir/codehero/releases/latest | grep "browser_download_url.*zip" | cut -d '"' -f 4)
       wget -q --show-progress "$LATEST_URL" -O codehero.zip
 
       # Extract
-      echo "[2/4] Extracting..."
+      echo "[2/5] Extracting..."
       unzip -q -o codehero.zip
       cd codehero
 
       # Run setup
-      echo "[3/4] Running setup (this takes 10-15 minutes)..."
+      echo "[3/5] Running setup (this takes 10-15 minutes)..."
       chmod +x setup.sh
       ./setup.sh
 
       # Install Claude Code CLI (install only, don't run)
-      echo "[4/4] Installing Claude Code CLI..."
+      echo "[4/5] Installing Claude Code CLI..."
 
       # Create claude user if not exists
       if ! id "claude" &>/dev/null; then
@@ -66,6 +413,11 @@ write_files:
       su - claude -c 'echo "export PATH=\"\$HOME/.local/bin:\$PATH\"" >> ~/.bashrc'
 
       echo "Claude Code installed. Run 'claude' as the claude user to activate."
+
+      # Install Mobile Development Tools
+      echo ""
+      echo "[5/5] Installing mobile development tools..."
+      /root/install-mobile-dev-tools.sh
 
       # Get IP address
       IP=$(hostname -I | awk '{print $1}')
@@ -89,6 +441,14 @@ write_files:
       echo "  TO ACTIVATE CLAUDE CODE:"
       echo "  1. Open dashboard and click 'Activate Claude'"
       echo "  2. Or: su - claude && claude"
+      echo ""
+      echo "  MOBILE DEVELOPMENT:"
+      echo "  ✓ Android SDK installed (/opt/android-sdk)"
+      echo "  ✓ Flutter SDK installed (/opt/flutter)"
+      echo "  ✓ React Native ready (Node.js + npm)"
+      echo "  ✓ Java/Kotlin development ready"
+      echo ""
+      echo "  📖 Mobile Dev Guide: /opt/codehero/MOBILE_DEV_GUIDE.md"
       echo ""
       echo "=========================================="
 

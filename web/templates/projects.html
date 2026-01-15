@@ -687,17 +687,27 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>Type</label>
-                        <select name="project_type" id="project_type" onchange="toggleAndroidSettings()">
-                            <option value="web">Web (PHP, HTML, WordPress)</option>
-                            <option value="app">App (Node.js, Python, Java)</option>
-                            <option value="hybrid">Hybrid (Web + Backend)</option>
-                            <option value="api">API Only (REST, GraphQL)</option>
-                            <option value="capacitor">Capacitor.js (Ionic)</option>
-                            <option value="react_native">React Native</option>
-                            <option value="flutter">Flutter</option>
-                            <option value="native_android">Native Android</option>
-                            <option value="dotnet">.NET / ASP.NET Core</option>
-                            <option value="other">Other</option>
+                        <select name="project_type" id="project_type">
+                            <optgroup label="Traditional">
+                                <option value="web">Web (PHP, HTML, WordPress)</option>
+                                <option value="app">App (Node.js, Python, Java)</option>
+                                <option value="hybrid">Hybrid (Web + Backend)</option>
+                                <option value="api">API Only (REST, GraphQL)</option>
+                                <option value="other">Other</option>
+                            </optgroup>
+                            <optgroup label="Mobile - Hybrid (WebView)">
+                                <option value="capacitor_ionic_vue">Capacitor + Ionic (Vue)</option>
+                            </optgroup>
+                            <optgroup label="Mobile - Cross-platform Native">
+                                <option value="react_native">React Native</option>
+                                <option value="flutter">Flutter</option>
+                                <option value="kotlin_multiplatform">Kotlin Multiplatform (KMP)</option>
+                            </optgroup>
+                            <optgroup label="Mobile - Native Android">
+                                <option value="android_java_xml">Java + XML</option>
+                                <option value="android_kotlin_xml">Kotlin + XML</option>
+                                <option value="android_kotlin_compose">Kotlin + Jetpack Compose</option>
+                            </optgroup>
                         </select>
                         <small>Determines default paths and context</small>
                     </div>
@@ -842,17 +852,27 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>Type</label>
-                        <select name="project_type" id="edit_project_type" onchange="toggleEditAndroidSettings()">
-                            <option value="web">Web (PHP, HTML)</option>
-                            <option value="app">App (Java, Node, Python)</option>
-                            <option value="hybrid">Hybrid (Web + App)</option>
-                            <option value="api">API Only</option>
-                            <option value="capacitor">Capacitor.js (Ionic)</option>
-                            <option value="react_native">React Native</option>
-                            <option value="flutter">Flutter</option>
-                            <option value="native_android">Native Android</option>
-                            <option value="dotnet">.NET / ASP.NET Core</option>
-                            <option value="other">Other</option>
+                        <select name="project_type" id="edit_project_type">
+                            <optgroup label="Traditional">
+                                <option value="web">Web (PHP, HTML, WordPress)</option>
+                                <option value="app">App (Node.js, Python, Java)</option>
+                                <option value="hybrid">Hybrid (Web + Backend)</option>
+                                <option value="api">API Only (REST, GraphQL)</option>
+                                <option value="other">Other</option>
+                            </optgroup>
+                            <optgroup label="Mobile - Hybrid (WebView)">
+                                <option value="capacitor_ionic_vue">Capacitor + Ionic (Vue)</option>
+                            </optgroup>
+                            <optgroup label="Mobile - Cross-platform Native">
+                                <option value="react_native">React Native</option>
+                                <option value="flutter">Flutter</option>
+                                <option value="kotlin_multiplatform">Kotlin Multiplatform (KMP)</option>
+                            </optgroup>
+                            <optgroup label="Mobile - Native Android">
+                                <option value="android_java_xml">Java + XML</option>
+                                <option value="android_kotlin_xml">Kotlin + XML</option>
+                                <option value="android_kotlin_compose">Kotlin + Jetpack Compose</option>
+                            </optgroup>
                         </select>
                     </div>
                     <div class="form-group">
