@@ -1118,6 +1118,21 @@
                     </select>
                 </div>
                 <div class="form-group">
+                    <label>Tag</label>
+                    <select name="tag" id="tagSelect">
+                        <option value="feature" selected>Feature</option>
+                        <option value="bugfix">Bugfix</option>
+                        <option value="hotfix">Hotfix</option>
+                        <option value="test">Test</option>
+                        <option value="custom">Custom</option>
+                    </select>
+                </div>
+                <div class="form-group" id="customTagNameGroup" style="display: none;">
+                    <label>Custom Tag Name</label>
+                    <input type="text" name="tag_custom_name" placeholder="e.g., Documentation, Research, etc." maxlength="50">
+                    <small style="color: var(--text-muted); font-size: 11px; margin-top: 4px; display: block;">Max 50 characters, letters and numbers only</small>
+                </div>
+                <div class="form-group">
                     <label>AI Model</label>
                     <select name="ai_model">
                         <option value="">Use Project Default ({{ project.ai_model or 'sonnet' }})</option>
@@ -1204,6 +1219,8 @@
                 title: form.title.value,
                 description: form.description.value,
                 priority: form.priority.value,
+                tag: form.tag.value,
+                tag_custom_name: form.tag.value === 'custom' ? (form.tag_custom_name.value || '') : null,
                 ai_model: form.ai_model.value || null
             };
 
@@ -1223,6 +1240,16 @@
 
         document.getElementById('newTicketModal').addEventListener('click', function(e) {
             if (e.target === this) hideModal();
+        });
+
+        // Show/hide custom tag name input based on tag selection
+        document.getElementById('tagSelect').addEventListener('change', function(e) {
+            const customTagGroup = document.getElementById('customTagNameGroup');
+            if (e.target.value === 'custom') {
+                customTagGroup.style.display = 'block';
+            } else {
+                customTagGroup.style.display = 'none';
+            }
         });
 
         async function archiveProject() {

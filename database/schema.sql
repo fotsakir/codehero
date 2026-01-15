@@ -349,6 +349,7 @@ CREATE TABLE `tickets` (
   `description` text,
   `context` text,
   `priority` enum('low','medium','high','critical') DEFAULT 'medium',
+  `tag` enum('bugfix','hotfix','feature','test','custom') DEFAULT 'feature',
   `status` enum('new','open','pending','in_progress','awaiting_input','done','failed','stuck','skipped') DEFAULT 'open',
   `result_summary` text,
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,

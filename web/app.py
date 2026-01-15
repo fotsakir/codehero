@@ -2233,11 +2233,28 @@ def api_tickets():
         title = data.get('title', '').strip()
         description = data.get('description', '').strip()
         priority = data.get('priority', 'medium')
+        tag = data.get('tag', 'feature')
+        tag_custom_name = data.get('tag_custom_name', '').strip() if data.get('tag') == 'custom' else None
         ai_model = data.get('ai_model')  # None = inherit from project
 
         # Validate ai_model
         if ai_model and ai_model not in ('opus', 'sonnet', 'haiku'):
             ai_model = None
+
+        # Validate tag
+        if tag not in ('bugfix', 'hotfix', 'feature', 'test', 'custom'):
+            tag = 'feature'
+
+        # Validate custom tag name (max 50 chars, only alphanumeric and spaces/dashes)
+        if tag == 'custom' and tag_custom_name:
+            tag_custom_name = tag_custom_name[:50]  # Limit to 50 chars
+            # Allow letters, numbers, spaces, dashes, underscores
+            import re
+            tag_custom_name = re.sub(r'[^a-zA-Z0-9\s\-_]', '', tag_custom_name).strip()
+            if not tag_custom_name:
+                tag_custom_name = 'Custom'
+        elif tag == 'custom':
+            tag_custom_name = 'Custom'
 
         if not project_id or not title:
             return jsonify({'success': False, 'message': 'Project and title required'})
@@ -2252,9 +2269,9 @@ def api_tickets():
             ticket_number = generate_ticket_number(project['code'], cursor)
 
             cursor.execute("""
-                INSERT INTO tickets (project_id, ticket_number, title, description, priority, ai_model, status, created_at, updated_at)
-                VALUES (%s, %s, %s, %s, %s, %s, 'open', NOW(), NOW())
-            """, (project_id, ticket_number, title, description, priority, ai_model))
+                INSERT INTO tickets (project_id, ticket_number, title, description, priority, tag, tag_custom_name, ai_model, status, created_at, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'open', NOW(), NOW())
+            """, (project_id, ticket_number, title, description, priority, tag, tag_custom_name, ai_model))
             conn.commit()
             ticket_id = cursor.lastrowid
             

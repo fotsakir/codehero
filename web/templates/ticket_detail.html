@@ -307,6 +307,20 @@
         .ticket-info .meta { color: var(--text-muted); font-size: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-subtle); }
         .ticket-info .meta code { font-size: 11px; }
 
+        .meta .tag-badge {
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .meta .tag-badge.feature { background: rgba(99, 102, 241, 0.2); color: #6366f1; }
+        .meta .tag-badge.bugfix { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
+        .meta .tag-badge.hotfix { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .meta .tag-badge.test { background: rgba(139, 92, 246, 0.2); color: #8b5cf6; }
+        .meta .tag-badge.custom { background: rgba(100, 116, 139, 0.2); color: #64748b; }
+
         .actions button {
             width: 100%;
             padding: 12px;
@@ -658,6 +672,7 @@
                     <div class="description">{{ ticket.description or 'No description' }}</div>
                     <div class="meta">
                         <div>Priority: <strong>{{ ticket.priority|upper }}</strong></div>
+                        <div>Tag: <span class="tag-badge {{ ticket.tag or 'feature' }}">{{ (ticket.tag_custom_name if ticket.tag == 'custom' and ticket.tag_custom_name else (ticket.tag or 'feature'))|upper }}</span></div>
                         <div>Created: {{ ticket.created_at.strftime('%Y-%m-%d %H:%M') if ticket.created_at else 'N/A' }}</div>
                         <div>Path: <code>{{ ticket.project_path }}</code></div>
                     </div>

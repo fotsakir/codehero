@@ -347,6 +347,36 @@
         .priority-dot.medium { background: var(--accent-cyan); }
         .priority-dot.low { background: var(--accent-green); }
 
+        .tag-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            display: inline-block;
+        }
+        .tag-badge.feature {
+            background: rgba(99, 102, 241, 0.2);
+            color: #6366f1;
+        }
+        .tag-badge.bugfix {
+            background: rgba(245, 158, 11, 0.2);
+            color: #f59e0b;
+        }
+        .tag-badge.hotfix {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+        .tag-badge.test {
+            background: rgba(139, 92, 246, 0.2);
+            color: #8b5cf6;
+        }
+        .tag-badge.custom {
+            background: rgba(100, 116, 139, 0.2);
+            color: #64748b;
+        }
+
         @media (max-width: 768px) {
             .search-box input { width: 200px; }
             .ticket-meta { gap: 12px; }
@@ -401,6 +431,7 @@
                     <div class="ticket-info">
                         <div class="ticket-header">
                             <span class="ticket-number">{{ t.ticket_number }}</span>
+                            <span class="tag-badge {{ t.tag or 'feature' }}">{{ (t.tag_custom_name if t.tag == 'custom' and t.tag_custom_name else (t.tag or 'feature'))|upper }}</span>
                             <span class="project-badge">{{ t.project_code }} - {{ t.project_name }}</span>
                         </div>
                         <div class="ticket-title">{{ t.title }}</div>
