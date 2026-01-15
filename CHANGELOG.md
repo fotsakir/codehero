@@ -5,6 +5,18 @@ All notable changes to CodeHero will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.66.0] - 2026-01-15
+
+### Added
+- **Voice Input (Speech-to-Text)** - Microphone button for voice input
+  - Ticket chat - speak instead of typing messages to Claude
+  - Project creation - voice input for project name and description
+  - New ticket - voice input for ticket description
+  - Uses browser's Web Speech API (Chrome, Edge, Safari)
+  - Visual feedback with red pulsing animation while recording
+  - Tooltip hint "Recording... Click to stop"
+  - Auto-stops after 10 seconds of silence
+
 ## [2.65.0] - 2026-01-15
 
 ### Added

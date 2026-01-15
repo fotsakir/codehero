@@ -577,6 +577,38 @@
             .grid { grid-template-columns: 1fr; }
             .form-row { grid-template-columns: 1fr; }
         }
+
+        /* Voice input */
+        .input-with-voice {
+            display: flex;
+            gap: 8px;
+            align-items: flex-start;
+        }
+        .input-with-voice input, .input-with-voice textarea {
+            flex: 1;
+        }
+        .voice-btn {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-primary);
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+        .voice-btn:hover {
+            border-color: var(--accent-primary);
+        }
+        .voice-btn.recording {
+            background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+            border-color: #ef4444 !important;
+            animation: pulse-recording 1s infinite;
+        }
+        @keyframes pulse-recording {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
     </style>
 </head>
 <body>
@@ -674,7 +706,10 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>Project Name *</label>
-                        <input type="text" name="name" required placeholder="My Awesome Website">
+                        <div class="input-with-voice">
+                            <input type="text" name="name" id="project_name" required placeholder="My Awesome Website">
+                            <button type="button" class="voice-btn" onclick="toggleVoice('project_name', this)" title="Voice input">🎤</button>
+                        </div>
                         <small>A descriptive name for your project</small>
                     </div>
                     <div class="form-group">
@@ -751,7 +786,10 @@
 
                 <div class="form-group">
                     <label>Description</label>
-                    <textarea name="description" rows="2" placeholder="E-commerce site with user accounts, product catalog, and checkout..."></textarea>
+                    <div class="input-with-voice">
+                        <textarea name="description" id="project_description" rows="2" placeholder="E-commerce site with user accounts, product catalog, and checkout..."></textarea>
+                        <button type="button" class="voice-btn" onclick="toggleVoice('project_description', this)" title="Voice input">🎤</button>
+                    </div>
                     <small>What does this project do? Claude uses this for context.</small>
                 </div>
 
@@ -1208,6 +1246,96 @@
             const top = (screen.height - height) / 2;
             window.open('/claude-assistant?mode=blueprint&popup=1', 'blueprint_planner',
                 `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=no`);
+        }
+
+        // Voice recognition (Web Speech API)
+        let recognition = null;
+        let isRecording = false;
+        let activeVoiceInput = null;
+        let activeVoiceBtn = null;
+        let silenceTimeout = null;
+
+        function initVoiceRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) return null;
+
+            const rec = new SpeechRecognition();
+            rec.continuous = true;
+            rec.interimResults = false;
+
+            rec.onresult = (event) => {
+                resetSilenceTimeout();
+                const lastResult = event.results[event.results.length - 1];
+                if (lastResult.isFinal && activeVoiceInput) {
+                    const transcript = lastResult[0].transcript;
+                    if (activeVoiceInput.value && !activeVoiceInput.value.endsWith(' ')) {
+                        activeVoiceInput.value += ' ';
+                    }
+                    activeVoiceInput.value += transcript;
+                    activeVoiceInput.focus();
+                }
+            };
+
+            rec.onend = () => {
+                if (isRecording) {
+                    try { rec.start(); } catch(e) {}
+                    return;
+                }
+                stopVoiceRecording();
+            };
+
+            rec.onerror = (event) => {
+                stopVoiceRecording();
+                if (event.error === 'not-allowed') {
+                    alert('Microphone access denied. Please allow microphone access.');
+                }
+            };
+
+            return rec;
+        }
+
+        function resetSilenceTimeout() {
+            if (silenceTimeout) clearTimeout(silenceTimeout);
+            silenceTimeout = setTimeout(() => {
+                if (isRecording) {
+                    recognition.stop();
+                    stopVoiceRecording();
+                }
+            }, 10000);
+        }
+
+        function stopVoiceRecording() {
+            isRecording = false;
+            activeVoiceInput = null;
+            if (silenceTimeout) clearTimeout(silenceTimeout);
+            document.querySelectorAll('.voice-btn').forEach(btn => {
+                btn.classList.remove('recording');
+                btn.title = 'Voice input';
+            });
+        }
+
+        function toggleVoice(inputId, btn) {
+            if (!recognition) {
+                recognition = initVoiceRecognition();
+            }
+
+            if (!recognition) {
+                alert('Voice input is not supported in your browser. Please use Chrome, Edge, or Safari.');
+                return;
+            }
+
+            if (isRecording) {
+                recognition.stop();
+                stopVoiceRecording();
+            } else {
+                activeVoiceInput = document.getElementById(inputId);
+                activeVoiceBtn = btn;
+                recognition.start();
+                isRecording = true;
+                btn.classList.add('recording');
+                btn.title = 'Recording... Click to stop';
+                resetSilenceTimeout();
+            }
         }
     </script>
 </body>

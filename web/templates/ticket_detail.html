@@ -298,6 +298,16 @@
         .input-area button:hover { box-shadow: var(--glow-primary); transform: translateY(-1px); }
         .input-area button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
 
+        #voice-btn.recording {
+            background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+            border-color: #ef4444 !important;
+            animation: pulse-recording 1s infinite;
+        }
+        @keyframes pulse-recording {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
         .sidebar h3 { color: var(--text-primary); margin-bottom: 14px; font-size: 14px; font-weight: 600; }
         .sidebar-section { margin-bottom: 24px; }
 
@@ -642,6 +652,9 @@
             <div class="input-area">
                 <input type="text" id="message-input" placeholder="Send a message to Claude..."
                        {% if ticket.status in ['done', 'failed'] %}disabled{% endif %} />
+                <button onclick="toggleVoiceInput()" id="voice-btn" title="Voice input"
+                        style="background:var(--bg-secondary);border:1px solid var(--border-subtle);font-size:18px"
+                        {% if ticket.status in ['done', 'failed'] %}disabled{% endif %}>🎤</button>
                 <button onclick="sendMessage()" id="send-btn"
                         {% if ticket.status in ['done', 'failed'] %}disabled{% endif %}>Send</button>
                 <button onclick="seeWithEyes()" id="eyes-btn" title="Ask Claude to take a screenshot and see the page"
@@ -1045,6 +1058,97 @@
             message += 'Look at the current state visually, describe what you see, and identify any issues.';
             input.value = message;
             sendMessage();
+        }
+
+        // Voice recognition (Web Speech API)
+        let recognition = null;
+        let isRecording = false;
+        let silenceTimeout = null;
+
+        function initVoiceRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                return null;
+            }
+
+            const rec = new SpeechRecognition();
+            rec.continuous = true;
+            rec.interimResults = false;
+
+            rec.onresult = (event) => {
+                // Reset silence timeout on speech
+                resetSilenceTimeout();
+                // Get only the latest result
+                const lastResult = event.results[event.results.length - 1];
+                if (lastResult.isFinal) {
+                    const transcript = lastResult[0].transcript;
+                    if (input.value && !input.value.endsWith(' ')) {
+                        input.value += ' ';
+                    }
+                    input.value += transcript;
+                    input.focus();
+                }
+            };
+
+            rec.onend = () => {
+                // Restart if still recording (browser may stop automatically)
+                if (isRecording) {
+                    try { rec.start(); } catch(e) {}
+                    return;
+                }
+                stopVoiceRecording();
+            };
+
+            rec.onerror = (event) => {
+                stopVoiceRecording();
+                if (event.error === 'not-allowed') {
+                    alert('Microphone access denied. Please allow microphone access.');
+                }
+            };
+
+            return rec;
+        }
+
+        function resetSilenceTimeout() {
+            if (silenceTimeout) clearTimeout(silenceTimeout);
+            silenceTimeout = setTimeout(() => {
+                if (isRecording) {
+                    recognition.stop();
+                    stopVoiceRecording();
+                }
+            }, 10000); // 10 seconds
+        }
+
+        function stopVoiceRecording() {
+            isRecording = false;
+            if (silenceTimeout) clearTimeout(silenceTimeout);
+            const btn = document.getElementById('voice-btn');
+            btn.classList.remove('recording');
+            btn.title = 'Voice input';
+        }
+
+        function toggleVoiceInput() {
+            if (!recognition) {
+                recognition = initVoiceRecognition();
+            }
+
+            if (!recognition) {
+                alert('Voice input is not supported in your browser. Please use Chrome, Edge, or Safari.');
+                return;
+            }
+
+            const btn = document.getElementById('voice-btn');
+
+            if (isRecording) {
+                recognition.stop();
+                stopVoiceRecording();
+            } else {
+                recognition.start();
+                isRecording = true;
+                btn.classList.add('recording');
+                btn.title = 'Recording... Click to stop';
+                resetSilenceTimeout();
+            }
         }
 
         async function deleteMessage(messageId) {
