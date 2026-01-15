@@ -442,7 +442,20 @@
                     if (mode === 'blueprint' && !blueprintSent) {
                         blueprintSent = true;
                         setTimeout(() => {
-                            const prompt = 'Read the file /opt/codehero/config/project-template.md and help me create a blueprint for a new project. Guide me through each section step by step, asking questions to understand my requirements. Start by asking what kind of project I want to build.';
+                            const prompt = `Read the file /opt/codehero/config/project-template.md and help me create a blueprint for a new project.
+
+IMPORTANT: You have tools to create the project and tickets:
+- codehero_create_project: Create the project (name, description, project_type, tech_stack)
+- codehero_create_ticket: Create tickets for tasks (project_id, title, description, priority)
+
+WORKFLOW:
+1. Ask what kind of project the user wants to build
+2. Guide through each section of the blueprint (features, tech stack, etc.)
+3. When the blueprint is complete, ASK the user: "Would you like me to create this project and the initial tickets now?"
+4. If yes, use codehero_create_project to create the project
+5. Then use codehero_create_ticket to create tickets for each major feature/task
+
+Start by asking what kind of project they want to build.`;
                             sendInput(prompt + '\n');
                         }, 2000);
                     }

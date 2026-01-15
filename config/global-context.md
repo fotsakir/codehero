@@ -1,209 +1,166 @@
 # Global Project Context
 
-This context applies to ALL projects processed by Claude.
+## THE MISSION
+```
+Human + Machine = EVOLUTION
+We build simple systems that AI can test, fix, and evolve.
+Adapt or die. Simplicity is survival.
+```
 
-## Server Environment
+---
 
-- **Operating System**: Ubuntu 24.04 LTS
-- **Web Server**: Nginx with PHP-FPM
-- **PHP Version**: PHP 8.3 (via PHP-FPM)
-- **Node.js**: v22.x
-- **Java**: GraalVM 24
+## CORE RULES (Memorize These!)
 
-## Ports
+### 1. TEAM MINDSET
+Code like you're in a 10-person team. Ask: "Can someone else continue this at 3am?"
+- Bus Factor Test: If you're gone, can others continue?
+- Comment the WHY, not the WHAT
+- Document everything in TECHNOLOGIES.md
 
-| Service | Port | Protocol |
-|---------|------|----------|
-| Admin Panel | 9453 | HTTPS |
-| Web Projects | 9867 | HTTPS |
-| MySQL | 3306 | TCP (localhost only) |
-| SSH | 22, 9966 | TCP |
+### 2. SIMPLE CODE
+- Junior developer must understand it
+- Descriptive names: `calculateTotal()` not `calc()`
+- No clever tricks - readable beats clever
 
-## File Locations
+### 3. SMALL BLACK BOXES
+- Each function = ONE job
+- Clear inputs → Process → Clear outputs
+- Test each piece alone, then connect
+- Build bottom-up: Utilities → Core → Services → App
 
-- **PHP Projects**: `/var/www/projects/[project-code]/`
-- **App Projects**: `/opt/apps/[project-code]/`
-- **Nginx Config**: `/etc/nginx/sites-available/`
-- **PHP Binary**: `/usr/bin/php` or `/usr/bin/php8.3`
+### 4. ASK WHEN < 90% CONFIDENT
+Multiple options? Unclear requirements? Could break something? → ASK FIRST
 
-## Installed Tools
+### 5. SECURITY (MANDATORY)
+```php
+// ❌ NEVER: $sql = "SELECT * FROM users WHERE id = $id";
+// ✅ ALWAYS: $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
 
-### System
-- Git
-- curl, wget
-- OpenSSL
+// ❌ NEVER: echo $userInput;
+// ✅ ALWAYS: echo htmlspecialchars($userInput, ENT_QUOTES, 'UTF-8');
+```
+- ALL SQL = Prepared statements
+- ALL inputs = Validated
+- ALL outputs = Escaped
 
-### Databases
-- MySQL 8.0 (server and client)
+### 6. PLAYWRIGHT-READY
+All UI elements need `data-testid` so AI can test:
+```html
+<button data-testid="submit-login-btn">Login</button>
+<input data-testid="email-input" type="email">
+<div data-testid="error-message">...</div>
+```
 
-### PHP
-- PHP 8.3 with extensions: mysql, curl, intl, opcache, redis, imagick
-- PHP-FPM for web serving
-- Composer (if installed separately - check with `which composer`)
+### 7. ARCHITECTURE
+- **UI**: Grid-based, minimalist, mobile-first, fast
+- **Libraries**: Popular (Tailwind, Alpine.js, PDO) - avoid bloat
+- **Wrappers**: Every external service gets a wrapper (DB, Email, Payment)
+- **Size matters**: Smaller = fewer tokens = faster AI = lower cost
+- **Future-proof**: Standard features, no framework magic
 
-### JavaScript
-- Node.js 22.x
-- npm (comes with Node.js)
+### 8. DOCUMENTATION
+Create `TECHNOLOGIES.md` in every project listing:
+- Stack (PHP/Python/Node, framework, DB)
+- APIs & Services (Google Maps, Stripe, etc.)
+- Libraries with versions
+- Environment variables
 
-### Python
-- Python 3 with pip
-- Flask, Flask-SocketIO, Flask-CORS
-- mysql-connector-python
-- bcrypt, eventlet
-- Playwright (Python) with Chromium browser
-- Pillow, OpenCV (opencv-python-headless)
-- pytesseract, pdf2image, pydub
+### 9. PROJECT MAP (Bird's Eye View)
+**Create and UPDATE `PROJECT_MAP.md` as you work on tickets!**
 
-### Multimedia Tools
-- **ffmpeg**: Video/audio conversion, editing, streaming
-- **ImageMagick**: Image conversion, resize, crop, effects
-- **tesseract-ocr**: OCR (English + Greek) - extract text from images
-- **sox**: Audio processing and effects
-- **poppler-utils**: PDF tools (pdftotext, pdftoppm)
-- **ghostscript**: PDF manipulation
-- **mediainfo**: Media file information
-- **optipng, jpegoptim, webp**: Image optimization
+When starting a ticket:
+1. Read PROJECT_MAP.md first (if exists)
+2. Understand the big picture before coding
 
-### Java
-- GraalVM 24 (JAVA_HOME=/opt/graalvm)
-- java, javac available in PATH
+While working:
+3. Add new files/folders you create
+4. Update data flow if it changes
+5. Add new API endpoints
 
-### .NET / Windows Development
-- .NET SDK 8.0 (LTS)
-- PowerShell 7.5
-- Wine 11.0 (run Windows .exe)
-- Mono 6.12 (.NET Framework runtime)
-- Supports: Console apps, ASP.NET Core, Web APIs, Blazor, Class libraries
-- Commands: `dotnet new`, `dotnet build`, `dotnet run`, `dotnet test`, `pwsh`
+When finishing:
+6. Make sure map reflects current state
 
-## Testing Tools
+```markdown
+# Project Map (updated: 2024-01-15)
 
-- **Playwright (Python)**: Already installed with Chromium
-  - Use: `from playwright.sync_api import sync_playwright`
-  - Browser path: Managed by Playwright
-  - To run headless tests, no additional installation needed
+## Structure
+/src
+  /controllers    → Handle requests (UserController, OrderController)
+  /models         → Database entities (User, Order, Product)
+  /services       → Business logic (AuthService, PaymentService)
+  /utils          → Helpers (validation, formatting)
 
-## AI Behavior Guidelines
+## Data Flow
+User → Controller → Service → Model → Database
 
-### Ask Questions Before Starting
-If the task description is unclear or has multiple possible interpretations:
-1. **Ask clarifying questions** before writing any code
-2. List what you understand and what you need to know
-3. Wait for user response before proceeding
-4. This saves time and produces better results
+## Key Files
+- index.php         → Entry point, routing
+- Database.php      → DB wrapper (all queries go through here)
+- AuthService.php   → Login, logout, 2FA, sessions
 
-Example: "Before I start, I'd like to clarify a few things: 1) Should the form include email validation? 2) Do you want the data saved to the database or just displayed?"
+## API Endpoints
+POST /api/login     → AuthController::login
+GET  /api/users     → UserController::list
+```
 
-### Visual Verification with Playwright
-You have Playwright with Chromium available for visual testing. **USE IT** when:
-1. User says something "doesn't look right" or "isn't displaying correctly"
-2. User mentions layout, styling, or visual issues
-3. You need to verify your changes visually
-4. User explicitly asks you to "see" or "check" the page
+**This is your GPS - keep it updated!**
 
-**How to use Playwright for screenshots:**
+---
+
+## CHECKLIST (Before finishing ANY code)
+- [ ] Junior can understand?
+- [ ] Comments explain WHY?
+- [ ] Names are descriptive?
+- [ ] Functions are small (one job)?
+- [ ] Tests exist?
+- [ ] TECHNOLOGIES.md updated?
+- [ ] PROJECT_MAP.md updated?
+- [ ] data-testid on all UI elements?
+- [ ] SQL uses prepared statements?
+- [ ] Inputs validated, outputs escaped?
+
+---
+
+## SERVER ENVIRONMENT
+
+| Tool | Version | Notes |
+|------|---------|-------|
+| Ubuntu | 24.04 LTS | |
+| PHP | 8.3 | + extensions |
+| Node.js | 22.x | |
+| MySQL | 8.0 | |
+| .NET | 8.0 | + PowerShell 7.5 |
+| Java | GraalVM 24 | |
+| Playwright | Python | Chromium included |
+
+**Ports**: Admin=9453, Projects=9867, MySQL=3306
+
+**Paths**:
+- PHP: `/var/www/projects/[code]/`
+- Apps: `/opt/apps/[code]/`
+
+**Multimedia**: ffmpeg, ImageMagick, tesseract-ocr, sox, poppler
+
+---
+
+## AI BEHAVIOR
+
+### Visual Testing
+Use Playwright when user reports visual issues:
 ```python
 from playwright.sync_api import sync_playwright
-
 with sync_playwright() as p:
     browser = p.chromium.launch(headless=True)
-    page = browser.new_page(viewport={'width': 1280, 'height': 720})
-    page.goto('https://localhost:9867/project-path/')
+    page = browser.new_page()
+    page.goto('https://localhost:9867/project/')
     page.screenshot(path='/tmp/screenshot.png')
     browser.close()
 ```
 
-Then read the screenshot to see what the user sees. This helps you:
-- Understand visual bugs without asking the user to describe them
-- Verify your CSS/layout changes work correctly
-- See exactly what the user is experiencing
+### Before Installing
+Check first: `which [tool]` or `[tool] --version`
+Most tools are already installed!
 
-### When User Says "It Doesn't Look Right"
-1. **Take a screenshot first** with Playwright
-2. Analyze the visual issue
-3. Fix and take another screenshot to verify
-4. Don't ask the user to describe what's wrong - see it yourself
+---
 
-## Important Rules
-
-1. **Check before installing**: Most tools are already installed. Always verify with `which [tool]` or `[tool] --version` before attempting installation
-2. **Do NOT run `apt-get install`** for packages that are already installed
-3. **PHP version**: Default is 8.3
-4. **Project isolation**: Each project has its own directory and optionally its own MySQL database
-5. SSL certificates are managed by Let's Encrypt or self-signed - do not modify SSL config
-
-## Database Access
-
-Each project may have its own MySQL database. Credentials are provided in the PROJECT DATABASE section.
-To connect: `mysql -h [host] -u [user] -p[password] [database]`
-
-## Quick Checks
-
-```bash
-# Check Node.js
-node --version
-
-# Check PHP
-php --version
-
-# Check Java
-java --version
-
-# Check .NET
-dotnet --version
-
-# Check Playwright
-python3 -c "from playwright.sync_api import sync_playwright; print('Playwright OK')"
-
-# Check MySQL
-mysql --version
-
-# Check multimedia tools
-ffmpeg -version | head -1
-convert -version | head -1
-tesseract --version | head -1
-```
-
-## Multimedia Examples
-
-```bash
-# Convert image format
-convert input.png output.jpg
-
-# Resize image to 50%
-convert input.png -resize 50% output.png
-
-# OCR - extract text from image
-tesseract image.png output -l eng+ell
-
-# Convert video
-ffmpeg -i input.mp4 output.webm
-
-# Extract audio from video
-ffmpeg -i video.mp4 -vn audio.mp3
-
-# PDF to text
-pdftotext document.pdf output.txt
-
-# PDF to images
-pdftoppm -png document.pdf output
-```
-
-```python
-# Python: Image processing
-from PIL import Image
-img = Image.open('input.png')
-img.thumbnail((800, 600))
-img.save('output.jpg')
-
-# Python: OCR
-import pytesseract
-from PIL import Image
-text = pytesseract.image_to_string(Image.open('image.png'), lang='eng+ell')
-
-# Python: PDF to images
-from pdf2image import convert_from_path
-images = convert_from_path('document.pdf')
-for i, img in enumerate(images):
-    img.save(f'page_{i}.png')
-```
+**Remember: Simple rules → Big projects. Black boxes → Easy maintenance. Evolution → Survival.**

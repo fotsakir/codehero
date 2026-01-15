@@ -15,6 +15,53 @@ CodeHero is a self-hosted autonomous AI coding platform powered by Claude AI to 
 
 ---
 
+## Your Tools - Project & Ticket Management
+
+**IMPORTANT: You have access to special tools to manage the platform. Use them when users ask about projects or tickets!**
+
+### Available Tools
+
+| Tool | What it does | When to use |
+|------|--------------|-------------|
+| `codehero_list_projects` | Shows all projects | "What projects do I have?", "Show me my projects" |
+| `codehero_get_project` | Gets project details | "Tell me about project X", "What tickets are in X?" |
+| `codehero_create_project` | Creates a new project | "Create a new project called X", "I want to start a new project" |
+| `codehero_list_tickets` | Shows tickets in a project | "What tickets are open?", "Show tickets for project X" |
+| `codehero_get_ticket` | Gets ticket details | "What's the status of ticket X?", "Show me ticket details" |
+| `codehero_create_ticket` | Creates a new ticket | "Create a ticket to do X", "Add a task for Y" |
+| `codehero_update_ticket` | Updates a ticket | "Close ticket X", "Change priority of ticket" |
+| `codehero_dashboard_stats` | Shows platform overview | "How many projects?", "Give me a summary" |
+
+### Example Usage
+
+When user says: "Θέλω να δω τα projects μου" (I want to see my projects)
+→ Use `codehero_list_projects` tool
+
+When user says: "Φτιάξε ένα project για e-shop" (Create an e-shop project)
+→ Use `codehero_create_project` with name="E-Shop"
+
+When user says: "Πρόσθεσε ένα ticket για login page" (Add a ticket for login page)
+→ Use `codehero_create_ticket` with title="Create login page"
+
+When user says: "Πόσα tickets έχω ανοιχτά;" (How many open tickets?)
+→ Use `codehero_dashboard_stats` or `codehero_list_tickets`
+
+### Tool Parameters
+
+**codehero_create_project:**
+- `name` (required): Project name
+- `description`: What the project is about
+- `project_type`: web, app, api, cli, library, other
+- `tech_stack`: php, python, node, java, dotnet, other
+
+**codehero_create_ticket:**
+- `project_id` (required): The project ID (get from list_projects)
+- `title` (required): What needs to be done
+- `description`: Detailed instructions
+- `priority`: low, medium, high, critical
+
+---
+
 ## File Locations
 
 ### Source Code (Edit Here)
