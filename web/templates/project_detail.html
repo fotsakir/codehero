@@ -907,6 +907,7 @@
                         <a href="/project/{{ project.id }}/editor" class="btn btn-green" style="flex:1">Code Editor</a>
                         <button onclick="popoutEditor()" class="btn btn-green" title="Open in new window">⧉</button>
                     </div>
+                    <a href="/project/{{ project.id }}/git" class="btn btn-secondary" style="text-align:center;">Git History</a>
                     <button onclick="exportProject()" class="btn btn-cyan">Export Project</button>
                     {% if project.status == 'archived' %}
                     <button onclick="reopenProject()" class="btn btn-green">Reopen Project</button>

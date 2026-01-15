@@ -57,6 +57,14 @@ except ImportError:
     LSP_ENABLED = False
     lsp_manager = None
 
+try:
+    from git_manager import GitManager, get_git_manager
+    GIT_ENABLED = True
+except ImportError:
+    GIT_ENABLED = False
+    GitManager = None
+    get_git_manager = None
+
 def to_iso_utc(dt):
     """Convert datetime to ISO format with UTC indicator for JavaScript"""
     if dt is None:
@@ -1348,6 +1356,391 @@ def api_delete_backup(project_id, filename):
         return jsonify({'success': False, 'message': str(e)})
 
 
+# ==========================================
+# GIT VERSION CONTROL ROUTES
+# ==========================================
+
+@app.route('/project/<int:project_id>/git')
+@login_required
+def project_git_history(project_id):
+    """Git history page for a project"""
+    conn = get_db()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT p.*, pgr.id as repo_id, pgr.repo_path, pgr.last_commit_hash,
+               pgr.last_commit_at, pgr.total_commits, pgr.status as git_status
+        FROM projects p
+        LEFT JOIN project_git_repos pgr ON pgr.project_id = p.id
+        WHERE p.id = %s
+    """, (project_id,))
+    project = cursor.fetchone()
+    cursor.close()
+    conn.close()
+
+    if not project:
+        return "Project not found", 404
+
+    return render_template('project_git.html', project=project)
+
+
+@app.route('/api/project/<int:project_id>/git/commits', methods=['GET'])
+@login_required
+def api_git_commits(project_id):
+    """Get commits for a project"""
+    try:
+        limit = int(request.args.get('limit', 50))
+        offset = int(request.args.get('offset', 0))
+
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+
+        # Get project path
+        cursor.execute("""
+            SELECT web_path, app_path, project_type, tech_stack
+            FROM projects WHERE id = %s
+        """, (project_id,))
+        project = cursor.fetchone()
+
+        if not project:
+            return jsonify({'success': False, 'message': 'Project not found'})
+
+        git_path = project.get('web_path') or project.get('app_path')
+        if not git_path or not GIT_ENABLED:
+            return jsonify({'success': False, 'message': 'Git not available for this project'})
+
+        gm = GitManager(
+            git_path,
+            project.get('project_type', 'web'),
+            project.get('tech_stack', '')
+        )
+
+        if not gm.is_initialized():
+            return jsonify({'success': False, 'message': 'Git repository not initialized'})
+
+        commits = gm.get_commits(limit=limit + offset)
+        commits = commits[offset:offset + limit] if offset else commits[:limit]
+
+        # Enrich with database info (ticket links)
+        cursor.execute("""
+            SELECT pgc.commit_hash, t.ticket_number, t.title as ticket_title
+            FROM project_git_commits pgc
+            LEFT JOIN tickets t ON pgc.ticket_id = t.id
+            WHERE pgc.project_id = %s
+        """, (project_id,))
+        db_commits = {row['commit_hash']: row for row in cursor.fetchall()}
+
+        for commit in commits:
+            if commit['hash'] in db_commits:
+                commit['ticket_number'] = db_commits[commit['hash']].get('ticket_number')
+                commit['ticket_title'] = db_commits[commit['hash']].get('ticket_title')
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({'success': True, 'commits': commits})
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+
+@app.route('/api/project/<int:project_id>/git/commit/<commit_hash>', methods=['GET'])
+@login_required
+def api_git_commit_detail(project_id, commit_hash):
+    """Get details of a specific commit"""
+    try:
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("""
+            SELECT web_path, app_path, project_type, tech_stack
+            FROM projects WHERE id = %s
+        """, (project_id,))
+        project = cursor.fetchone()
+        cursor.close()
+        conn.close()
+
+        if not project:
+            return jsonify({'success': False, 'message': 'Project not found'})
+
+        git_path = project.get('web_path') or project.get('app_path')
+        if not git_path or not GIT_ENABLED:
+            return jsonify({'success': False, 'message': 'Git not available'})
+
+        gm = GitManager(
+            git_path,
+            project.get('project_type', 'web'),
+            project.get('tech_stack', '')
+        )
+
+        commit = gm.get_commit_detail(commit_hash)
+        if not commit:
+            return jsonify({'success': False, 'message': 'Commit not found'})
+
+        return jsonify({'success': True, 'commit': commit})
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+
+@app.route('/api/project/<int:project_id>/git/diff/<commit_hash>', methods=['GET'])
+@login_required
+def api_git_diff(project_id, commit_hash):
+    """Get diff for a commit"""
+    try:
+        file_path = request.args.get('file')
+
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("""
+            SELECT web_path, app_path, project_type, tech_stack
+            FROM projects WHERE id = %s
+        """, (project_id,))
+        project = cursor.fetchone()
+        cursor.close()
+        conn.close()
+
+        if not project:
+            return jsonify({'success': False, 'message': 'Project not found'})
+
+        git_path = project.get('web_path') or project.get('app_path')
+        if not git_path or not GIT_ENABLED:
+            return jsonify({'success': False, 'message': 'Git not available'})
+
+        gm = GitManager(
+            git_path,
+            project.get('project_type', 'web'),
+            project.get('tech_stack', '')
+        )
+
+        diff = gm.get_diff(commit_hash, file_path)
+        if diff is None:
+            return jsonify({'success': False, 'message': 'Could not get diff'})
+
+        return jsonify({'success': True, 'diff': diff})
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+
+@app.route('/api/project/<int:project_id>/git/status', methods=['GET'])
+@login_required
+def api_git_status(project_id):
+    """Get current Git status"""
+    try:
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("""
+            SELECT web_path, app_path, project_type, tech_stack
+            FROM projects WHERE id = %s
+        """, (project_id,))
+        project = cursor.fetchone()
+        cursor.close()
+        conn.close()
+
+        if not project:
+            return jsonify({'success': False, 'message': 'Project not found'})
+
+        git_path = project.get('web_path') or project.get('app_path')
+        if not git_path or not GIT_ENABLED:
+            return jsonify({'success': False, 'message': 'Git not available'})
+
+        gm = GitManager(
+            git_path,
+            project.get('project_type', 'web'),
+            project.get('tech_stack', '')
+        )
+
+        if not gm.is_initialized():
+            return jsonify({'success': False, 'initialized': False, 'message': 'Git not initialized'})
+
+        status = gm.get_status()
+        return jsonify({'success': True, 'initialized': True, 'status': status})
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+
+@app.route('/api/project/<int:project_id>/git/init', methods=['POST'])
+@login_required
+def api_git_init(project_id):
+    """Initialize Git repository for a project"""
+    try:
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("""
+            SELECT id, web_path, app_path, project_type, tech_stack
+            FROM projects WHERE id = %s
+        """, (project_id,))
+        project = cursor.fetchone()
+
+        if not project:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'message': 'Project not found'})
+
+        git_path = project.get('web_path') or project.get('app_path')
+        if not git_path or not GIT_ENABLED:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'message': 'Git not available'})
+
+        gm = GitManager(
+            git_path,
+            project.get('project_type', 'web'),
+            project.get('tech_stack', '')
+        )
+
+        success, msg = gm.init_repo()
+        if success:
+            # Create repo record
+            cursor.execute("""
+                INSERT INTO project_git_repos (project_id, repo_path, path_type, status)
+                VALUES (%s, %s, 'web', 'active')
+                ON DUPLICATE KEY UPDATE status = 'active'
+            """, (project_id, git_path))
+            conn.commit()
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({'success': success, 'message': msg})
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+
+@app.route('/api/project/<int:project_id>/git/rollback', methods=['POST'])
+@login_required
+def api_git_rollback(project_id):
+    """Rollback to a specific commit"""
+    try:
+        data = request.get_json()
+        target_hash = data.get('commit_hash')
+        reason = data.get('reason', 'Manual rollback')
+
+        if not target_hash:
+            return jsonify({'success': False, 'message': 'Commit hash required'})
+
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("""
+            SELECT id, web_path, app_path, project_type, tech_stack
+            FROM projects WHERE id = %s
+        """, (project_id,))
+        project = cursor.fetchone()
+
+        if not project:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'message': 'Project not found'})
+
+        git_path = project.get('web_path') or project.get('app_path')
+        if not git_path or not GIT_ENABLED:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'message': 'Git not available'})
+
+        gm = GitManager(
+            git_path,
+            project.get('project_type', 'web'),
+            project.get('tech_stack', '')
+        )
+
+        if not gm.is_initialized():
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'message': 'Git not initialized'})
+
+        success, result = gm.rollback_to_commit(target_hash, reason)
+
+        if success:
+            # Record rollback commit
+            cursor.execute("""
+                SELECT id FROM project_git_repos WHERE project_id = %s
+            """, (project_id,))
+            repo = cursor.fetchone()
+
+            if repo:
+                # Get new commit hash (result contains the new commit hash)
+                new_hash = result
+                cursor.execute("""
+                    INSERT INTO project_git_commits
+                    (project_id, repo_id, commit_hash, short_hash, message,
+                     is_rollback, rollback_to_hash)
+                    VALUES (%s, %s, %s, %s, %s, 1, %s)
+                """, (
+                    project_id, repo['id'], new_hash, new_hash[:7],
+                    f"Rollback to {target_hash[:7]}: {reason}", target_hash
+                ))
+
+                cursor.execute("""
+                    UPDATE project_git_repos
+                    SET last_commit_hash = %s, last_commit_at = NOW(),
+                        total_commits = total_commits + 1
+                    WHERE id = %s
+                """, (new_hash, repo['id']))
+                conn.commit()
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({
+            'success': success,
+            'message': 'Rollback successful' if success else result,
+            'commit_hash': result if success else None
+        })
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+
+@app.route('/api/project/<int:project_id>/git/file/<commit_hash>', methods=['GET'])
+@login_required
+def api_git_file_at_commit(project_id, commit_hash):
+    """Get file content at a specific commit"""
+    try:
+        file_path = request.args.get('path')
+        if not file_path:
+            return jsonify({'success': False, 'message': 'File path required'})
+
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("""
+            SELECT web_path, app_path, project_type, tech_stack
+            FROM projects WHERE id = %s
+        """, (project_id,))
+        project = cursor.fetchone()
+        cursor.close()
+        conn.close()
+
+        if not project:
+            return jsonify({'success': False, 'message': 'Project not found'})
+
+        git_path = project.get('web_path') or project.get('app_path')
+        if not git_path or not GIT_ENABLED:
+            return jsonify({'success': False, 'message': 'Git not available'})
+
+        gm = GitManager(
+            git_path,
+            project.get('project_type', 'web'),
+            project.get('tech_stack', '')
+        )
+
+        content = gm.get_file_at_commit(commit_hash, file_path)
+        if content is None:
+            return jsonify({'success': False, 'message': 'Could not get file'})
+
+        return jsonify({'success': True, 'content': content})
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+
 @app.route('/api/project/<int:project_id>/upload', methods=['POST'])
 @login_required
 def upload_file(project_id):
@@ -1625,6 +2018,28 @@ def api_projects():
             if project_type == 'dotnet' and dotnet_port and app_path:
                 setup_dotnet_project(code, dotnet_port, app_path)
 
+            # Initialize Git repository for the project
+            git_initialized = False
+            if GIT_ENABLED:
+                git_path = web_path or app_path
+                if git_path:
+                    try:
+                        gm = GitManager(git_path, project_type or 'web', tech_stack or '')
+                        success, msg = gm.init_repo()
+                        if success:
+                            git_initialized = True
+                            # Record in database
+                            cursor.execute("""
+                                INSERT INTO project_git_repos (project_id, repo_path, path_type, status)
+                                VALUES (%s, %s, %s, 'active')
+                            """, (project_id, git_path, 'web' if web_path else 'app'))
+                            conn.commit()
+                            print(f"[Git] Initialized repo for project {code} at {git_path}")
+                        else:
+                            print(f"[Git] Failed to init repo for {code}: {msg}")
+                    except Exception as e:
+                        print(f"[Git] Error initializing repo for {code}: {e}")
+
             cursor.close(); conn.close()
 
             result = {'success': True, 'project_id': project_id, 'message': 'Project created'}
@@ -1634,6 +2049,8 @@ def api_projects():
                 result['db_user'] = db_user
             if dotnet_port:
                 result['dotnet_port'] = dotnet_port
+            if git_initialized:
+                result['git_initialized'] = True
             if db_warning:
                 result['warning'] = db_warning
             return jsonify(result)

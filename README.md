@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Dual-blue.svg" alt="License"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-2.62.0-green.svg" alt="Version"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-2.63.0-green.svg" alt="Version"></a>
   <img src="https://img.shields.io/badge/Ubuntu-22.04%20|%2024.04-orange.svg" alt="Ubuntu">
   <a href="https://anthropic.com"><img src="https://img.shields.io/badge/Powered%20by-Claude%20AI-blueviolet.svg" alt="Claude AI"></a>
   <a href="https://github.com/fotsakir/codehero/stargazers"><img src="https://img.shields.io/github/stars/fotsakir/codehero?style=social" alt="Stars"></a>
@@ -136,6 +136,16 @@ VS Code-quality code editing right in your browser:
 - **Real-time Diagnostics** - Errors and warnings as you type
 - **Multi-language Support** - Python, JavaScript, TypeScript, PHP, Java, C#, Kotlin, HTML, CSS, JSON
 - **Optional LSP Servers** - Install only what you need with `setup_lsp.sh`
+
+#### Git Version Control
+Automatic version control for every project:
+- **Auto-commit** - When AI completes work, changes are committed automatically
+- **Commit Messages** - Format: `[TICKET-NUM] Title` with full metadata
+- **Git History Page** - View all commits with timeline and diff viewer
+- **Rollback** - Restore any previous version with one click (preserves history)
+- **Smart .gitignore** - Auto-generated based on project type (PHP, Python, Node, .NET)
+- **AI Context** - Claude sees recent commits and can self-correct based on history
+- **Initialize Existing** - Add Git to existing projects from the web UI
 
 #### Telegram - Work from Your Phone
 Full two-way communication via Telegram. Control your AI developer from anywhere:

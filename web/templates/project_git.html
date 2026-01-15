@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#6366f1">
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png">
+    <link rel="shortcut icon" href="/static/favicon.ico">
+    <title>Git History - {{ project.name }} - CodeHero</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #07070d;
+            --bg-secondary: #0d0d16;
+            --bg-card: rgba(18, 18, 32, 0.7);
+            --bg-card-hover: rgba(25, 25, 45, 0.8);
+            --border-subtle: rgba(99, 102, 241, 0.15);
+            --border-glow: rgba(99, 102, 241, 0.4);
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-primary: #6366f1;
+            --accent-secondary: #8b5cf6;
+            --accent-cyan: #22d3ee;
+            --accent-green: #10b981;
+            --accent-orange: #f59e0b;
+            --accent-red: #ef4444;
+            --glow-primary: 0 0 20px rgba(99, 102, 241, 0.3);
+            --glow-cyan: 0 0 20px rgba(34, 211, 238, 0.3);
+            --glow-green: 0 0 20px rgba(16, 185, 129, 0.3);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Aurora Background */
+        .aurora-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+            background: var(--bg-primary);
+            overflow: hidden;
+        }
+
+        .aurora-blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.5;
+            animation: float 20s ease-in-out infinite;
+        }
+
+        .aurora-blob:nth-child(1) {
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.4) 0%, transparent 70%);
+            top: -200px;
+            left: -100px;
+        }
+
+        .aurora-blob:nth-child(2) {
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.3) 0%, transparent 70%);
+            top: 50%;
+            right: -150px;
+            animation-delay: -5s;
+        }
+
+        .aurora-blob:nth-child(3) {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(34, 211, 238, 0.25) 0%, transparent 70%);
+            bottom: -100px;
+            left: 30%;
+            animation-delay: -10s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(50px, -30px) scale(1.05); }
+            50% { transform: translate(-30px, 50px) scale(0.95); }
+            75% { transform: translate(-50px, -20px) scale(1.02); }
+        }
+
+        .noise {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.03;
+            pointer-events: none;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+        }
+
+        /* Header */
+        .header {
+            background: rgba(13, 13, 22, 0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-subtle);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav { display: flex; gap: 8px; }
+        .nav a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        .nav a:hover, .nav a.active {
+            color: var(--text-primary);
+            background: var(--bg-card);
+        }
+
+        /* Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .breadcrumb { margin-bottom: 20px; font-size: 13px; }
+        .breadcrumb a { color: var(--text-muted); text-decoration: none; }
+        .breadcrumb a:hover { color: var(--accent-cyan); }
+        .breadcrumb span { color: var(--text-muted); margin: 0 8px; }
+
+        /* Page Header */
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .page-header h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .page-header h2 svg {
+            color: var(--accent-orange);
+        }
+
+        /* Git Status */
+        .git-status {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .git-status-info {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-badge.clean {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--accent-green);
+        }
+
+        .status-badge.dirty {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--accent-orange);
+        }
+
+        .status-badge.not-init {
+            background: rgba(100, 116, 139, 0.15);
+            color: var(--text-muted);
+        }
+
+        /* Main Layout */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 1100px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Commit List */
+        .commit-list {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .commit-list-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-subtle);
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .commit-list-body {
+            max-height: calc(100vh - 350px);
+            overflow-y: auto;
+        }
+
+        .commit-item {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-subtle);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .commit-item:last-child {
+            border-bottom: none;
+        }
+
+        .commit-item:hover {
+            background: var(--bg-card-hover);
+        }
+
+        .commit-item.selected {
+            background: rgba(99, 102, 241, 0.1);
+            border-left: 3px solid var(--accent-primary);
+        }
+
+        .commit-hash {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            color: var(--accent-cyan);
+            margin-bottom: 6px;
+        }
+
+        .commit-message {
+            color: var(--text-primary);
+            font-size: 14px;
+            margin-bottom: 8px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .commit-meta {
+            display: flex;
+            gap: 16px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .commit-stats {
+            display: flex;
+            gap: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+        }
+
+        .commit-stats .add {
+            color: var(--accent-green);
+        }
+
+        .commit-stats .del {
+            color: var(--accent-red);
+        }
+
+        .rollback-badge {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--accent-orange);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .ticket-link {
+            color: var(--accent-primary);
+            font-size: 11px;
+            text-decoration: none;
+        }
+
+        .ticket-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Diff Viewer */
+        .diff-viewer {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            overflow: hidden;
+        }
+
+        .diff-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .diff-header h3 {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .diff-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .diff-files {
+            border-bottom: 1px solid var(--border-subtle);
+            padding: 12px 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .diff-file-btn {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .diff-file-btn:hover {
+            border-color: var(--accent-primary);
+            color: var(--text-primary);
+        }
+
+        .diff-file-btn.selected {
+            background: rgba(99, 102, 241, 0.15);
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+
+        .diff-content {
+            padding: 16px;
+            max-height: calc(100vh - 450px);
+            overflow: auto;
+        }
+
+        .diff-code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            white-space: pre;
+            overflow-x: auto;
+        }
+
+        .diff-line {
+            padding: 2px 12px;
+            display: flex;
+        }
+
+        .diff-line.add {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--accent-green);
+        }
+
+        .diff-line.del {
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--accent-red);
+        }
+
+        .diff-line.context {
+            color: var(--text-secondary);
+        }
+
+        .diff-line.header {
+            color: var(--accent-cyan);
+            background: rgba(34, 211, 238, 0.05);
+            margin-top: 8px;
+        }
+
+        .line-number {
+            color: var(--text-muted);
+            min-width: 40px;
+            text-align: right;
+            margin-right: 12px;
+            user-select: none;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state svg {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-state h3 {
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary {
+            background: var(--accent-primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--accent-secondary);
+        }
+
+        .btn-secondary {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent-primary);
+            color: var(--text-primary);
+        }
+
+        .btn-danger {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--accent-red);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-danger:hover {
+            background: rgba(239, 68, 68, 0.25);
+        }
+
+        .btn-success {
+            background: var(--accent-green);
+            color: white;
+        }
+
+        .btn-success:hover {
+            opacity: 0.9;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .modal h3 {
+            font-size: 18px;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        .modal p {
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+
+        /* Loading */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 2px solid var(--border-subtle);
+            border-top-color: var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-right: 12px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 16px 20px;
+            display: none;
+            align-items: center;
+            gap: 12px;
+            z-index: 1001;
+            animation: slideIn 0.3s ease;
+        }
+
+        .toast.show {
+            display: flex;
+        }
+
+        .toast.success {
+            border-color: var(--accent-green);
+        }
+
+        .toast.error {
+            border-color: var(--accent-red);
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="aurora-bg">
+        <div class="aurora-blob"></div>
+        <div class="aurora-blob"></div>
+        <div class="aurora-blob"></div>
+    </div>
+    <div class="noise"></div>
+
+    <header class="header">
+        <h1>CodeHero</h1>
+        <nav class="nav">
+            <a href="/">Dashboard</a>
+            <a href="/projects">Projects</a>
+            <a href="/tickets">Tickets</a>
+            <a href="/sessions">Sessions</a>
+            <a href="/settings">Settings</a>
+        </nav>
+    </header>
+
+    <div class="container">
+        <div class="breadcrumb">
+            <a href="/projects">Projects</a>
+            <span>/</span>
+            <a href="/project/{{ project.id }}">{{ project.name }}</a>
+            <span>/</span>
+            <span style="color: var(--text-primary)">Git History</span>
+        </div>
+
+        <div class="page-header">
+            <h2>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M12 3v6"/>
+                    <path d="M12 15v6"/>
+                    <path d="M3 12h6"/>
+                    <path d="M15 12h6"/>
+                </svg>
+                Git Version Control
+            </h2>
+            <button class="btn btn-secondary" onclick="refreshStatus()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M23 4v6h-6"/>
+                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+                </svg>
+                Refresh
+            </button>
+        </div>
+
+        <div class="git-status" id="gitStatus">
+            <div class="git-status-info">
+                <div class="stat-item">
+                    <div class="stat-value" id="totalCommits">{{ project.total_commits or 0 }}</div>
+                    <div class="stat-label">Commits</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="modifiedCount">-</div>
+                    <div class="stat-label">Modified</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="untrackedCount">-</div>
+                    <div class="stat-label">Untracked</div>
+                </div>
+            </div>
+            <div>
+                <span class="status-badge" id="repoStatus">Loading...</span>
+            </div>
+        </div>
+
+        <div class="main-grid">
+            <!-- Commit List -->
+            <div class="commit-list">
+                <div class="commit-list-header">
+                    <span>Commit History</span>
+                    <span id="commitCount" style="color: var(--text-muted); font-weight: normal; font-size: 13px;"></span>
+                </div>
+                <div class="commit-list-body" id="commitList">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        Loading commits...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Diff Viewer -->
+            <div class="diff-viewer">
+                <div class="diff-header">
+                    <h3 id="diffTitle">Select a commit to view changes</h3>
+                    <div class="diff-actions" id="diffActions" style="display: none;">
+                        <button class="btn btn-danger" onclick="showRollbackModal()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                                <path d="M3 3v5h5"/>
+                            </svg>
+                            Rollback
+                        </button>
+                    </div>
+                </div>
+                <div class="diff-files" id="diffFiles" style="display: none;"></div>
+                <div class="diff-content" id="diffContent">
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                            <polyline points="14 2 14 8 20 8"/>
+                            <line x1="16" y1="13" x2="8" y2="13"/>
+                            <line x1="16" y1="17" x2="8" y2="17"/>
+                            <polyline points="10 9 9 9 8 9"/>
+                        </svg>
+                        <h3>No commit selected</h3>
+                        <p>Click on a commit to view its changes</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rollback Modal -->
+    <div class="modal-overlay" id="rollbackModal">
+        <div class="modal">
+            <h3>Confirm Rollback</h3>
+            <p>This will restore your project files to the state at commit <code id="rollbackHash" style="color: var(--accent-cyan);"></code>.</p>
+            <p style="color: var(--accent-orange);">A new commit will be created with the restored files. The original history will be preserved.</p>
+            <div class="form-group">
+                <label>Reason for rollback (optional)</label>
+                <input type="text" id="rollbackReason" placeholder="e.g., Reverting broken feature">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="hideRollbackModal()">Cancel</button>
+                <button class="btn btn-danger" onclick="performRollback()">Rollback</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Init Modal -->
+    <div class="modal-overlay" id="initModal">
+        <div class="modal">
+            <h3>Initialize Git Repository</h3>
+            <p>This project doesn't have a Git repository yet. Would you like to initialize one?</p>
+            <p style="font-size: 13px; color: var(--text-muted);">A .gitignore file will be created based on your project type.</p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="hideInitModal()">Cancel</button>
+                <button class="btn btn-success" onclick="initializeGit()">Initialize Git</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast">
+        <span id="toastMessage"></span>
+    </div>
+
+    <script>
+        const projectId = {{ project.id }};
+        let selectedCommit = null;
+        let commits = [];
+
+        // Load initial data
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStatus();
+            loadCommits();
+        });
+
+        async function loadStatus() {
+            try {
+                const res = await fetch(`/api/project/${projectId}/git/status`);
+                const data = await res.json();
+
+                const statusBadge = document.getElementById('repoStatus');
+                const modifiedCount = document.getElementById('modifiedCount');
+                const untrackedCount = document.getElementById('untrackedCount');
+
+                if (!data.success && !data.initialized) {
+                    statusBadge.textContent = 'Not Initialized';
+                    statusBadge.className = 'status-badge not-init';
+                    modifiedCount.textContent = '-';
+                    untrackedCount.textContent = '-';
+                    showInitModal();
+                    return;
+                }
+
+                if (data.success && data.status) {
+                    const status = data.status;
+                    const isClean = !status.modified?.length && !status.untracked?.length;
+
+                    statusBadge.textContent = isClean ? 'Clean' : 'Changes';
+                    statusBadge.className = isClean ? 'status-badge clean' : 'status-badge dirty';
+                    modifiedCount.textContent = status.modified?.length || 0;
+                    untrackedCount.textContent = status.untracked?.length || 0;
+                }
+            } catch (err) {
+                console.error('Failed to load status:', err);
+            }
+        }
+
+        async function loadCommits() {
+            try {
+                const res = await fetch(`/api/project/${projectId}/git/commits?limit=100`);
+                const data = await res.json();
+
+                const listEl = document.getElementById('commitList');
+                const countEl = document.getElementById('commitCount');
+
+                if (!data.success) {
+                    listEl.innerHTML = `
+                        <div class="empty-state">
+                            <h3>No commits yet</h3>
+                            <p>${data.message || 'Complete a ticket to create the first commit'}</p>
+                        </div>`;
+                    return;
+                }
+
+                commits = data.commits || [];
+                countEl.textContent = `(${commits.length})`;
+
+                if (commits.length === 0) {
+                    listEl.innerHTML = `
+                        <div class="empty-state">
+                            <h3>No commits yet</h3>
+                            <p>Complete a ticket to create the first commit</p>
+                        </div>`;
+                    return;
+                }
+
+                listEl.innerHTML = commits.map(commit => `
+                    <div class="commit-item" onclick="selectCommit('${commit.hash}')" data-hash="${commit.hash}">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <div class="commit-hash">${commit.short_hash || commit.hash.substring(0, 7)}</div>
+                            ${commit.is_rollback ? '<span class="rollback-badge">Rollback</span>' : ''}
+                        </div>
+                        <div class="commit-message">${escapeHtml(commit.message)}</div>
+                        <div class="commit-meta">
+                            <span>${commit.author || 'CodeHero'}</span>
+                            <span>${formatDate(commit.date)}</span>
+                            ${commit.ticket_number ? `<a href="/tickets?q=${commit.ticket_number}" class="ticket-link">${commit.ticket_number}</a>` : ''}
+                        </div>
+                        ${commit.files_changed ? `
+                            <div class="commit-stats">
+                                <span class="add">+${commit.insertions || 0}</span>
+                                <span class="del">-${commit.deletions || 0}</span>
+                                <span style="color: var(--text-muted)">${commit.files_changed} file${commit.files_changed !== 1 ? 's' : ''}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                `).join('');
+
+                // Update total commits display
+                document.getElementById('totalCommits').textContent = commits.length;
+
+            } catch (err) {
+                console.error('Failed to load commits:', err);
+                document.getElementById('commitList').innerHTML = `
+                    <div class="empty-state">
+                        <h3>Error loading commits</h3>
+                        <p>${err.message}</p>
+                    </div>`;
+            }
+        }
+
+        async function selectCommit(hash) {
+            // Update selected state
+            document.querySelectorAll('.commit-item').forEach(el => {
+                el.classList.remove('selected');
+            });
+            document.querySelector(`.commit-item[data-hash="${hash}"]`)?.classList.add('selected');
+
+            selectedCommit = hash;
+
+            // Load commit details
+            try {
+                const [detailRes, diffRes] = await Promise.all([
+                    fetch(`/api/project/${projectId}/git/commit/${hash}`),
+                    fetch(`/api/project/${projectId}/git/diff/${hash}`)
+                ]);
+
+                const detailData = await detailRes.json();
+                const diffData = await diffRes.json();
+
+                if (detailData.success && detailData.commit) {
+                    document.getElementById('diffTitle').textContent =
+                        `${detailData.commit.short_hash || hash.substring(0, 7)} - ${detailData.commit.message}`;
+
+                    // Show files list
+                    const files = detailData.commit.files || [];
+                    const filesEl = document.getElementById('diffFiles');
+                    if (files.length > 0) {
+                        filesEl.style.display = 'flex';
+                        filesEl.innerHTML = files.map(f => `
+                            <button class="diff-file-btn" onclick="loadFileDiff('${hash}', '${f}')">${f}</button>
+                        `).join('');
+                    } else {
+                        filesEl.style.display = 'none';
+                    }
+                }
+
+                if (diffData.success && diffData.diff) {
+                    document.getElementById('diffContent').innerHTML = `
+                        <div class="diff-code">${formatDiff(diffData.diff)}</div>
+                    `;
+                } else {
+                    document.getElementById('diffContent').innerHTML = `
+                        <div class="empty-state">
+                            <h3>No diff available</h3>
+                            <p>This might be an initial commit or the diff couldn't be generated</p>
+                        </div>
+                    `;
+                }
+
+                document.getElementById('diffActions').style.display = 'flex';
+
+            } catch (err) {
+                console.error('Failed to load commit:', err);
+                document.getElementById('diffContent').innerHTML = `
+                    <div class="empty-state">
+                        <h3>Error loading diff</h3>
+                        <p>${err.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        async function loadFileDiff(hash, file) {
+            // Update selected file button
+            document.querySelectorAll('.diff-file-btn').forEach(btn => {
+                btn.classList.remove('selected');
+                if (btn.textContent === file) btn.classList.add('selected');
+            });
+
+            try {
+                const res = await fetch(`/api/project/${projectId}/git/diff/${hash}?file=${encodeURIComponent(file)}`);
+                const data = await res.json();
+
+                if (data.success && data.diff) {
+                    document.getElementById('diffContent').innerHTML = `
+                        <div class="diff-code">${formatDiff(data.diff)}</div>
+                    `;
+                }
+            } catch (err) {
+                console.error('Failed to load file diff:', err);
+            }
+        }
+
+        function formatDiff(diff) {
+            return diff.split('\n').map(line => {
+                let className = 'context';
+                if (line.startsWith('+') && !line.startsWith('+++')) {
+                    className = 'add';
+                } else if (line.startsWith('-') && !line.startsWith('---')) {
+                    className = 'del';
+                } else if (line.startsWith('@@')) {
+                    className = 'header';
+                } else if (line.startsWith('diff ') || line.startsWith('index ') ||
+                           line.startsWith('---') || line.startsWith('+++')) {
+                    className = 'header';
+                }
+                return `<div class="diff-line ${className}">${escapeHtml(line)}</div>`;
+            }).join('');
+        }
+
+        function showRollbackModal() {
+            if (!selectedCommit) return;
+            document.getElementById('rollbackHash').textContent = selectedCommit.substring(0, 7);
+            document.getElementById('rollbackModal').classList.add('show');
+        }
+
+        function hideRollbackModal() {
+            document.getElementById('rollbackModal').classList.remove('show');
+            document.getElementById('rollbackReason').value = '';
+        }
+
+        async function performRollback() {
+            if (!selectedCommit) return;
+
+            const reason = document.getElementById('rollbackReason').value || 'Manual rollback';
+
+            try {
+                const res = await fetch(`/api/project/${projectId}/git/rollback`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        commit_hash: selectedCommit,
+                        reason: reason
+                    })
+                });
+
+                const data = await res.json();
+
+                hideRollbackModal();
+
+                if (data.success) {
+                    showToast('Rollback successful! A new commit has been created.', 'success');
+                    loadCommits();
+                    loadStatus();
+                } else {
+                    showToast('Rollback failed: ' + data.message, 'error');
+                }
+            } catch (err) {
+                hideRollbackModal();
+                showToast('Rollback failed: ' + err.message, 'error');
+            }
+        }
+
+        function showInitModal() {
+            document.getElementById('initModal').classList.add('show');
+        }
+
+        function hideInitModal() {
+            document.getElementById('initModal').classList.remove('show');
+        }
+
+        async function initializeGit() {
+            try {
+                const res = await fetch(`/api/project/${projectId}/git/init`, {
+                    method: 'POST'
+                });
+                const data = await res.json();
+
+                hideInitModal();
+
+                if (data.success) {
+                    showToast('Git repository initialized!', 'success');
+                    loadStatus();
+                    loadCommits();
+                } else {
+                    showToast('Failed to initialize: ' + data.message, 'error');
+                }
+            } catch (err) {
+                hideInitModal();
+                showToast('Failed to initialize: ' + err.message, 'error');
+            }
+        }
+
+        function refreshStatus() {
+            loadStatus();
+            loadCommits();
+            showToast('Refreshed', 'success');
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMessage').textContent = message;
+            toast.className = `toast show ${type}`;
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diff = now - date;
+
+            if (diff < 60000) return 'just now';
+            if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+            if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+            if (diff < 604800000) return `${Math.floor(diff / 86400000)}d ago`;
+
+            return date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
+            });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
