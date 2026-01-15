@@ -55,9 +55,13 @@ def project_add(args):
     web_path = args.web_path
     app_path = args.app_path
     
-    if not web_path and project_type in ('web', 'hybrid'):
+    if not web_path and project_type in ('web', 'hybrid', 'capacitor_ionic_vue'):
         web_path = f'/var/www/projects/{code.lower()}'
-    if not app_path and project_type in ('app', 'hybrid', 'api'):
+
+    # All mobile project types need app_path for their source/native code
+    mobile_types = ('capacitor_ionic_vue', 'react_native', 'flutter', 'kotlin_multiplatform',
+                   'android_java_xml', 'android_kotlin_xml', 'android_kotlin_compose')
+    if not app_path and project_type in ('app', 'hybrid', 'api') + mobile_types:
         app_path = f'/opt/apps/{code.lower()}'
     
     # Read context from file if specified
