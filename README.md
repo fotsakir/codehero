@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Dual-blue.svg" alt="License"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-2.61.2-green.svg" alt="Version"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-2.62.0-green.svg" alt="Version"></a>
   <img src="https://img.shields.io/badge/Ubuntu-22.04%20|%2024.04-orange.svg" alt="Ubuntu">
   <a href="https://anthropic.com"><img src="https://img.shields.io/badge/Powered%20by-Claude%20AI-blueviolet.svg" alt="Claude AI"></a>
   <a href="https://github.com/fotsakir/codehero/stargazers"><img src="https://img.shields.io/github/stars/fotsakir/codehero?style=social" alt="Stars"></a>
@@ -126,6 +126,16 @@ Claude can see exactly what you see:
 - **Visual analysis** - Describes layout, styling, and UI issues
 - **No more explaining** - Just click "👁️ See" and Claude sees the problem
 - **Automatic when needed** - Mention visual issues and Claude uses Playwright automatically
+
+#### Monaco Editor with LSP Support
+VS Code-quality code editing right in your browser:
+- **Monaco Editor** - The same editor that powers VS Code
+- **Intelligent Autocomplete** - Context-aware suggestions as you type
+- **Hover Documentation** - See function docs by hovering
+- **Go to Definition** - Ctrl+Click to jump to definitions
+- **Real-time Diagnostics** - Errors and warnings as you type
+- **Multi-language Support** - Python, JavaScript, TypeScript, PHP, Java, C#, Kotlin, HTML, CSS, JSON
+- **Optional LSP Servers** - Install only what you need with `setup_lsp.sh`
 
 #### Telegram - Work from Your Phone
 Full two-way communication via Telegram. Control your AI developer from anywhere:
@@ -242,6 +252,7 @@ After initial installation, run these scripts based on your needs:
 | `setup_android.sh` | Docker, Redroid emulator, ws-scrcpy, ADB, Flutter, Gradle |
 | `setup_windows.sh` | .NET 8 SDK, PowerShell, Wine, Mono, NuGet |
 | `setup_devtools.sh` | Node.js, Java (GraalVM), multimedia tools (ffmpeg, ImageMagick, tesseract) |
+| `setup_lsp.sh` | Language servers for code editor (Python, JS/TS, PHP, Java, C#, Kotlin, HTML/CSS) |
 
 ```bash
 # Android development (emulator + mobile frameworks)
@@ -252,6 +263,9 @@ sudo /opt/codehero/scripts/setup_windows.sh
 
 # Development tools (Node.js, Java, multimedia)
 sudo /opt/codehero/scripts/setup_devtools.sh
+
+# Code editor LSP (optional - for autocomplete, hover docs, etc.)
+sudo /opt/codehero/scripts/setup_lsp.sh
 ```
 
 ---
@@ -311,8 +325,8 @@ apt-get update && apt-get install -y unzip wget net-tools
 
 # Download and extract
 cd /root
-wget https://github.com/fotsakir/codehero/releases/latest/download/codehero-2.61.1.zip
-unzip codehero-2.61.1.zip
+wget https://github.com/fotsakir/codehero/releases/latest/download/codehero-2.62.0.zip
+unzip codehero-2.62.0.zip
 cd codehero
 
 # Run setup
@@ -338,7 +352,7 @@ The installer automatically sets up:
 ```bash
 # Download new version
 cd /root
-unzip codehero-2.61.1.zip
+unzip codehero-2.62.0.zip
 cd codehero
 
 # Preview changes (recommended)
@@ -574,6 +588,7 @@ REVIEW_DEADLINE_DAYS=7
 |----------|-------------|
 | [One-Click Install](docs/MULTIPASS_INSTALL.md) | Easiest install for Windows, macOS, Linux |
 | [User Guide](docs/USER_GUIDE.md) | How to use the admin panel (with screenshots) |
+| [LSP Setup](docs/LSP_SETUP.md) | Install language servers for code editor features |
 | [Telegram Setup](docs/TELEGRAM_SETUP.md) | Get instant alerts on your phone |
 | [VM Installation](docs/VM_INSTALLATION.md) | Install on VMware, Hyper-V, VirtualBox, UTM, Parallels |
 | [Installed Packages](docs/INSTALLED_PACKAGES.md) | All tools & packages (ffmpeg, ImageMagick, OCR, etc.) |

@@ -12,7 +12,7 @@
 
 ```bash
 cd /root
-unzip codehero-2.61.2.zip
+unzip codehero-2.62.0.zip
 cd codehero
 ```
 
@@ -65,6 +65,7 @@ Run these scripts based on what you need:
 | `setup_devtools.sh` | Development tools | Node.js 22, Java (GraalVM 24), multimedia (ffmpeg, ImageMagick, tesseract) |
 | `setup_android.sh` | Android development | Docker, Redroid emulator, ws-scrcpy, ADB, Flutter, Gradle |
 | `setup_windows.sh` | Windows/.NET development | .NET 8 SDK, PowerShell 7, Wine, Mono, NuGet |
+| `setup_lsp.sh` | Code Editor LSP | Language servers for Python, JS/TS, PHP, Java, C#, Kotlin, HTML/CSS |
 
 ```bash
 # Development tools (Node.js, Java, multimedia)
@@ -75,6 +76,9 @@ sudo /opt/codehero/scripts/setup_android.sh
 
 # Windows/.NET development
 sudo /opt/codehero/scripts/setup_windows.sh
+
+# Code Editor LSP (optional - for autocomplete, hover docs, etc.)
+sudo /opt/codehero/scripts/setup_lsp.sh
 ```
 
 **Android Emulator**: After running `setup_android.sh`, access at `https://YOUR_IP:8443`
@@ -115,7 +119,7 @@ To upgrade from a previous version:
 ```bash
 # Download and extract new version
 cd /root
-unzip codehero-2.61.2.zip
+unzip codehero-2.62.0.zip
 cd codehero
 
 # Preview what will change (recommended)
@@ -180,4 +184,4 @@ curl -fsSL https://claude.ai/install.sh | sh
 
 ---
 
-**Version:** 2.61.2
+**Version:** 2.62.0

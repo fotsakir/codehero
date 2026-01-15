@@ -50,6 +50,13 @@ try:
 except ImportError:
     SmartContextManager = None
 
+try:
+    from lsp_manager import LSPManager, lsp_manager
+    LSP_ENABLED = True
+except ImportError:
+    LSP_ENABLED = False
+    lsp_manager = None
+
 def to_iso_utc(dt):
     """Convert datetime to ISO format with UTC indicator for JavaScript"""
     if dt is None:
@@ -4193,9 +4200,205 @@ def handle_terminal_kill(data):
                 os.kill(term_info['pid'], signal.SIGTERM)
             except: pass
 
+# ==================== LSP WebSocket Handlers ====================
+
+# Store LSP sessions per client
+lsp_sessions = {}
+lsp_lock = threading.Lock()
+
+@socketio.on('lsp:init')
+def handle_lsp_init(data):
+    """Initialize LSP for a project"""
+    if not LSP_ENABLED or not lsp_manager:
+        emit('lsp:error', {'message': 'LSP not available'})
+        return
+
+    project_path = data.get('projectPath', '')
+    language = data.get('language', '')
+    sid = request.sid
+
+    if not project_path or not language:
+        emit('lsp:error', {'message': 'Missing projectPath or language'})
+        return
+
+    server = lsp_manager.get_server(project_path, language)
+    if server:
+        with lsp_lock:
+            if sid not in lsp_sessions:
+                lsp_sessions[sid] = {}
+            lsp_sessions[sid][language] = {
+                'projectPath': project_path,
+                'server': server
+            }
+
+        # Register message handler for diagnostics
+        def on_notification(lang, msg):
+            if msg.get('method') == 'textDocument/publishDiagnostics':
+                emit('lsp:diagnostics', msg.get('params', {}), room=sid)
+
+        lsp_manager.register_message_handler(f'{sid}_{language}', on_notification)
+
+        emit('lsp:ready', {
+            'language': language,
+            'capabilities': server.capabilities
+        })
+    else:
+        emit('lsp:error', {'message': f'Failed to start {language} server'})
+
+@socketio.on('lsp:didOpen')
+def handle_lsp_did_open(data):
+    """Notify LSP that a file was opened"""
+    if not LSP_ENABLED:
+        return
+
+    sid = request.sid
+    uri = data.get('uri', '')
+    language = data.get('language', '')
+    text = data.get('text', '')
+
+    with lsp_lock:
+        if sid in lsp_sessions and language in lsp_sessions[sid]:
+            server = lsp_sessions[sid][language]['server']
+            server.did_open(uri, language, text)
+
+@socketio.on('lsp:didChange')
+def handle_lsp_did_change(data):
+    """Notify LSP of document changes"""
+    if not LSP_ENABLED:
+        return
+
+    sid = request.sid
+    uri = data.get('uri', '')
+    language = data.get('language', '')
+    version = data.get('version', 1)
+    text = data.get('text', '')
+
+    with lsp_lock:
+        if sid in lsp_sessions and language in lsp_sessions[sid]:
+            server = lsp_sessions[sid][language]['server']
+            server.did_change(uri, version, text)
+
+@socketio.on('lsp:didSave')
+def handle_lsp_did_save(data):
+    """Notify LSP that a file was saved"""
+    if not LSP_ENABLED:
+        return
+
+    sid = request.sid
+    uri = data.get('uri', '')
+    language = data.get('language', '')
+
+    with lsp_lock:
+        if sid in lsp_sessions and language in lsp_sessions[sid]:
+            server = lsp_sessions[sid][language]['server']
+            server.did_save(uri)
+
+@socketio.on('lsp:didClose')
+def handle_lsp_did_close(data):
+    """Notify LSP that a file was closed"""
+    if not LSP_ENABLED:
+        return
+
+    sid = request.sid
+    uri = data.get('uri', '')
+    language = data.get('language', '')
+
+    with lsp_lock:
+        if sid in lsp_sessions and language in lsp_sessions[sid]:
+            server = lsp_sessions[sid][language]['server']
+            server.did_close(uri)
+
+@socketio.on('lsp:completion')
+def handle_lsp_completion(data):
+    """Request code completion"""
+    if not LSP_ENABLED:
+        return
+
+    sid = request.sid
+    uri = data.get('uri', '')
+    language = data.get('language', '')
+    line = data.get('line', 0)
+    character = data.get('character', 0)
+    request_id = data.get('requestId', 0)
+
+    with lsp_lock:
+        if sid in lsp_sessions and language in lsp_sessions[sid]:
+            server = lsp_sessions[sid][language]['server']
+            result = server.completion(uri, line, character)
+            emit('lsp:completionResponse', {
+                'requestId': request_id,
+                'result': result.get('result') if result else None
+            })
+
+@socketio.on('lsp:hover')
+def handle_lsp_hover(data):
+    """Request hover info"""
+    if not LSP_ENABLED:
+        return
+
+    sid = request.sid
+    uri = data.get('uri', '')
+    language = data.get('language', '')
+    line = data.get('line', 0)
+    character = data.get('character', 0)
+    request_id = data.get('requestId', 0)
+
+    with lsp_lock:
+        if sid in lsp_sessions and language in lsp_sessions[sid]:
+            server = lsp_sessions[sid][language]['server']
+            result = server.hover(uri, line, character)
+            emit('lsp:hoverResponse', {
+                'requestId': request_id,
+                'result': result.get('result') if result else None
+            })
+
+@socketio.on('lsp:definition')
+def handle_lsp_definition(data):
+    """Request go-to-definition"""
+    if not LSP_ENABLED:
+        return
+
+    sid = request.sid
+    uri = data.get('uri', '')
+    language = data.get('language', '')
+    line = data.get('line', 0)
+    character = data.get('character', 0)
+    request_id = data.get('requestId', 0)
+
+    with lsp_lock:
+        if sid in lsp_sessions and language in lsp_sessions[sid]:
+            server = lsp_sessions[sid][language]['server']
+            result = server.definition(uri, line, character)
+            emit('lsp:definitionResponse', {
+                'requestId': request_id,
+                'result': result.get('result') if result else None
+            })
+
+@socketio.on('lsp:signatureHelp')
+def handle_lsp_signature_help(data):
+    """Request signature help"""
+    if not LSP_ENABLED:
+        return
+
+    sid = request.sid
+    uri = data.get('uri', '')
+    language = data.get('language', '')
+    line = data.get('line', 0)
+    character = data.get('character', 0)
+    request_id = data.get('requestId', 0)
+
+    with lsp_lock:
+        if sid in lsp_sessions and language in lsp_sessions[sid]:
+            server = lsp_sessions[sid][language]['server']
+            result = server.signature_help(uri, line, character)
+            emit('lsp:signatureHelpResponse', {
+                'requestId': request_id,
+                'result': result.get('result') if result else None
+            })
+
 @socketio.on('disconnect')
 def handle_disconnect():
-    """Clean up terminals when client disconnects"""
+    """Clean up terminals and LSP sessions when client disconnects"""
     sid = request.sid
     terminals_to_kill = []
 
@@ -4214,6 +4417,14 @@ def handle_disconnect():
         try:
             os.kill(info['pid'], signal.SIGTERM)
         except: pass
+
+    # Clean up LSP sessions
+    if LSP_ENABLED and lsp_manager:
+        with lsp_lock:
+            if sid in lsp_sessions:
+                for lang in lsp_sessions[sid]:
+                    lsp_manager.unregister_message_handler(f'{sid}_{lang}')
+                del lsp_sessions[sid]
 
 # Background thread to push new messages
 def message_pusher():
