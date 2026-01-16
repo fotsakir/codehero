@@ -804,20 +804,20 @@
                 </div>
 
                 <div class="form-section">
-                    <h4>Paths & Preview</h4>
+                    <h4 id="paths-section-title">Paths & Preview</h4>
                     <div class="form-row">
-                        <div class="form-group">
+                        <div class="form-group" id="web-path-group">
                             <label>Web Path</label>
                             <input type="text" name="web_path" id="web_path" placeholder="/var/www/projects/mysite">
                             <small>Where web files live (HTML, PHP, CSS). Served by Nginx.</small>
                         </div>
                         <div class="form-group">
-                            <label>App Path</label>
+                            <label id="app-path-label">App Path</label>
                             <input type="text" name="app_path" id="app_path" placeholder="/opt/apps/mysite">
-                            <small>Where backend code lives (Node, Python). Not web-accessible.</small>
+                            <small id="app-path-description">Where backend code lives (Node, Python). Not web-accessible.</small>
                         </div>
                     </div>
-                    <div class="form-group" style="margin-top:12px">
+                    <div class="form-group" id="preview-url-group" style="margin-top:12px">
                         <label>Preview URL</label>
                         <input type="text" name="preview_url" id="preview_url" placeholder="https://server:9867/mysite">
                         <small>Live preview URL for tickets. Auto-generated from code.</small>
@@ -1033,7 +1033,10 @@
     </div>
 
     <script>
-        function openModal() { document.getElementById('modal').classList.add('active'); }
+        function openModal() {
+            document.getElementById('modal').classList.add('active');
+            updateAutoFields(); // Set initial field visibility
+        }
         function closeModal() { document.getElementById('modal').classList.remove('active'); }
         function closeEditModal() { document.getElementById('editModal').classList.remove('active'); }
 
@@ -1079,12 +1082,49 @@
         // Auto-generate paths when code changes
         function updateAutoFields() {
             const code = document.getElementById('project_code').value.toLowerCase();
+            const projectType = document.getElementById('project_type').value;
+
+            // Define mobile project types
+            const mobileTypes = [
+                'capacitor_ionic_vue',
+                'react_native',
+                'flutter',
+                'kotlin_multiplatform',
+                'android_java_xml',
+                'android_kotlin_xml',
+                'android_kotlin_compose'
+            ];
+
+            const isMobile = mobileTypes.includes(projectType);
+
+            // Show/hide fields based on project type
+            const webPathGroup = document.getElementById('web-path-group');
+            const previewUrlGroup = document.getElementById('preview-url-group');
+            const pathsSectionTitle = document.getElementById('paths-section-title');
+            const appPathLabel = document.getElementById('app-path-label');
+            const appPathDescription = document.getElementById('app-path-description');
+
+            if (isMobile) {
+                // Hide web path and preview URL for mobile projects
+                webPathGroup.style.display = 'none';
+                previewUrlGroup.style.display = 'none';
+                pathsSectionTitle.textContent = 'Project Path';
+                appPathLabel.textContent = 'Application Path';
+                appPathDescription.textContent = 'Where your mobile app source code lives (React Native, Flutter, Android, etc.)';
+            } else {
+                // Show all fields for non-mobile projects
+                webPathGroup.style.display = '';
+                previewUrlGroup.style.display = '';
+                pathsSectionTitle.textContent = 'Paths & Preview';
+                appPathLabel.textContent = 'App Path';
+                appPathDescription.textContent = 'Where backend code lives (Node, Python). Not web-accessible.';
+            }
 
             if (!code) return;
 
-            // Auto-fill web_path (always)
+            // Auto-fill web_path (only for non-mobile)
             const webPathInput = document.getElementById('web_path');
-            if (!webPathInput.dataset.userEdited) {
+            if (!isMobile && !webPathInput.dataset.userEdited) {
                 webPathInput.value = `/var/www/projects/${code}`;
             }
 
@@ -1094,9 +1134,9 @@
                 appPathInput.value = `/opt/apps/${code}`;
             }
 
-            // Auto-fill preview_url
+            // Auto-fill preview_url (only for non-mobile)
             const previewInput = document.getElementById('preview_url');
-            if (!previewInput.dataset.userEdited) {
+            if (!isMobile && !previewInput.dataset.userEdited) {
                 previewInput.value = `https://${location.hostname}:9867/${code}`;
             }
         }
