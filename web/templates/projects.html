@@ -824,7 +824,7 @@
                     </div>
                 </div>
 
-                <div class="form-section">
+                <div class="form-section" id="database-section">
                     <h4>Database</h4>
                     <div class="checkbox-group">
                         <input type="checkbox" name="skip_database" id="skip_database">
@@ -1100,14 +1100,16 @@
             // Show/hide fields based on project type
             const webPathGroup = document.getElementById('web-path-group');
             const previewUrlGroup = document.getElementById('preview-url-group');
+            const databaseSection = document.getElementById('database-section');
             const pathsSectionTitle = document.getElementById('paths-section-title');
             const appPathLabel = document.getElementById('app-path-label');
             const appPathDescription = document.getElementById('app-path-description');
 
             if (isMobile) {
-                // Hide web path and preview URL for mobile projects
+                // Hide web path, preview URL, and database for mobile projects
                 webPathGroup.style.display = 'none';
                 previewUrlGroup.style.display = 'none';
+                databaseSection.style.display = 'none';
                 pathsSectionTitle.textContent = 'Project Path';
                 appPathLabel.textContent = 'Application Path';
                 appPathDescription.textContent = 'Where your mobile app source code lives (React Native, Flutter, Android, etc.)';
@@ -1115,6 +1117,7 @@
                 // Show all fields for non-mobile projects
                 webPathGroup.style.display = '';
                 previewUrlGroup.style.display = '';
+                databaseSection.style.display = '';
                 pathsSectionTitle.textContent = 'Paths & Preview';
                 appPathLabel.textContent = 'App Path';
                 appPathDescription.textContent = 'Where backend code lives (Node, Python). Not web-accessible.';
