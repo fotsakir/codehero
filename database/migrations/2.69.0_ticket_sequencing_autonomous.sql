@@ -1,58 +1,115 @@
 -- Migration: 2.69.0 - Ticket Sequencing & Autonomous Operation
 -- Date: 2026-01-17
 -- Description: Adds ticket types, sequencing, dependencies, retry logic, timeout, and test verification
+-- Note: All statements are idempotent (safe to run multiple times)
+
+-- =============================================================================
+-- HELPER PROCEDURE FOR IDEMPOTENT COLUMN ADDITIONS
+-- =============================================================================
+
+DROP PROCEDURE IF EXISTS add_column_if_not_exists;
+DROP PROCEDURE IF EXISTS add_index_if_not_exists;
+
+DELIMITER //
+
+CREATE PROCEDURE add_column_if_not_exists(
+    IN p_table_name VARCHAR(64),
+    IN p_column_name VARCHAR(64),
+    IN p_column_definition TEXT
+)
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = DATABASE()
+        AND table_name = p_table_name
+        AND column_name = p_column_name
+    ) THEN
+        SET @sql = CONCAT('ALTER TABLE ', p_table_name, ' ADD COLUMN ', p_column_name, ' ', p_column_definition);
+        PREPARE stmt FROM @sql;
+        EXECUTE stmt;
+        DEALLOCATE PREPARE stmt;
+    END IF;
+END //
+
+CREATE PROCEDURE add_index_if_not_exists(
+    IN p_table_name VARCHAR(64),
+    IN p_index_name VARCHAR(64),
+    IN p_index_columns VARCHAR(255)
+)
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.statistics
+        WHERE table_schema = DATABASE()
+        AND table_name = p_table_name
+        AND index_name = p_index_name
+    ) THEN
+        SET @sql = CONCAT('CREATE INDEX ', p_index_name, ' ON ', p_table_name, '(', p_index_columns, ')');
+        PREPARE stmt FROM @sql;
+        EXECUTE stmt;
+        DEALLOCATE PREPARE stmt;
+    END IF;
+END //
+
+DELIMITER ;
 
 -- =============================================================================
 -- TICKETS TABLE ADDITIONS
 -- =============================================================================
 
 -- Ticket Type (feature, bug, debug, rnd, task, improvement, docs)
-ALTER TABLE tickets ADD COLUMN ticket_type ENUM('feature','bug','debug','rnd','task','improvement','docs') DEFAULT 'task' AFTER priority;
+CALL add_column_if_not_exists('tickets', 'ticket_type', "ENUM('feature','bug','debug','rnd','task','improvement','docs') DEFAULT 'task'");
 
 -- Sequence Order (for ordering tickets within a project)
-ALTER TABLE tickets ADD COLUMN sequence_order INT DEFAULT NULL AFTER ticket_type;
+CALL add_column_if_not_exists('tickets', 'sequence_order', 'INT DEFAULT NULL');
 
 -- Force Next (jump to front of queue)
-ALTER TABLE tickets ADD COLUMN is_forced BOOLEAN DEFAULT FALSE AFTER sequence_order;
+CALL add_column_if_not_exists('tickets', 'is_forced', 'BOOLEAN DEFAULT FALSE');
 
 -- Retry Logic
-ALTER TABLE tickets ADD COLUMN retry_count INT DEFAULT 0 AFTER is_forced;
-ALTER TABLE tickets ADD COLUMN max_retries INT DEFAULT 3 AFTER retry_count;
+CALL add_column_if_not_exists('tickets', 'retry_count', 'INT DEFAULT 0');
+CALL add_column_if_not_exists('tickets', 'max_retries', 'INT DEFAULT 3');
 
 -- Timeout per Ticket
-ALTER TABLE tickets ADD COLUMN max_duration_minutes INT DEFAULT 60 AFTER max_retries;
+CALL add_column_if_not_exists('tickets', 'max_duration_minutes', 'INT DEFAULT 60');
 
 -- Parent Ticket (for sub-tickets)
-ALTER TABLE tickets ADD COLUMN parent_ticket_id INT DEFAULT NULL AFTER max_duration_minutes;
+CALL add_column_if_not_exists('tickets', 'parent_ticket_id', 'INT DEFAULT NULL');
 
 -- Test Verification
-ALTER TABLE tickets ADD COLUMN test_command VARCHAR(255) DEFAULT NULL AFTER parent_ticket_id;
-ALTER TABLE tickets ADD COLUMN require_tests_pass BOOLEAN DEFAULT FALSE AFTER test_command;
+CALL add_column_if_not_exists('tickets', 'test_command', 'VARCHAR(255) DEFAULT NULL');
+CALL add_column_if_not_exists('tickets', 'require_tests_pass', 'BOOLEAN DEFAULT FALSE');
 
 -- Auto-start after dependencies complete (FALSE = wait for user input)
-ALTER TABLE tickets ADD COLUMN start_when_ready BOOLEAN DEFAULT TRUE AFTER require_tests_pass;
+CALL add_column_if_not_exists('tickets', 'start_when_ready', 'BOOLEAN DEFAULT TRUE');
 
 -- Include awaiting_input as completed for dependency checks (relaxed mode)
-ALTER TABLE tickets ADD COLUMN deps_include_awaiting BOOLEAN DEFAULT FALSE AFTER start_when_ready;
+CALL add_column_if_not_exists('tickets', 'deps_include_awaiting', 'BOOLEAN DEFAULT FALSE');
 
--- Add timeout status to enum
+-- Add timeout status to enum (this will be ignored if already has it)
 ALTER TABLE tickets MODIFY COLUMN status ENUM('new','open','pending','in_progress','awaiting_input','done','failed','stuck','skipped','timeout') DEFAULT 'open';
 
--- Add foreign key for parent ticket
-ALTER TABLE tickets ADD CONSTRAINT fk_parent_ticket FOREIGN KEY (parent_ticket_id) REFERENCES tickets(id) ON DELETE SET NULL;
+-- Add foreign key for parent ticket (ignore if exists)
+SET @fk_exists = (SELECT COUNT(*) FROM information_schema.TABLE_CONSTRAINTS
+    WHERE CONSTRAINT_SCHEMA = DATABASE() AND CONSTRAINT_NAME = 'fk_parent_ticket');
+SET @sql = IF(@fk_exists = 0,
+    'ALTER TABLE tickets ADD CONSTRAINT fk_parent_ticket FOREIGN KEY (parent_ticket_id) REFERENCES tickets(id) ON DELETE SET NULL',
+    'SELECT 1');
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
--- Index for sequencing queries
-CREATE INDEX idx_ticket_sequence ON tickets(project_id, sequence_order, is_forced, priority);
+-- Index for sequencing queries (ignore if exists)
+CALL add_index_if_not_exists('tickets', 'idx_ticket_sequence', 'project_id, sequence_order, is_forced, priority');
 
--- Index for parent-child relationships
-CREATE INDEX idx_parent_ticket ON tickets(parent_ticket_id);
+-- Index for parent-child relationships (ignore if exists)
+CALL add_index_if_not_exists('tickets', 'idx_parent_ticket', 'parent_ticket_id');
 
 -- =============================================================================
 -- PROJECTS TABLE ADDITIONS
 -- =============================================================================
 
 -- Default test command for project
-ALTER TABLE projects ADD COLUMN default_test_command VARCHAR(255) DEFAULT NULL AFTER knowledge_updated_at;
+CALL add_column_if_not_exists('projects', 'default_test_command', 'VARCHAR(255) DEFAULT NULL');
 
 -- =============================================================================
 -- TICKET DEPENDENCIES TABLE (Many-to-Many)
@@ -67,8 +124,8 @@ CREATE TABLE IF NOT EXISTS ticket_dependencies (
     CONSTRAINT fk_dep_depends_on FOREIGN KEY (depends_on_ticket_id) REFERENCES tickets(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Index for dependency lookups
-CREATE INDEX idx_depends_on ON ticket_dependencies(depends_on_ticket_id);
+-- Index for dependency lookups (ignore if exists)
+CALL add_index_if_not_exists('ticket_dependencies', 'idx_depends_on', 'depends_on_ticket_id');
 
 -- =============================================================================
 -- EXECUTION SESSIONS TABLE ADDITIONS
@@ -78,7 +135,7 @@ CREATE INDEX idx_depends_on ON ticket_dependencies(depends_on_ticket_id);
 ALTER TABLE execution_sessions MODIFY COLUMN status ENUM('running','completed','failed','stuck','stopped','skipped','timeout') DEFAULT 'running';
 
 -- Track when ticket processing started (for timeout calculation)
-ALTER TABLE execution_sessions ADD COLUMN processing_started_at TIMESTAMP NULL AFTER started_at;
+CALL add_column_if_not_exists('execution_sessions', 'processing_started_at', 'TIMESTAMP NULL');
 
 -- =============================================================================
 -- VIEWS FOR REPORTING
@@ -133,6 +190,13 @@ JOIN tickets dt ON dt.id = td.depends_on_ticket_id
 WHERE t.status NOT IN ('done', 'skipped', 'failed')
   AND dt.status NOT IN ('done', 'skipped')
 GROUP BY t.id, t.ticket_number, t.title, t.project_id;
+
+-- =============================================================================
+-- CLEANUP
+-- =============================================================================
+
+DROP PROCEDURE IF EXISTS add_column_if_not_exists;
+DROP PROCEDURE IF EXISTS add_index_if_not_exists;
 
 -- =============================================================================
 -- MIGRATION RECORD
