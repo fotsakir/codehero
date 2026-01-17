@@ -497,11 +497,9 @@ def project_tickets_view(project_id):
         project = cursor.fetchone()
 
         cursor.execute("""
-            SELECT id, ticket_number, title, status, priority, created_at, updated_at
+            SELECT id, ticket_number, title, status, priority, ticket_type, sequence_order, is_forced, created_at, updated_at
             FROM tickets WHERE project_id = %s
-            ORDER BY
-            CASE status WHEN 'in_progress' THEN 1 WHEN 'open' THEN 2 WHEN 'awaiting_input' THEN 3 ELSE 4 END,
-            updated_at DESC
+            ORDER BY is_forced DESC, sequence_order IS NULL, sequence_order ASC, id ASC
         """, (project_id,))
         tickets = cursor.fetchall()
 
@@ -2072,7 +2070,12 @@ def api_projects():
         preview_url = data.get('preview_url', '').strip()
         context = data.get('context', '').strip()
         ai_model = data.get('ai_model', 'sonnet')
+        default_execution_mode = data.get('default_execution_mode', 'autonomous')
         skip_database = data.get('skip_database', False)
+
+        # Validate execution mode
+        if default_execution_mode not in ('autonomous', 'supervised'):
+            default_execution_mode = 'autonomous'
 
         # Android settings
         android_device_type = data.get('android_device_type') or 'none'
@@ -2119,12 +2122,12 @@ def api_projects():
             cursor.execute("""
                 INSERT INTO projects (name, code, description, project_type, tech_stack,
                     web_path, app_path, preview_url, context, db_name, db_user, db_password, db_host,
-                    ai_model, android_device_type, android_remote_host, android_remote_port, android_screen_size,
+                    ai_model, default_execution_mode, android_device_type, android_remote_host, android_remote_port, android_screen_size,
                     dotnet_port, status, created_at, updated_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'localhost', %s, %s, %s, %s, %s, %s, 'active', NOW(), NOW())
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'localhost', %s, %s, %s, %s, %s, %s, %s, 'active', NOW(), NOW())
             """, (name, code, description, project_type, tech_stack or None,
                   web_path or None, app_path or None, preview_url or None, context or None,
-                  db_name, db_user, db_password, ai_model,
+                  db_name, db_user, db_password, ai_model, default_execution_mode,
                   android_device_type, android_remote_host, android_remote_port, android_screen_size,
                   dotnet_port))
             conn.commit()
@@ -2267,6 +2270,11 @@ def api_project_detail(project_id):
         updates.append("default_test_command = %s")
         test_cmd = data['default_test_command']
         params.append(test_cmd.strip() if test_cmd else None)
+    if 'default_execution_mode' in data:
+        exec_mode = data['default_execution_mode']
+        if exec_mode in ('autonomous', 'supervised'):
+            updates.append("default_execution_mode = %s")
+            params.append(exec_mode)
 
     # Android settings
     if 'android_device_type' in data:
@@ -2323,6 +2331,7 @@ def ticket_detail(ticket_id):
                    p.web_path, p.app_path,
                    COALESCE(p.web_path, p.app_path) as project_path,
                    p.preview_url, p.ai_model as project_ai_model,
+                   p.default_execution_mode as project_default_execution_mode,
                    p.project_type, p.android_device_type, p.android_screen_size,
                    p.db_name, p.db_user, p.db_host
             FROM tickets t JOIN projects p ON t.project_id = p.id
@@ -2335,6 +2344,14 @@ def ticket_detail(ticket_id):
             if not ticket.get('preview_url') and ticket.get('project_code'):
                 host = request.host.split(':')[0]  # Get hostname without port
                 ticket['preview_url'] = f"https://{host}:9867/{ticket['project_code'].lower()}"
+
+            # Parse pending_permission JSON if present
+            if ticket.get('pending_permission'):
+                if isinstance(ticket['pending_permission'], str):
+                    try:
+                        ticket['pending_permission'] = json.loads(ticket['pending_permission'])
+                    except:
+                        ticket['pending_permission'] = None
             cursor.execute("""
                 SELECT * FROM conversation_messages
                 WHERE ticket_id = %s ORDER BY created_at ASC
@@ -2389,6 +2406,11 @@ def api_tickets():
         max_duration_minutes = data.get('max_duration_minutes', 60)
         start_when_ready = data.get('start_when_ready', True)  # Auto-start after deps complete
         deps_include_awaiting = data.get('deps_include_awaiting', False)  # Relaxed mode for deps
+        execution_mode = data.get('execution_mode')  # None = inherit, 'autonomous', or 'supervised'
+
+        # Validate execution_mode (None = inherit from project)
+        if execution_mode and execution_mode not in ('autonomous', 'supervised'):
+            execution_mode = None
 
         # Validate ai_model
         if ai_model and ai_model not in ('opus', 'sonnet', 'haiku'):
@@ -2419,11 +2441,12 @@ def api_tickets():
                 INSERT INTO tickets (project_id, ticket_number, title, description, priority, ai_model,
                                      ticket_type, sequence_order, parent_ticket_id, test_command,
                                      require_tests_pass, max_retries, max_duration_minutes, start_when_ready,
-                                     deps_include_awaiting, status, created_at, updated_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'open', NOW(), NOW())
+                                     deps_include_awaiting, execution_mode, status, created_at, updated_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'open', NOW(), NOW())
             """, (project_id, ticket_number, title, description, priority, ai_model,
                   ticket_type, sequence_order, parent_ticket_id, test_command,
-                  require_tests_pass, max_retries, max_duration_minutes, start_when_ready, deps_include_awaiting))
+                  require_tests_pass, max_retries, max_duration_minutes, start_when_ready, deps_include_awaiting,
+                  execution_mode))
             conn.commit()
             ticket_id = cursor.lastrowid
 
@@ -2456,14 +2479,16 @@ def api_tickets():
     project_id = request.args.get('project_id')
     if project_id:
         cursor.execute("""
-            SELECT t.*, p.name as project_name FROM tickets t 
-            JOIN projects p ON t.project_id = p.id 
-            WHERE t.project_id = %s ORDER BY t.updated_at DESC
+            SELECT t.*, p.name as project_name FROM tickets t
+            JOIN projects p ON t.project_id = p.id
+            WHERE t.project_id = %s
+            ORDER BY t.is_forced DESC, t.sequence_order IS NULL, t.sequence_order ASC, t.id ASC
         """, (project_id,))
     else:
         cursor.execute("""
-            SELECT t.*, p.name as project_name FROM tickets t 
-            JOIN projects p ON t.project_id = p.id ORDER BY t.updated_at DESC
+            SELECT t.*, p.name as project_name FROM tickets t
+            JOIN projects p ON t.project_id = p.id
+            ORDER BY t.is_forced DESC, t.sequence_order IS NULL, t.sequence_order ASC, t.id ASC
         """)
     
     tickets = cursor.fetchall()
@@ -2671,9 +2696,9 @@ def reopen_ticket(ticket_id):
         ticket = cursor.fetchone()
 
         # Update ticket status first (fast)
-        # Update ticket status
+        # Update ticket status and reset retry count
         cursor.execute("""
-            UPDATE tickets SET status = 'open', closed_at = NULL,
+            UPDATE tickets SET status = 'open', retry_count = 0, closed_at = NULL,
             closed_by = NULL, close_reason = NULL, review_deadline = NULL, updated_at = NOW()
             WHERE id = %s
         """, (ticket_id,))
@@ -2832,6 +2857,14 @@ def update_ticket_settings(ticket_id):
                 updates.append("ticket_type = %s")
                 params.append(data['ticket_type'])
 
+        # Execution Mode (NULL = inherit from project)
+        if 'execution_mode' in data:
+            if data['execution_mode'] in ('autonomous', 'supervised'):
+                updates.append("execution_mode = %s")
+                params.append(data['execution_mode'])
+            elif data['execution_mode'] is None or data['execution_mode'] == '':
+                updates.append("execution_mode = NULL")
+
         # Sequence Order
         if 'sequence_order' in data:
             seq = data['sequence_order']
@@ -2980,6 +3013,116 @@ def force_ticket(ticket_id):
         return jsonify({'success': False, 'message': str(e)})
 
 
+@app.route('/api/ticket/<int:ticket_id>/permission', methods=['POST'])
+@login_required
+def handle_permission(ticket_id):
+    """Handle permission approval/rejection for supervised mode"""
+    try:
+        data = request.get_json() or {}
+        action = data.get('action')  # 'approve', 'approve_all', 'reject'
+
+        if action not in ('approve', 'approve_all', 'reject'):
+            return jsonify({'success': False, 'message': 'Invalid action'})
+
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+
+        # Get ticket with pending permission
+        cursor.execute("""
+            SELECT id, pending_permission, approved_permissions, execution_mode
+            FROM tickets WHERE id = %s
+        """, (ticket_id,))
+        ticket = cursor.fetchone()
+
+        if not ticket:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'message': 'Ticket not found'})
+
+        pending = ticket.get('pending_permission')
+        if isinstance(pending, str):
+            pending = json.loads(pending) if pending else None
+
+        if not pending:
+            cursor.close()
+            conn.close()
+            return jsonify({'success': False, 'message': 'No pending permission'})
+
+        if action == 'reject':
+            # Clear pending permission and keep ticket in awaiting_input
+            cursor.execute("""
+                UPDATE tickets SET pending_permission = NULL, updated_at = NOW()
+                WHERE id = %s
+            """, (ticket_id,))
+            conn.commit()
+            cursor.close()
+            conn.close()
+            return jsonify({'success': True, 'action': 'rejected'})
+
+        # Approve - add to approved_permissions
+        approved = ticket.get('approved_permissions')
+        if isinstance(approved, str):
+            approved = json.loads(approved) if approved else []
+        if not approved:
+            approved = []
+
+        tool = pending.get('tool', '')
+        tool_input = pending.get('input', {})
+
+        if action == 'approve':
+            # Add specific approval for this exact operation
+            new_perm = {'tool': tool, 'pattern': '*', 'once': True}
+            approved.append(new_perm)
+        elif action == 'approve_all':
+            # Add pattern-based approval for similar operations
+            if tool == 'Bash':
+                cmd = tool_input.get('command', '')
+                # Extract command prefix (e.g., "npm install" -> "npm *")
+                parts = cmd.split()
+                if len(parts) >= 1:
+                    pattern = parts[0] + ' *'
+                else:
+                    pattern = '*'
+                new_perm = {'tool': tool, 'pattern': pattern}
+            elif tool in ('Edit', 'Write'):
+                # Approve edits to same directory
+                file_path = tool_input.get('file_path', '')
+                import os
+                dir_path = os.path.dirname(file_path)
+                pattern = dir_path + '/*' if dir_path else '*'
+                new_perm = {'tool': tool, 'pattern': pattern}
+            else:
+                new_perm = {'tool': tool, 'pattern': '*'}
+            approved.append(new_perm)
+
+        # Save approved permissions file for the hook to read
+        perm_file = f"/var/run/codehero/permissions_{ticket_id}.json"
+        import os
+        os.makedirs('/var/run/codehero', exist_ok=True)
+        with open(perm_file, 'w') as f:
+            json.dump(approved, f)
+
+        # Clear pending permission and set status to open for daemon to pick up
+        cursor.execute("""
+            UPDATE tickets
+            SET pending_permission = NULL,
+                approved_permissions = %s,
+                status = 'open',
+                updated_at = NOW()
+            WHERE id = %s
+        """, (json.dumps(approved), ticket_id))
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return jsonify({'success': True, 'action': action, 'approved': approved})
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'message': str(e)})
+
+
 @app.route('/api/ticket/<int:ticket_id>/start', methods=['POST'])
 @login_required
 def start_ticket(ticket_id):
@@ -3028,7 +3171,7 @@ def start_ticket(ticket_id):
 
         # Set to open + forced (will be picked up next by daemon)
         cursor.execute("""
-            UPDATE tickets SET status = 'open', is_forced = TRUE, updated_at = NOW()
+            UPDATE tickets SET status = 'open', retry_count = 0, is_forced = TRUE, updated_at = NOW()
             WHERE id = %s
         """, (target_id,))
         conn.commit()
@@ -3379,7 +3522,7 @@ def send_ticket_message(ticket_id):
         # If ticket is in awaiting_input or skipped, auto-reopen it so Claude can respond
         if ticket['status'] in ('awaiting_input', 'skipped'):
             cursor.execute("""
-                UPDATE tickets SET status = 'open', review_deadline = NULL,
+                UPDATE tickets SET status = 'open', retry_count = 0, review_deadline = NULL,
                 closed_at = NULL, closed_by = NULL, close_reason = NULL, updated_at = NOW()
                 WHERE id = %s
             """, (ticket_id,))
@@ -3462,7 +3605,7 @@ def send_ticket_message(ticket_id):
 
         # If ticket is awaiting_input, change to open so daemon picks it up
         if ticket.get('status') == 'awaiting_input':
-            cursor.execute("UPDATE tickets SET status = 'open' WHERE id = %s", (ticket_id,))
+            cursor.execute("UPDATE tickets SET status = 'open', retry_count = 0 WHERE id = %s", (ticket_id,))
             socketio.emit('ticket_status', {'ticket_id': ticket_id, 'status': 'open'}, room=f'ticket_{ticket_id}')
 
         conn.commit()
@@ -3765,7 +3908,7 @@ def send_console_message():
         # If ticket is in awaiting_input, auto-reopen it
         if ticket['status'] == 'awaiting_input':
             cursor.execute("""
-                UPDATE tickets SET status = 'open', review_deadline = NULL, updated_at = NOW()
+                UPDATE tickets SET status = 'open', retry_count = 0, review_deadline = NULL, updated_at = NOW()
                 WHERE id = %s
             """, (ticket['id'],))
 

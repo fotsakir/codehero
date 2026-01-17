@@ -484,11 +484,16 @@
             <div class="assistant-suggestions">
                 <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 12px;">Quick actions:</p>
                 <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-                    <button class="suggestion-btn" onclick="askAssistant('Πώς πάει το project;')">📊 Project Status</button>
-                    <button class="suggestion-btn" onclick="askAssistant('Τι tickets έχουν κολλήσει;')">🚧 Blocked Tickets</button>
-                    <button class="suggestion-btn" onclick="askAssistant('Retry τα failed tickets')">🔄 Retry Failed</button>
-                    <button class="suggestion-btn" onclick="askAssistant('Πρόσθεσε νέο ticket')">➕ Add Ticket</button>
+                    <button class="suggestion-btn" onclick="askAssistant('Project status')">📊 Project Status</button>
+                    <button class="suggestion-btn" onclick="askAssistant('Show blocked tickets')">🚧 Blocked Tickets</button>
+                    <button class="suggestion-btn" onclick="askAssistant('Retry failed tickets')">🔄 Retry Failed</button>
+                    <button class="suggestion-btn" onclick="askAssistant('Add new ticket, autonomous')">➕ Add Ticket</button>
+                    <button class="suggestion-btn" onclick="askAssistant('Add ticket supervised')">🔐 Add Supervised</button>
                 </div>
+                <p style="color: var(--text-muted); font-size: 11px; margin-top: 12px;">
+                    <strong>Tip:</strong> When adding tickets, say "autonomous" (full access) or "supervised" (asks permission).
+                    For multiple tickets, say "relaxed" (continuous) or "strict" (waits between).
+                </p>
             </div>
         </div>
 

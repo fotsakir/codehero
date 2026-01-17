@@ -1267,8 +1267,16 @@
                             {% endif %}
                             {% endfor %}
                         </select>
-                        <!-- Checkboxes under parent -->
+                        <!-- Execution Mode & Checkboxes -->
                         <div style="margin-top: 10px;">
+                            <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 8px;">
+                                <span style="min-width: 100px;">Execution Mode:</span>
+                                <select name="execution_mode" style="flex: 1; font-size: 12px; padding: 4px 8px;">
+                                    <option value="" selected>📋 Inherit ({{ '🛡️ Supervised' if project.default_execution_mode == 'supervised' else '⚡ Autonomous' }})</option>
+                                    <option value="autonomous">⚡ Autonomous</option>
+                                    <option value="supervised">🛡️ Supervised</option>
+                                </select>
+                            </label>
                             <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 12px;">
                                 <input type="checkbox" name="start_when_ready" checked style="width: 14px; height: 14px;">
                                 <span>Auto-start when deps complete</span>
@@ -1379,7 +1387,8 @@
                 parent_ticket_id: parentValue ? parseInt(parentValue) : null,
                 start_when_ready: form.start_when_ready.checked,
                 deps_include_awaiting: form.deps_include_awaiting.checked,
-                ai_model: form.ai_model.value || null
+                ai_model: form.ai_model.value || null,
+                execution_mode: form.execution_mode.value || null
             };
 
             const resp = await fetch('/api/tickets', {

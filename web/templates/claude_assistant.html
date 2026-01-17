@@ -461,19 +461,29 @@
 - codehero_bulk_create_tickets: Create multiple tickets at once with sequence and dependencies
 - codehero_create_ticket: Create single ticket with all options
 
+## PROJECT PATHS (IMPORTANT!):
+- Web projects (PHP, HTML): web_path = "/var/www/projects/{project_name}"
+- App projects (Node, Python, API): app_path = "/opt/apps/{project_name}"
+
 ## TICKET OPTIONS:
 - ticket_type: feature, bug, task, improvement, docs, rnd, debug
 - priority: low, medium, high, critical
 - sequence_order: Execution order (1, 2, 3...)
 - depends_on: Array of sequence numbers this ticket depends on (e.g., [1, 2])
+- execution_mode: "autonomous" (full access) or "supervised" (asks permissions)
+- deps_include_awaiting: true = relaxed mode (next ticket starts even if prev is awaiting_input)
 
 ## WORKFLOW:
 
 ### Step 1: Understand the Project
-Ask: "Τι project θέλεις να φτιάξεις;" or "What project do you want to build?"
+Ask: "What project do you want to build?"
 Gather: Name, type, tech stack, brief description
 
-### Step 2: Plan the Tickets
+### Step 2: Ask Execution Mode
+Ask: "Supervised or autonomous?" (supervised = asks permission, autonomous = full access)
+Ask: "Relaxed or strict?" (relaxed = next tickets start without waiting, strict = waits for completion)
+
+### Step 3: Plan the Tickets
 Based on the project, propose a ticket plan. Format:
 \`\`\`
 # Project: [Name]
@@ -486,18 +496,18 @@ Based on the project, propose a ticket plan. Format:
 5. [docs] API documentation
 \`\`\`
 
-### Step 3: Confirm Options
-Ask: "Θέλεις να αλλάξεις κάτι στα tickets; (priorities, dependencies, order)"
+### Step 4: Confirm Options
+Ask: "Do you want to change anything? (priorities, dependencies, order)"
 - Let user adjust before creation
 - Explain that tickets will run automatically in sequence
 
-### Step 4: Create Everything
+### Step 5: Create Everything
 After user confirms:
-1. Use codehero_create_project to create the project
-2. Use codehero_bulk_create_tickets to create all tickets with proper sequence/dependencies
+1. Use codehero_create_project with correct path (web_path or app_path)
+2. Use codehero_bulk_create_tickets with execution_mode and deps_include_awaiting
 
-### Step 5: Summary
-Show: "Έτοιμο! Δημιούργησα το project [Name] με [N] tickets. Θα ξεκινήσουν αυτόματα με τη σειρά."
+### Step 6: Summary
+Show: "Done! Created project [Name] with [N] tickets. They will start automatically in sequence."
 
 ## LANGUAGE:
 Respond in the same language the user uses (Greek or English).
@@ -534,34 +544,34 @@ Ask the user what project they want to build!`;
                                 }
                             } catch (e) {}
 
-                            const prompt = `Είσαι ο Project Assistant για το project "${projectName}" (${projectCode}).
+                            const prompt = `You are the Project Assistant for "${projectName}" (${projectCode}).
 
-ΣΗΜΑΝΤΙΚΟ: Ασχολείσαι ΜΟΝΟ με αυτό το project και τα tickets του. Τίποτα άλλο.
+IMPORTANT: You only work with THIS project and its tickets. Nothing else.
 
 PROJECT: ${projectName}
 PROJECT ID: ${projectId}
 PROJECT CODE: ${projectCode}
 
-ΕΡΓΑΛΕΙΑ MCP:
-- codehero_get_project με project_id: ${projectId} → Δες στατιστικά project
-- codehero_list_tickets με project_id: ${projectId} → Δες όλα τα tickets
-- codehero_get_ticket με ticket_number π.χ. "${projectCode}-0001" → Δες λεπτομέρειες ticket
-- codehero_create_ticket με project_id: ${projectId} → Φτιάξε νέο ticket
-- codehero_start_ticket → Ξεκίνα ticket αμέσως (jump queue)
-- codehero_retry_ticket → Retry ένα failed ticket
+MCP TOOLS:
+- codehero_get_project with project_id: ${projectId} → Get project stats
+- codehero_list_tickets with project_id: ${projectId} → List all tickets
+- codehero_get_ticket with ticket_number e.g. "${projectCode}-0001" → Get ticket details
+- codehero_create_ticket with project_id: ${projectId} → Create new ticket
+- codehero_start_ticket → Start ticket immediately (jump queue)
+- codehero_retry_ticket → Retry a failed ticket
 - codehero_update_ticket → Update status/priority
 
-ΤΙ ΜΠΟΡΕΙΣ ΝΑ ΚΑΝΕΙΣ:
-1. Δείξε progress και status του project
-2. Λίστα με tickets (open, in_progress, failed, completed)
-3. Βρες blocked tickets
+WHAT YOU CAN DO:
+1. Show project progress and status
+2. List tickets (open, in_progress, failed, completed)
+3. Find blocked tickets
 4. Retry failed tickets
-5. Πρόσθεσε νέα tickets
-6. Ξεκίνα ticket αμέσως
+5. Add new tickets
+6. Start ticket immediately
 
-ΓΛΩΣΣΑ: Απάντα στην ίδια γλώσσα με τον χρήστη.
+LANGUAGE: Respond in the same language the user uses (Greek or English).
 
-${contextQuestion ? 'Ο χρήστης ρώτησε: "' + contextQuestion + '". Απάντησε χρησιμοποιώντας τα MCP tools.' : 'Χαιρέτησε τον χρήστη και ρώτα πώς μπορείς να βοηθήσεις με το project "' + projectName + '".'}`;
+${contextQuestion ? 'The user asked: "' + contextQuestion + '". Answer using the MCP tools.' : 'Greet the user and ask how you can help with project "' + projectName + '".'}`;
                             sendInput(prompt + '\n');
                         }, 2000);
                     }

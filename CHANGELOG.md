@@ -5,6 +5,25 @@ All notable changes to CodeHero will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.70.0] - 2026-01-17
+
+### Added
+- **Execution Modes** - Control how tickets run
+  - `autonomous` - Full access, no permission prompts (default)
+  - `supervised` - Asks for user approval before write/edit/bash operations
+  - Per-ticket or project-wide default setting
+- **Relaxed Mode** - Control dependency behavior
+  - `strict` (default) - Wait for dependencies to fully complete
+  - `relaxed` - Continue even if dependency is awaiting user input
+  - Ask "Relaxed or strict?" when creating multiple tickets
+
+### Improved
+- **Claude Assistant** - Now asks about execution mode and relaxed mode
+- **Plan with AI** - Includes execution mode and relaxed mode options
+- **MCP Tools** - Added `execution_mode` and `deps_include_awaiting` parameters
+
+---
+
 ## [2.69.0] - 2026-01-17
 
 ### Added

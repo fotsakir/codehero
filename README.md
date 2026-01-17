@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Dual-blue.svg" alt="License"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-2.69.0-green.svg" alt="Version"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-2.70.0-green.svg" alt="Version"></a>
   <img src="https://img.shields.io/badge/Ubuntu-22.04%20|%2024.04-orange.svg" alt="Ubuntu">
   <a href="https://anthropic.com"><img src="https://img.shields.io/badge/Powered%20by-Claude%20AI-blueviolet.svg" alt="Claude AI"></a>
   <a href="https://github.com/fotsakir/codehero/stargazers"><img src="https://img.shields.io/github/stars/fotsakir/codehero?style=social" alt="Stars"></a>
@@ -106,12 +106,19 @@ Built-in protection against runaway AI sessions:
 - **Explains why** it stopped in the conversation
 
 #### AI Project Manager (Blueprint Planner)
-Let Claude help you design your project before coding:
+Let Claude design and build your entire project from a single description:
+
+**How it works:**
+1. Describe what you want to build
+2. CodeHero Manager creates the plan (tech stack, features, database)
+3. Creates the project and tickets automatically
+4. You just wait - wake up to working code
+
 - **"Plan with AI"** button on Projects page
 - **Guided questionnaire** - Claude asks about requirements
-- **Generates complete blueprint**: tech stack, database schema, API design, file structure
-- **Feature breakdown** with milestones
-- **Copy directly** to new project description
+- **Auto-creates project** with correct paths and settings
+- **Auto-creates tickets** with dependencies and sequences
+- **Choose execution mode** - supervised or autonomous
 
 #### Claude Assistant
 Interactive Claude terminal with full control:
@@ -119,6 +126,18 @@ Interactive Claude terminal with full control:
 - **Popup Window**: Open in separate window for multi-monitor setups
 - **Direct Access**: Chat with Claude outside of ticket workflow
 - **Full Terminal**: Real PTY with color support
+
+#### Execution Modes
+Control how Claude runs your tickets:
+- **Autonomous** (default) - Full access, Claude works without interruption
+- **Supervised** - Claude asks for permission before write/edit/bash operations
+- **Per-ticket or project-wide** - Set default for project or override per ticket
+
+#### Dependency Modes
+Control how tickets with dependencies behave:
+- **Strict** (default) - Wait for dependencies to fully complete
+- **Relaxed** - Continue even if dependency is awaiting user input
+- **Useful for chained tasks** - Keep work flowing without manual intervention
 
 #### Visual Verification - "See With Your Eyes"
 Claude can see exactly what you see:
@@ -336,8 +355,8 @@ apt-get update && apt-get install -y unzip wget net-tools
 
 # Download and extract
 cd /root
-wget https://github.com/fotsakir/codehero/releases/latest/download/codehero-2.69.0.zip
-unzip codehero-2.69.0.zip
+wget https://github.com/fotsakir/codehero/releases/latest/download/codehero-2.70.0.zip
+unzip codehero-2.70.0.zip
 cd codehero
 
 # Run setup
@@ -363,7 +382,7 @@ The installer automatically sets up:
 ```bash
 # Download new version
 cd /root
-unzip codehero-2.69.0.zip
+unzip codehero-2.70.0.zip
 cd codehero
 
 # Preview changes (recommended)

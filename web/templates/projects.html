@@ -840,6 +840,18 @@
                 </div>
 
                 <div class="form-section">
+                    <h4>Execution Mode</h4>
+                    <div class="form-group">
+                        <label>Default Execution Mode</label>
+                        <select name="default_execution_mode">
+                            <option value="autonomous" selected>⚡ Autonomous - Full access, no interruptions</option>
+                            <option value="supervised">🛡️ Supervised - Asks for dangerous operations</option>
+                        </select>
+                        <small>New tickets inherit this setting. Can be overridden per ticket.</small>
+                    </div>
+                </div>
+
+                <div class="form-section">
                     <h4>Project Context</h4>
                     <div class="form-group">
                         <label>Context for Claude</label>
@@ -1009,6 +1021,18 @@
                 </div>
 
                 <div class="form-section">
+                    <h4>Execution Mode</h4>
+                    <div class="form-group">
+                        <label>Default Execution Mode</label>
+                        <select name="default_execution_mode" id="edit_default_execution_mode">
+                            <option value="autonomous">⚡ Autonomous - Full access, no interruptions</option>
+                            <option value="supervised">🛡️ Supervised - Asks for dangerous operations</option>
+                        </select>
+                        <small>New tickets inherit this setting. Can be overridden per ticket.</small>
+                    </div>
+                </div>
+
+                <div class="form-section">
                     <h4>Project Context</h4>
                     <div class="form-group">
                         <label>Context for Claude</label>
@@ -1118,6 +1142,7 @@
                 preview_url: form.preview_url.value,
                 context: form.context.value,
                 ai_model: form.ai_model.value,
+                default_execution_mode: form.default_execution_mode.value,
                 skip_database: form.skip_database.checked,
                 android_device_type: androidDeviceType,
                 android_remote_host: form.android_remote_host?.value || null,
@@ -1162,6 +1187,7 @@
                 document.getElementById('edit_context').value = p.context || '';
                 document.getElementById('edit_ai_model').value = p.ai_model || 'sonnet';
                 document.getElementById('edit_default_test_command').value = p.default_test_command || '';
+                document.getElementById('edit_default_execution_mode').value = p.default_execution_mode || 'autonomous';
 
                 // Android settings
                 const deviceType = p.android_device_type || 'none';
@@ -1201,6 +1227,7 @@
                 context: form.context.value,
                 ai_model: form.ai_model.value,
                 default_test_command: form.default_test_command.value || null,
+                default_execution_mode: form.default_execution_mode.value || 'autonomous',
                 android_device_type: androidDeviceType,
                 android_remote_host: document.getElementById('edit_android_remote_host').value || null,
                 android_remote_port: parseInt(document.getElementById('edit_android_remote_port').value) || 5555,

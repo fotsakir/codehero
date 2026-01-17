@@ -207,6 +207,15 @@ TOOLS = [
                 "auto_start": {
                     "type": "boolean",
                     "description": "Automatically start processing. Default: true"
+                },
+                "execution_mode": {
+                    "type": "string",
+                    "description": "Execution mode: autonomous (full access), supervised (asks for permissions), or omit to inherit from project default",
+                    "enum": ["autonomous", "supervised"]
+                },
+                "deps_include_awaiting": {
+                    "type": "boolean",
+                    "description": "Set to TRUE for 'relaxed' mode (tickets run continuously), FALSE for 'strict' mode (waits between tickets). Default: false (strict)"
                 }
             },
             "required": ["project_id", "title"]
@@ -753,6 +762,12 @@ def handle_create_ticket(args: Dict[str, Any]) -> Dict[str, Any]:
     sequence_order = args.get('sequence_order')
     depends_on = args.get('depends_on', [])
     parent_ticket_id = args.get('parent_ticket_id')
+    execution_mode = args.get('execution_mode')  # None = inherit from project
+    deps_include_awaiting = args.get('deps_include_awaiting', False)  # Relaxed mode for deps
+
+    # Validate execution_mode (None = inherit from project)
+    if execution_mode and execution_mode not in ('autonomous', 'supervised'):
+        execution_mode = None
 
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
@@ -790,10 +805,10 @@ def handle_create_ticket(args: Dict[str, Any]) -> Dict[str, Any]:
 
         cursor.execute("""
             INSERT INTO tickets (project_id, ticket_number, title, description, status, priority,
-                                 ticket_type, sequence_order, parent_ticket_id)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                 ticket_type, sequence_order, parent_ticket_id, execution_mode, deps_include_awaiting)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         """, (project_id, ticket_number, title, description, status, priority,
-              ticket_type, sequence_order, parent_ticket_id))
+              ticket_type, sequence_order, parent_ticket_id, execution_mode, deps_include_awaiting))
 
         conn.commit()
         ticket_id = cursor.lastrowid

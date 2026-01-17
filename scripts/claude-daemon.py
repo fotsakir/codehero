@@ -210,6 +210,8 @@ class ProjectWorker(threading.Thread):
         self.session_cache_read_tokens = 0
         self.session_cache_creation_tokens = 0
         self.session_api_calls = 0
+        # Permission denials (supervised mode)
+        self.permission_denials = []
         
     def log(self, message, level="INFO"):
         self.daemon_ref.log(f"[{self.project_name}] {message}", level)
@@ -375,7 +377,8 @@ class ProjectWorker(threading.Thread):
                        p.db_name, p.db_user, p.db_password, p.db_host,
                        p.ai_model as project_ai_model, t.ai_model as ticket_ai_model,
                        p.android_device_type, p.android_remote_host, p.android_remote_port, p.android_screen_size,
-                       p.dotnet_port, p.default_test_command
+                       p.dotnet_port, p.default_test_command,
+                       p.default_execution_mode
                 FROM tickets t
                 JOIN projects p ON t.project_id = p.id
                 WHERE t.project_id = %s
@@ -833,6 +836,7 @@ class ProjectWorker(threading.Thread):
         self.session_cache_read_tokens = 0
         self.session_cache_creation_tokens = 0
         self.session_api_calls = 0
+        self.permission_denials = []
 
     def save_usage_stats(self):
         """Save usage statistics to database"""
@@ -1138,6 +1142,12 @@ Complete this task. When finished, say "TASK COMPLETED" with a summary."""
                     result = json.dumps(result)
                 self.save_message('tool_result', str(result)[:5000])
 
+                # Check for permission denials (supervised mode)
+                permission_denials = data.get('permission_denials', [])
+                if permission_denials:
+                    self.permission_denials = permission_denials
+                    self.log(f"Permission denials captured: {len(permission_denials)} denial(s)", "INFO")
+
             elif msg_type == 'error':
                 error = data.get('error', {}).get('message', 'Unknown error')
                 self.save_message('system', f"Error: {error}")
@@ -1148,7 +1158,43 @@ Complete this task. When finished, say "TASK COMPLETED" with a summary."""
                 self.save_log('output', line.strip())
 
         return None
-    
+
+    def check_pending_permission(self, ticket_id):
+        """Check if there's a pending permission request"""
+        pending_file = f"/var/run/codehero/pending_{ticket_id}.json"
+        if os.path.exists(pending_file):
+            try:
+                with open(pending_file, 'r') as f:
+                    return json.load(f)
+            except:
+                pass
+        return None
+
+    def clear_pending_permission(self, ticket_id):
+        """Clear the pending permission file"""
+        pending_file = f"/var/run/codehero/pending_{ticket_id}.json"
+        try:
+            if os.path.exists(pending_file):
+                os.remove(pending_file)
+        except:
+            pass
+
+    def save_pending_permission_to_db(self, ticket_id, pending):
+        """Save pending permission to database for user review"""
+        try:
+            db = self.get_db()
+            cursor = db.cursor()
+            cursor.execute(
+                "UPDATE tickets SET pending_permission = %s, status = 'awaiting_input' WHERE id = %s",
+                (json.dumps(pending), ticket_id)
+            )
+            db.commit()
+            cursor.close()
+            return True
+        except Exception as e:
+            self.log(f"Error saving pending permission: {e}", "ERROR")
+            return False
+
     def run_claude(self, ticket, prompt):
         """Run Claude Code within project directory"""
 
@@ -1174,14 +1220,27 @@ Complete this task. When finished, say "TASK COMPLETED" with a summary."""
         ai_model = ticket.get('ticket_ai_model') or ticket.get('project_ai_model') or 'sonnet'
         self.log(f"Using AI model: {ai_model}")
 
+        # Check execution mode: autonomous (default) or supervised
+        execution_mode = ticket.get('execution_mode') or ticket.get('default_execution_mode') or 'autonomous'
+        self.log(f"Execution mode: {execution_mode}")
+
+        # Build command based on execution mode
         cmd = [
             '/home/claude/.local/bin/claude',
             '--model', ai_model,
             '--verbose',
             '--output-format', 'stream-json',
-            '--dangerously-skip-permissions',
-            '-p', prompt
         ]
+
+        # Supervised mode: Claude's built-in permission system asks for approval
+        # Autonomous mode: skip all permission prompts
+        if execution_mode == 'supervised':
+            self.log(f"Supervised mode: Claude will ask for permission on write operations")
+        else:
+            cmd.append('--dangerously-skip-permissions')
+
+        cmd.extend(['-p', prompt])
+
         self.log(f"Starting Claude in {work_path}")
         try:
             # Load API key from .env if exists
@@ -1252,14 +1311,32 @@ Complete this task. When finished, say "TASK COMPLETED" with a summary."""
                         process.terminate()
                         return 'stuck'
             
+            # Check for permission denials in supervised mode
+            if execution_mode == 'supervised' and self.permission_denials:
+                # Take the first denied permission
+                denied = self.permission_denials[0]
+                pending = {
+                    'tool': denied.get('tool_name', 'unknown'),
+                    'input': denied.get('tool_input', {}),
+                    'tool_use_id': denied.get('tool_use_id', ''),
+                    'timestamp': datetime.now().isoformat()
+                }
+                self.log(f"Permission required: {pending['tool']}", "INFO")
+                self.save_pending_permission_to_db(ticket['id'], pending)
+                self.save_log('warning', f"🛡️ Permission required: {pending['tool']}")
+                self.save_message('system', f"🛡️ Permission required for {pending['tool']}. Waiting for approval.")
+                return 'permission_needed'
+
             final_result = result if result else ('success' if process.returncode == 0 else 'failed')
             self.log(f"Claude finished - returncode: {process.returncode}, result: {result}, final: {final_result}", "DEBUG")
+
             # Cleanup PID file
             try:
                 if os.path.exists(pid_file):
                     os.remove(pid_file)
             except:
                 pass
+
             return final_result
 
         except Exception as e:
@@ -1282,8 +1359,8 @@ Complete this task. When finished, say "TASK COMPLETED" with a summary."""
 
         self.log(f"Processing: {ticket['ticket_number']} - {ticket['title']}")
 
-        # Create automatic backup before starting
-        self.create_backup(ticket['id'])
+        # Auto backup disabled - backup happens on ticket close instead
+        # self.create_backup(ticket['id'])
 
         self.update_ticket(ticket['id'], 'in_progress')
         self.save_log('info', f"Starting: {ticket['ticket_number']}")
@@ -1299,7 +1376,13 @@ Complete this task. When finished, say "TASK COMPLETED" with a summary."""
             prompt = self.build_prompt(ticket, history)
             result = self.run_claude(ticket, prompt)
 
-            if result == 'interrupted':
+            if result == 'permission_needed':
+                # Supervised mode - waiting for user to approve permission
+                self.end_session(self.current_session_id, 'awaiting_permission')
+                self.log(f"🛡️ Permission needed: {ticket['ticket_number']} - waiting for approval")
+                break
+
+            elif result == 'interrupted':
                 # User sent /stop - check for new instructions
                 time.sleep(1)  # Brief pause to allow message to be sent
                 pending = self.get_pending_user_messages(ticket['id'])

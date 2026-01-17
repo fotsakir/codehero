@@ -439,14 +439,26 @@
                 const resp = await fetch(`/api/tickets?project_id=${projectId}&status=all&limit=100`);
                 const data = await resp.json();
 
-                if (!data.tickets) return;
+                // API returns array directly, not { tickets: [...] }
+                const tickets = Array.isArray(data) ? data : (data.tickets || []);
+                if (tickets.length === 0 && ticketItems.length === 0) return;
 
                 const ticketList = document.getElementById('ticketList');
                 const currentSelectedId = selectedTicketId;
 
+                // Sort by: is_forced DESC, sequence_order ASC (nulls last), id ASC
+                tickets.sort((a, b) => {
+                    if (a.is_forced && !b.is_forced) return -1;
+                    if (!a.is_forced && b.is_forced) return 1;
+                    if (a.sequence_order && b.sequence_order) return a.sequence_order - b.sequence_order;
+                    if (a.sequence_order) return -1;
+                    if (b.sequence_order) return 1;
+                    return a.id - b.id;
+                });
+
                 // Rebuild ticket list
                 let html = '';
-                for (const t of data.tickets) {
+                for (const t of tickets) {
                     const isSelected = t.id === currentSelectedId ? ' selected' : '';
                     const typeClass = t.ticket_type || 'task';
                     const priorityClass = t.priority || 'medium';

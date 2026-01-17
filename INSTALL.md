@@ -12,7 +12,7 @@
 
 ```bash
 cd /root
-unzip codehero-2.69.0.zip
+unzip codehero-2.70.0.zip
 cd codehero
 ```
 
@@ -129,8 +129,8 @@ sudo systemctl restart codehero-web codehero-daemon
 ```bash
 # Download and extract new version
 cd /root
-wget https://github.com/fotsakir/codehero/releases/latest/download/codehero-2.69.0.zip
-unzip codehero-2.69.0.zip
+wget https://github.com/fotsakir/codehero/releases/latest/download/codehero-2.70.0.zip
+unzip codehero-2.70.0.zip
 cd codehero
 
 # Preview what will change (recommended)
@@ -179,7 +179,7 @@ upgrades/
 └── _always.sh   # Runs every upgrade (permissions)
 ```
 
-When upgrading from 2.60.0 to 2.69.0, the system automatically runs: `2.60.4.sh` → `2.61.0.sh` → `2.61.2.sh` → `2.63.0.sh` → `2.65.0.sh`
+When upgrading from 2.60.0 to 2.70.0, the system automatically runs: `2.60.4.sh` → `2.61.0.sh` → `2.61.2.sh` → `2.63.0.sh` → `2.65.0.sh`
 
 ### Creating custom upgrade scripts
 
@@ -227,4 +227,4 @@ curl -fsSL https://claude.ai/install.sh | sh
 
 ---
 
-**Version:** 2.69.0
+**Version:** 2.70.0
