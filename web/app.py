@@ -2341,9 +2341,11 @@ def ticket_detail(ticket_id):
 
         if ticket:
             # Generate default preview_url if not set
-            if not ticket.get('preview_url') and ticket.get('project_code'):
+            if not ticket.get('preview_url') and ticket.get('web_path'):
                 host = request.host.split(':')[0]  # Get hostname without port
-                ticket['preview_url'] = f"https://{host}:9867/{ticket['project_code'].lower()}"
+                # Use folder name from web_path (e.g., /var/www/projects/mysite -> mysite)
+                folder = os.path.basename(ticket['web_path'].rstrip('/'))
+                ticket['preview_url'] = f"https://{host}:9867/{folder}"
 
             # Parse pending_permission JSON if present
             if ticket.get('pending_permission'):
