@@ -212,10 +212,29 @@ class ProjectWorker(threading.Thread):
         self.session_api_calls = 0
         # Permission denials (supervised mode)
         self.permission_denials = []
+        # Current running Claude process (for watchdog to kill if stuck)
+        self.current_process = None
+        self.current_process_lock = threading.Lock()
         
     def log(self, message, level="INFO"):
         self.daemon_ref.log(f"[{self.project_name}] {message}", level)
-    
+
+    def kill_process(self):
+        """Kill the current Claude process (called by watchdog)"""
+        with self.current_process_lock:
+            if self.current_process and self.current_process.poll() is None:
+                self.log("Killing Claude process (watchdog)", "WARNING")
+                try:
+                    self.current_process.terminate()
+                    self.current_process.wait(timeout=5)
+                except:
+                    try:
+                        self.current_process.kill()
+                    except:
+                        pass
+                return True
+        return False
+
     def get_db(self):
         return self.daemon_ref.get_db()
     
@@ -1265,6 +1284,10 @@ Complete this task. When finished, say "TASK COMPLETED" with a summary."""
                 env=claude_env
             )
 
+            # Store process reference for watchdog to kill if needed
+            with self.current_process_lock:
+                self.current_process = process
+
             # Write PID file for instant kill switch
             pid_file = f"/var/run/codehero/claude_{ticket['id']}.pid"
             try:
@@ -1306,9 +1329,11 @@ Complete this task. When finished, say "TASK COMPLETED" with a summary."""
                     stuck_time = (datetime.now() - self.last_activity).total_seconds()
                     if stuck_time > STUCK_TIMEOUT_MINUTES * 60:
                         self.log("STUCK detected", "ERROR")
-                        self.daemon_ref.send_email(f"Stuck on {ticket['ticket_number']}", 
+                        self.daemon_ref.send_email(f"Stuck on {ticket['ticket_number']}",
                                        f"Ticket: {ticket['title']}\nNo activity for {STUCK_TIMEOUT_MINUTES} minutes.")
                         process.terminate()
+                        with self.current_process_lock:
+                            self.current_process = None
                         return 'stuck'
             
             # Check for permission denials in supervised mode
@@ -1325,6 +1350,8 @@ Complete this task. When finished, say "TASK COMPLETED" with a summary."""
                 self.save_pending_permission_to_db(ticket['id'], pending)
                 self.save_log('warning', f"🛡️ Permission required: {pending['tool']}")
                 self.save_message('system', f"🛡️ Permission required for {pending['tool']}. Waiting for approval.")
+                with self.current_process_lock:
+                    self.current_process = None
                 return 'permission_needed'
 
             final_result = result if result else ('success' if process.returncode == 0 else 'failed')
@@ -1336,6 +1363,10 @@ Complete this task. When finished, say "TASK COMPLETED" with a summary."""
                     os.remove(pid_file)
             except:
                 pass
+
+            # Clear process reference
+            with self.current_process_lock:
+                self.current_process = None
 
             return final_result
 
@@ -1350,6 +1381,9 @@ Complete this task. When finished, say "TASK COMPLETED" with a summary."""
                     os.remove(pid_file)
             except:
                 pass
+            # Clear process reference
+            with self.current_process_lock:
+                self.current_process = None
             return 'failed'
     
     def process_ticket(self, ticket):
@@ -1654,6 +1688,14 @@ Your response:"""
     def mark_ticket_stuck(self, ticket, reason):
         """Mark a ticket as stuck and notify"""
         self.log(f"STUCK DETECTED: {ticket['ticket_number']} - {reason}", "WARNING")
+
+        # Kill the running Claude process for this ticket
+        project_id = ticket.get('project_id')
+        if project_id and project_id in self.daemon_ref.workers:
+            worker = self.daemon_ref.workers[project_id]
+            if worker.current_ticket_id == ticket['id']:
+                if worker.kill_process():
+                    self.log(f"Killed Claude process for ticket {ticket['ticket_number']}", "WARNING")
 
         try:
             conn = self.get_db()
