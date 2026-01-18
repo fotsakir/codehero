@@ -531,18 +531,9 @@ Ask the user what project they want to build!`;
                     if (projectId && !mode && !blueprintSent) {
                         blueprintSent = true;
                         setTimeout(() => {
-                            // Check if there's a question from the progress page
-                            let contextQuestion = '';
-                            try {
-                                const ctx = sessionStorage.getItem('assistantContext');
-                                if (ctx) {
-                                    const parsed = JSON.parse(ctx);
-                                    if (parsed.question) {
-                                        contextQuestion = parsed.question;
-                                    }
-                                    sessionStorage.removeItem('assistantContext');
-                                }
-                            } catch (e) {}
+                            // Check if there's a question from URL parameter (passed from progress page)
+                            const urlParams = new URLSearchParams(window.location.search);
+                            const contextQuestion = urlParams.get('question') || '';
 
                             const prompt = `You are the Project Assistant for "${projectName}" (${projectCode}).
 

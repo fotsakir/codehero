@@ -759,15 +759,9 @@
             const left = (screen.width - width) / 2;
             const top = (screen.height - height) / 2;
 
-            // Store the question in sessionStorage for the assistant to pick up
-            sessionStorage.setItem('assistantContext', JSON.stringify({
-                projectId: projectId,
-                projectName: projectName,
-                projectCode: projectCode,
-                question: question
-            }));
-
-            window.open('/claude-assistant?popup=1&project_id=' + projectId, 'claude_assistant',
+            // Pass question via URL parameter (sessionStorage doesn't work across windows)
+            const encodedQuestion = encodeURIComponent(question);
+            window.open('/claude-assistant?popup=1&project_id=' + projectId + '&question=' + encodedQuestion, 'claude_assistant',
                 `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=no`);
         }
 
