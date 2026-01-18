@@ -343,6 +343,23 @@
         let pollInterval = null;
         let blueprintSent = false;
 
+        // Context prompt queue (global scope for pollOutput access)
+        let pendingContextPrompt = null;
+        let claudeReady = false;
+
+        function checkAndSendPendingPrompt() {
+            if (pendingContextPrompt && !claudeReady) {
+                claudeReady = true;
+                const ctx = pendingContextPrompt;
+                pendingContextPrompt = null;
+                term.writeln('\x1b[32m[Claude ready - sending: ' + ctx.name + ']\x1b[0m');
+                term.writeln('');
+                setTimeout(() => {
+                    sendInput(ctx.prompt + '\n');
+                }, 500);
+            }
+        }
+
         function initTerminal() {
             term = new Terminal({
                 cursorBlink: true,
@@ -450,6 +467,21 @@
                     resizeTerminal();
                     pollInterval = setInterval(pollOutput, 100);
 
+                    // Reset context prompt state for new session
+                    pendingContextPrompt = null;
+                    claudeReady = false;
+
+                    // Helper to queue context prompt (sent when Claude outputs something)
+                    function sendContextPrompt(contextName, prompt) {
+                        pendingContextPrompt = { name: contextName, prompt: prompt };
+                        // Show loading message immediately
+                        term.writeln('');
+                        term.writeln('\x1b[33m════════════════════════════════════════\x1b[0m');
+                        term.writeln('\x1b[33m  Waiting for Claude: ' + contextName + '\x1b[0m');
+                        term.writeln('\x1b[33m════════════════════════════════════════\x1b[0m');
+                        term.writeln('');
+                    }
+
                     // If blueprint mode, auto-send the initial prompt after Claude is ready
                     if (mode === 'blueprint' && !blueprintSent) {
                         blueprintSent = true;
@@ -514,7 +546,7 @@ Respond in the same language the user uses (Greek or English).
 
 ## START NOW:
 Ask the user what project they want to build!`;
-                            sendInput(prompt + '\n');
+                            sendContextPrompt('Project Planner', prompt);
                         }, 2000);
                     }
 
@@ -523,7 +555,7 @@ Ask the user what project they want to build!`;
                         blueprintSent = true;
                         setTimeout(() => {
                             const prompt = 'Read the file /opt/codehero/config/PLATFORM_KNOWLEDGE.md to learn about the CodeHero platform. You are now the platform support assistant. When I ask questions about the platform, use this knowledge to help me. Also check /opt/codehero/CLAUDE_OPERATIONS.md, /opt/codehero/docs/USER_GUIDE.md, and /opt/codehero/CLAUDE_DEV_NOTES.md if needed. Tell me you are ready to help and ask what I need assistance with.';
-                            sendInput(prompt + '\n');
+                            sendContextPrompt('Platform Help', prompt);
                         }, 2000);
                     }
 
@@ -563,7 +595,7 @@ WHAT YOU CAN DO:
 LANGUAGE: Respond in the same language the user uses (Greek or English).
 
 ${contextQuestion ? 'The user asked: "' + contextQuestion + '". Answer using the MCP tools.' : 'Greet the user and ask how you can help with project "' + projectName + '".'}`;
-                            sendInput(prompt + '\n');
+                            sendContextPrompt('Project Assistant: ' + projectName, prompt);
                         }, 2000);
                     }
 
@@ -626,7 +658,7 @@ Respond in the same language the user uses (Greek or English).
 - Test changes before deploying to production
 
 Greet the user and ask how you can help!`;
-                            sendInput(prompt + '\n');
+                            sendContextPrompt('General Assistant', prompt);
                         }, 2000);
                     }
                 } else {
@@ -652,6 +684,8 @@ Greet the user and ask how you can help!`;
 
                 if (data.output) {
                     term.write(data.output);
+                    // Check if we have a pending context prompt to send
+                    checkAndSendPendingPrompt();
                 }
 
                 if (!data.running) {
