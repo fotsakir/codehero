@@ -34,3 +34,10 @@ fi
 chmod +x ${INSTALL_DIR}/scripts/*.sh 2>/dev/null || true
 
 log_info "Permissions fixed"
+
+# Ensure AUTO_REVIEW_DELAY_MINUTES is in system.conf (added in 2.72.0)
+CONFIG_FILE="/etc/codehero/system.conf"
+if [ -f "$CONFIG_FILE" ] && ! grep -q "AUTO_REVIEW_DELAY_MINUTES" "$CONFIG_FILE"; then
+    log_info "Adding AUTO_REVIEW_DELAY_MINUTES to config..."
+    echo "AUTO_REVIEW_DELAY_MINUTES=5" >> "$CONFIG_FILE"
+fi
