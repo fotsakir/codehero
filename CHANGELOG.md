@@ -5,6 +5,31 @@ All notable changes to CodeHero will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.72.0] - 2026-01-18
+
+### Added
+- **Auto-Review System** - Intelligent ticket progression for relaxed mode
+  - Uses Claude Haiku (via CLI) to classify completed tickets
+  - Auto-closes tickets when AI reports "Task completed"
+  - Keeps tickets open when AI asks questions or reports errors
+  - 5-minute delay before review (configurable via `AUTO_REVIEW_DELAY_MINUTES`)
+  - No extra API key needed - uses same auth as Claude Code
+- **Review Retry Logic** - Handles Haiku call failures
+  - Retries up to 10 times with 5-minute intervals
+  - Notifications on review failure after max retries
+- **Awaiting Reason Tracking** - New `awaiting_reason` column
+  - Values: completed, question, error, stopped, permission, deps_ready
+  - Better visibility into why ticket is waiting
+
+### Improved
+- **Relaxed Mode** - Now waits for Haiku auto-close before starting next ticket
+  - Previously started next ticket immediately on `awaiting_input`
+  - Now waits for actual `done` status after Haiku review
+- **Kill Switch** - Sets `awaiting_reason='stopped'` to prevent auto-review
+- **User Messages** - Cancel pending review and reset retry counter
+
+---
+
 ## [2.71.0] - 2026-01-18
 
 ### Added

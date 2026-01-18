@@ -3522,9 +3522,11 @@ def send_ticket_message(ticket_id):
             return jsonify({'success': False, 'message': 'Ticket not found'})
 
         # If ticket is in awaiting_input or skipped, auto-reopen it so Claude can respond
+        # Also clear awaiting_reason, review_scheduled_at and review_attempts to cancel any pending auto-review
         if ticket['status'] in ('awaiting_input', 'skipped'):
             cursor.execute("""
                 UPDATE tickets SET status = 'open', retry_count = 0, review_deadline = NULL,
+                awaiting_reason = NULL, review_scheduled_at = NULL, review_attempts = 0,
                 closed_at = NULL, closed_by = NULL, close_reason = NULL, updated_at = NOW()
                 WHERE id = %s
             """, (ticket_id,))
@@ -3534,8 +3536,12 @@ def send_ticket_message(ticket_id):
             cmd = message.lower().split()[0]
             if cmd == '/stop':
                 # Update ticket status FIRST (so daemon doesn't mark as failed)
+                # Set awaiting_reason='stopped' to prevent auto-review from closing it
+                # Clear review_scheduled_at to cancel any pending auto-review
                 cursor.execute("""
-                    UPDATE tickets SET status = 'awaiting_input', updated_at = NOW()
+                    UPDATE tickets SET status = 'awaiting_input',
+                    awaiting_reason = 'stopped', review_scheduled_at = NULL,
+                    updated_at = NOW()
                     WHERE id = %s
                 """, (ticket_id,))
                 conn.commit()

@@ -951,8 +951,14 @@ def handle_kill_switch(args: Dict[str, Any]) -> Dict[str, Any]:
         ticket_id = ticket['id']
 
         # Update ticket status FIRST (so daemon doesn't mark as failed)
+        # Set awaiting_reason='stopped' to prevent auto-review from closing it
+        # Clear review_scheduled_at to cancel any pending auto-review
         cursor.execute("""
-            UPDATE tickets SET status = 'awaiting_input', updated_at = NOW()
+            UPDATE tickets SET
+                status = 'awaiting_input',
+                awaiting_reason = 'stopped',
+                review_scheduled_at = NULL,
+                updated_at = NOW()
             WHERE id = %s
         """, (ticket_id,))
         conn.commit()

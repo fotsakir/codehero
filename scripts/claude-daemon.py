@@ -51,6 +51,10 @@ except ImportError:
     get_git_manager = None
     print("[WARNING] GitManager not available - Git auto-commit disabled")
 
+# Auto-review settings (uses Claude CLI with --model haiku)
+AUTO_REVIEW_ENABLED = False
+AUTO_REVIEW_DELAY_MINUTES = 15
+
 BACKUP_DIR = "/var/backups/codehero"
 MAX_BACKUPS = 30
 
@@ -350,7 +354,8 @@ class ProjectWorker(threading.Thread):
                       WHERE td.ticket_id = t.id
                         AND NOT (
                             dt.status IN ('done', 'skipped')
-                            OR (COALESCE(t.deps_include_awaiting, FALSE) = TRUE AND dt.status = 'awaiting_input')
+                            -- Relaxed mode no longer treats awaiting_input as done
+                            -- Auto-review will close ticket to 'done' after 15 minutes
                         )
                   )
                   AND NOT EXISTS (
@@ -413,7 +418,8 @@ class ProjectWorker(threading.Thread):
                       WHERE td.ticket_id = t.id
                         AND NOT (
                             dt.status IN ('done', 'skipped')
-                            OR (COALESCE(t.deps_include_awaiting, FALSE) = TRUE AND dt.status = 'awaiting_input')
+                            -- Relaxed mode no longer treats awaiting_input as done
+                            -- Auto-review will close ticket to 'done' after 15 minutes
                         )
                   )
                 ORDER BY
@@ -458,7 +464,8 @@ class ProjectWorker(threading.Thread):
                       WHERE td.ticket_id = t.id
                         AND NOT (
                             dt.status IN ('done', 'skipped')
-                            OR (COALESCE(t.deps_include_awaiting, FALSE) = TRUE AND dt.status = 'awaiting_input')
+                            -- Relaxed mode no longer treats awaiting_input as done
+                            -- Auto-review will close ticket to 'done' after 15 minutes
                         )
                   )
                 ORDER BY
@@ -476,7 +483,7 @@ class ProjectWorker(threading.Thread):
 
     def all_sub_tickets_done(self, parent_ticket_id):
         """Check if all sub-tickets of a parent are completed.
-        awaiting_input counts as completed (task done, waiting for review)."""
+        Only 'done' and 'skipped' count as completed (awaiting_input waits for auto-review)."""
         conn = None
         try:
             conn = self.get_db()
@@ -484,7 +491,7 @@ class ProjectWorker(threading.Thread):
             cursor.execute("""
                 SELECT COUNT(*) as pending FROM tickets
                 WHERE parent_ticket_id = %s
-                  AND status NOT IN ('done', 'skipped', 'awaiting_input')
+                  AND status NOT IN ('done', 'skipped')
             """, (parent_ticket_id,))
             result = cursor.fetchone()
             cursor.close()
@@ -593,9 +600,12 @@ class ProjectWorker(threading.Thread):
                 # Set to awaiting_input instead of done - user must respond or close
                 actual_status = 'awaiting_input'
                 reset_forced = ticket_info.get('is_forced', False)
-                cursor.execute("""
+                # Schedule auto-review after configured delay (default 15 minutes)
+                cursor.execute(f"""
                     UPDATE tickets SET status = 'awaiting_input', result_summary = %s,
-                    review_deadline = DATE_ADD(NOW(), INTERVAL 7 DAY), updated_at = NOW(),
+                    review_deadline = DATE_ADD(NOW(), INTERVAL 7 DAY),
+                    review_scheduled_at = DATE_ADD(NOW(), INTERVAL {AUTO_REVIEW_DELAY_MINUTES} MINUTE),
+                    updated_at = NOW(),
                     is_forced = FALSE, retry_count = 0
                     WHERE id = %s
                 """, (result[:1000] if result else None, ticket_id))
@@ -1814,6 +1824,20 @@ class ClaudeDaemon:
         NOTIFY_SETTINGS['watchdog_alert'] = self.config.get('NOTIFY_WATCHDOG_ALERT', 'yes').lower() == 'yes'
         if TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID:
             print(f"[INFO] Telegram notifications enabled")
+
+        # Load Auto-review settings (uses Claude CLI with --model haiku)
+        global AUTO_REVIEW_ENABLED, AUTO_REVIEW_DELAY_MINUTES
+        AUTO_REVIEW_DELAY_MINUTES = int(self.config.get('AUTO_REVIEW_DELAY_MINUTES', '15'))
+
+        # Check if Claude CLI exists
+        claude_cli = '/home/claude/.local/bin/claude'
+        if os.path.exists(claude_cli):
+            AUTO_REVIEW_ENABLED = True
+            print(f"[INFO] Auto-review enabled (Haiku via CLI, {AUTO_REVIEW_DELAY_MINUTES}min delay)")
+        else:
+            AUTO_REVIEW_ENABLED = False
+            print("[INFO] Auto-review disabled (Claude CLI not found)")
+
         self.global_context = self.load_global_context()
 
         # Initialize Smart Context Manager
@@ -1839,7 +1863,309 @@ class ClaudeDaemon:
         except Exception as e:
             self.log(f"Warning: Could not load global context: {e}", "WARNING")
         return ""
-        
+
+    # ==================== AUTO-REVIEW SYSTEM ====================
+
+    def get_last_message_role(self, ticket_id: int) -> str:
+        """Get the role of the most recent message for a ticket."""
+        conn = None
+        try:
+            conn = self.get_db()
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("""
+                SELECT role FROM conversation_messages
+                WHERE ticket_id = %s
+                ORDER BY created_at DESC, id DESC
+                LIMIT 1
+            """, (ticket_id,))
+            result = cursor.fetchone()
+            cursor.close()
+            return result['role'] if result else None
+        except Exception as e:
+            self.log(f"Error getting last message role: {e}", "ERROR")
+            return None
+        finally:
+            if conn:
+                conn.close()
+
+    def get_last_user_message(self, ticket_id: int) -> dict:
+        """Get the most recent user message for a ticket."""
+        conn = None
+        try:
+            conn = self.get_db()
+            cursor = conn.cursor(dictionary=True)
+            cursor.execute("""
+                SELECT id, content, created_at FROM conversation_messages
+                WHERE ticket_id = %s AND role = 'user'
+                ORDER BY created_at DESC, id DESC
+                LIMIT 1
+            """, (ticket_id,))
+            result = cursor.fetchone()
+            cursor.close()
+            return result
+        except Exception as e:
+            self.log(f"Error getting last user message: {e}", "ERROR")
+            return None
+        finally:
+            if conn:
+                conn.close()
+
+    def get_messages_after_last_user(self, ticket_id: int) -> list:
+        """Get all assistant messages after the last user message."""
+        conn = None
+        try:
+            conn = self.get_db()
+            cursor = conn.cursor(dictionary=True)
+            # Get last user message timestamp
+            cursor.execute("""
+                SELECT created_at FROM conversation_messages
+                WHERE ticket_id = %s AND role = 'user'
+                ORDER BY created_at DESC, id DESC
+                LIMIT 1
+            """, (ticket_id,))
+            last_user = cursor.fetchone()
+
+            if not last_user:
+                # No user messages, get all assistant messages
+                cursor.execute("""
+                    SELECT role, content, created_at FROM conversation_messages
+                    WHERE ticket_id = %s AND role = 'assistant'
+                    ORDER BY created_at ASC
+                """, (ticket_id,))
+            else:
+                # Get messages after last user message
+                cursor.execute("""
+                    SELECT role, content, created_at FROM conversation_messages
+                    WHERE ticket_id = %s AND role = 'assistant'
+                      AND created_at >= %s
+                    ORDER BY created_at ASC
+                """, (ticket_id, last_user['created_at']))
+
+            results = cursor.fetchall()
+            cursor.close()
+            return results
+        except Exception as e:
+            self.log(f"Error getting messages after last user: {e}", "ERROR")
+            return []
+        finally:
+            if conn:
+                conn.close()
+
+    def classify_with_haiku(self, ticket_id: int):
+        """
+        Use Haiku (via Claude CLI) to classify if ticket is completed or needs input.
+        Returns: 'completed', 'question', 'error', or None if call failed (for retry)
+        """
+        if not AUTO_REVIEW_ENABLED:
+            return 'completed'  # Default to completed if auto-review disabled
+
+        try:
+            # Get last user message (the task)
+            last_user = self.get_last_user_message(ticket_id)
+            user_task = last_user['content'][:1000] if last_user else "Unknown task"
+
+            # Get all assistant messages after last user message
+            ai_messages = self.get_messages_after_last_user(ticket_id)
+            if not ai_messages:
+                return 'error'
+
+            # Format AI messages - focus on the last message (most important for classification)
+            # Last message gets 3000 chars, previous 5 get 500 chars each for context
+            formatted_messages = []
+            recent = ai_messages[-6:]  # Last 6 messages
+            for i, msg in enumerate(recent):
+                if i == len(recent) - 1:
+                    # Last message - full content (up to 3000 chars)
+                    formatted_messages.append(msg['content'][:3000])
+                else:
+                    # Previous messages - shorter (500 chars)
+                    formatted_messages.append(msg['content'][:500])
+            ai_response = "\n---\n".join(formatted_messages)
+
+            # Build prompt for Haiku
+            prompt = f"""Analyze this AI assistant conversation and classify the outcome.
+
+User's Request:
+{user_task}
+
+AI's Response (last messages):
+{ai_response[-5000:]}
+
+Based on the AI's final response, classify as ONE of:
+- COMPLETED - The AI finished the task and is reporting completion/results
+- QUESTION - The AI is asking the user a question and waiting for a response
+- ERROR - The AI encountered a problem it cannot solve alone
+
+Important: If the AI says "Done", "Completed", "Finished", "Ready", etc. → COMPLETED
+If the AI asks "Should I..?", "Do you want..?", "What do you think?" → QUESTION
+If the AI reports an error or asks for help → ERROR
+
+Reply with ONLY one word: COMPLETED, QUESTION, or ERROR"""
+
+            # Call Haiku via Claude CLI (same as watchdog)
+            result = subprocess.run(
+                ['/home/claude/.local/bin/claude', '--model', 'haiku', '--print'],
+                input=prompt,
+                capture_output=True,
+                text=True,
+                timeout=30,
+                cwd='/tmp'
+            )
+
+            if result.returncode == 0 and result.stdout:
+                response = result.stdout.strip().split('\n')[0].upper()  # First line only
+                self.log(f"Haiku classification for ticket {ticket_id}: {response}")
+
+                if response in ['COMPLETED', 'QUESTION', 'ERROR']:
+                    return response.lower()
+                else:
+                    self.log(f"Unexpected Haiku response: {response}, defaulting to question", "WARNING")
+                    return 'question'
+            else:
+                self.log(f"Haiku CLI failed: {result.stderr}", "ERROR")
+                return None  # Return None for retry
+
+        except subprocess.TimeoutExpired:
+            self.log(f"Haiku timeout classifying ticket {ticket_id}", "WARNING")
+            return None  # Return None for retry
+        except Exception as e:
+            self.log(f"Haiku classification failed: {e}", "ERROR")
+            return None  # Return None for retry
+
+    def process_scheduled_reviews(self):
+        """Process tickets that are due for auto-review."""
+        if not AUTO_REVIEW_ENABLED:
+            return
+
+        MAX_REVIEW_ATTEMPTS = 10
+        RETRY_DELAY_MINUTES = 5
+
+        conn = None
+        try:
+            conn = self.get_db()
+            cursor = conn.cursor(dictionary=True)
+
+            # Find tickets ready for review
+            cursor.execute("""
+                SELECT t.id, t.ticket_number, t.deps_include_awaiting, t.review_attempts,
+                       p.name as project_name
+                FROM tickets t
+                JOIN projects p ON t.project_id = p.id
+                WHERE t.status = 'awaiting_input'
+                  AND t.review_scheduled_at IS NOT NULL
+                  AND t.review_scheduled_at <= NOW()
+                  AND t.awaiting_reason IS NULL
+            """)
+            tickets = cursor.fetchall()
+
+            for ticket in tickets:
+                ticket_id = ticket['id']
+                ticket_number = ticket['ticket_number']
+                attempts = ticket.get('review_attempts', 0) or 0
+
+                # Check last message role - skip if user replied (user or system)
+                last_role = self.get_last_message_role(ticket_id)
+
+                if last_role in ('user', 'system'):
+                    # User replied - skip review, clear schedule and reset attempts
+                    cursor.execute("""
+                        UPDATE tickets SET review_scheduled_at = NULL, review_attempts = 0
+                        WHERE id = %s
+                    """, (ticket_id,))
+                    conn.commit()
+                    self.log(f"Skipping review for {ticket_number} (user replied)")
+                    continue
+
+                # Only auto-close for relaxed mode tickets
+                if not ticket['deps_include_awaiting']:
+                    # Strict mode - mark as completed but don't auto-close
+                    cursor.execute("""
+                        UPDATE tickets SET
+                            review_scheduled_at = NULL,
+                            review_attempts = 0,
+                            awaiting_reason = 'completed'
+                        WHERE id = %s
+                    """, (ticket_id,))
+                    conn.commit()
+                    self.log(f"Strict mode ticket {ticket_number} marked as completed (awaiting user review)")
+                    continue
+
+                # Relaxed mode - do Haiku classification
+                result = self.classify_with_haiku(ticket_id)
+
+                if result is None:
+                    # Haiku call failed - retry if under max attempts
+                    attempts += 1
+                    if attempts < MAX_REVIEW_ATTEMPTS:
+                        cursor.execute("""
+                            UPDATE tickets SET
+                                review_scheduled_at = DATE_ADD(NOW(), INTERVAL %s MINUTE),
+                                review_attempts = %s
+                            WHERE id = %s
+                        """, (RETRY_DELAY_MINUTES, attempts, ticket_id))
+                        conn.commit()
+                        self.log(f"Haiku failed for {ticket_number}, retry {attempts}/{MAX_REVIEW_ATTEMPTS} in {RETRY_DELAY_MINUTES}min")
+                    else:
+                        # Max retries reached - mark as error
+                        cursor.execute("""
+                            UPDATE tickets SET
+                                awaiting_reason = 'error',
+                                review_scheduled_at = NULL,
+                                review_attempts = %s
+                            WHERE id = %s
+                        """, (attempts, ticket_id))
+                        conn.commit()
+                        self.log(f"Haiku failed for {ticket_number} after {attempts} attempts, marked as error", "WARNING")
+                        notify('awaiting_input', 'Review Failed',
+                               f"{ticket_number} review failed after {attempts} attempts",
+                               ticket['project_name'], ticket_number)
+                    continue
+
+                if result == 'completed':
+                    # Auto-close ticket
+                    cursor.execute("""
+                        UPDATE tickets SET
+                            status = 'done',
+                            awaiting_reason = NULL,
+                            review_scheduled_at = NULL,
+                            review_attempts = 0,
+                            close_reason = 'auto_reviewed',
+                            updated_at = NOW()
+                        WHERE id = %s
+                    """, (ticket_id,))
+                    conn.commit()
+                    self.log(f"Auto-closed {ticket_number} (Haiku: COMPLETED)")
+
+                    # Send notification
+                    notify('ticket_completed', 'Ticket Auto-Closed',
+                           f"{ticket_number} auto-reviewed and closed",
+                           ticket['project_name'], ticket_number)
+                else:
+                    # Stay in awaiting_input with reason
+                    cursor.execute("""
+                        UPDATE tickets SET
+                            awaiting_reason = %s,
+                            review_scheduled_at = NULL,
+                            review_attempts = 0
+                        WHERE id = %s
+                    """, (result, ticket_id))
+                    conn.commit()
+                    self.log(f"Ticket {ticket_number} needs input (Haiku: {result.upper()})")
+
+                    # Send notification
+                    notify('awaiting_input', f'Ticket Needs Input ({result})',
+                           f"{ticket_number} is waiting for your response",
+                           ticket['project_name'], ticket_number)
+
+            cursor.close()
+        except Exception as e:
+            self.log(f"Error processing scheduled reviews: {e}", "ERROR")
+        finally:
+            if conn:
+                conn.close()
+
+    # ==================== END AUTO-REVIEW SYSTEM ====================
+
     def load_config(self):
         config = {}
         if os.path.exists(CONFIG_FILE):
@@ -1925,9 +2251,12 @@ class ClaudeDaemon:
                     """, (ticket['id'], f"[Via Telegram from {from_user}]\n{message}"))
 
                     # If ticket is awaiting_input, reopen it
+                    # Clear awaiting_reason and review_scheduled_at to cancel any pending auto-review
                     if ticket['status'] == 'awaiting_input':
                         cursor.execute("""
-                            UPDATE tickets SET status = 'open', updated_at = NOW()
+                            UPDATE tickets SET status = 'open',
+                            awaiting_reason = NULL, review_scheduled_at = NULL,
+                            updated_at = NOW()
                             WHERE id = %s
                         """, (ticket['id'],))
                         self.log(f"Telegram reply reopened ticket {ticket_number}")
@@ -2248,6 +2577,7 @@ Answer briefly:"""
             try:
                 self.cleanup_dead_workers()
                 self.auto_close_expired_reviews()
+                self.process_scheduled_reviews()  # Auto-review system
                 projects = self.get_projects_with_open_tickets()
                 
                 with self.workers_lock:

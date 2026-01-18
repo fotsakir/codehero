@@ -371,8 +371,11 @@ CREATE TABLE `tickets` (
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `closed_at` timestamp NULL DEFAULT NULL,
   `closed_by` varchar(50) DEFAULT NULL,
-  `close_reason` enum('completed','manual','timeout','skipped','failed','approved','auto_approved_7days') DEFAULT NULL,
+  `close_reason` enum('completed','manual','timeout','skipped','failed','approved','auto_approved_7days','auto_reviewed','auto_closed_7days') DEFAULT NULL,
   `review_deadline` datetime DEFAULT NULL,
+  `awaiting_reason` enum('completed','question','error','stopped','permission','deps_ready') DEFAULT NULL,
+  `review_scheduled_at` datetime DEFAULT NULL,
+  `review_attempts` int DEFAULT '0',
   `total_tokens` int DEFAULT '0',
   `total_duration_seconds` int DEFAULT '0',
   `ai_model` enum('opus','sonnet','haiku') DEFAULT NULL,
@@ -382,6 +385,7 @@ CREATE TABLE `tickets` (
   KEY `idx_status` (`status`),
   KEY `idx_ticket_sequence` (`project_id`,`sequence_order`,`is_forced`,`priority`),
   KEY `idx_parent_ticket` (`parent_ticket_id`),
+  KEY `idx_tickets_review_scheduled` (`status`,`review_scheduled_at`),
   CONSTRAINT `tickets_ibfk_1` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_parent_ticket` FOREIGN KEY (`parent_ticket_id`) REFERENCES `tickets` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
