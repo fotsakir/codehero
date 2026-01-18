@@ -315,7 +315,8 @@ TOOLS = [
                             "ticket_type": {"type": "string", "enum": ["feature", "bug", "debug", "rnd", "task", "improvement", "docs"]},
                             "priority": {"type": "string", "enum": ["low", "medium", "high", "critical"]},
                             "sequence_order": {"type": "integer"},
-                            "depends_on": {"type": "array", "items": {"type": "integer"}}
+                            "depends_on": {"type": "array", "items": {"type": "integer"}},
+                            "parent_sequence": {"type": "integer", "description": "Sequence order of parent ticket (for sub-tickets)"}
                         },
                         "required": ["title"]
                     }
@@ -1176,11 +1177,15 @@ def handle_bulk_create_tickets(args: Dict[str, Any]) -> Dict[str, Any]:
                     VALUES (%s, 'user', %s)
                 """, (ticket_id, description))
 
-        # Handle dependencies (second pass)
+        # Handle dependencies and parent tickets (second pass)
         for i, ticket_data in enumerate(tickets_data):
+            if i >= len(created_tickets):
+                continue
+            ticket_id = created_tickets[i]['ticket_id']
+
+            # Handle dependencies
             depends_on = ticket_data.get('depends_on', [])
-            if depends_on and i < len(created_tickets):
-                ticket_id = created_tickets[i]['ticket_id']
+            if depends_on:
                 for dep_seq in depends_on:
                     # dep_seq is a sequence order number
                     if dep_seq in ticket_id_map:
@@ -1188,6 +1193,14 @@ def handle_bulk_create_tickets(args: Dict[str, Any]) -> Dict[str, Any]:
                             INSERT IGNORE INTO ticket_dependencies (ticket_id, depends_on_ticket_id)
                             VALUES (%s, %s)
                         """, (ticket_id, ticket_id_map[dep_seq]))
+
+            # Handle parent ticket
+            parent_sequence = ticket_data.get('parent_sequence')
+            if parent_sequence and parent_sequence in ticket_id_map:
+                parent_id = ticket_id_map[parent_sequence]
+                cursor.execute("""
+                    UPDATE tickets SET parent_ticket_id = %s WHERE id = %s
+                """, (parent_id, ticket_id))
 
         conn.commit()
 
