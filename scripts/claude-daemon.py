@@ -1326,15 +1326,19 @@ Complete this task. When finished, say "TASK COMPLETED" with a summary."""
                 ready, _, _ = select.select([process.stdout], [], [], 1.0)
 
                 if ready:
+                    # Read available data without blocking
+                    # readline() can block if there's partial data without newline
                     line = process.stdout.readline()
-                    if not line and process.poll() is not None:
-                        break
-                    if line:
-                        result = self.parse_claude_output(line) or result
+                    if not line:
+                        if process.poll() is not None:
+                            break
+                        # No complete line yet, continue loop to check stuck timeout
+                        continue
+                    result = self.parse_claude_output(line) or result
                 elif process.poll() is not None:
                     # Process finished
                     break
-                    
+
                 if self.last_activity:
                     stuck_time = (datetime.now() - self.last_activity).total_seconds()
                     if stuck_time > STUCK_TIMEOUT_MINUTES * 60:

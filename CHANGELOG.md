@@ -5,6 +5,17 @@ All notable changes to CodeHero will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.72.4] - 2026-01-19
+
+### Fixed
+- **STUCK Detection Delay** - Fixed bug where STUCK detection was delayed by up to 57+ minutes
+  - Root cause: `readline()` blocks indefinitely waiting for newline character
+  - When Claude writes partial data without `\n`, stuck check never executes
+  - Now properly continues loop to check stuck timeout when no complete line available
+  - STUCK should now be detected within the configured 30-minute timeout
+
+---
+
 ## [2.72.3] - 2026-01-18
 
 ### Fixed
