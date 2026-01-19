@@ -399,21 +399,14 @@ Do NOT ask for:
 
 ## 🎨 PART 5: UI RULES
 
-### 6.1 PLAYWRIGHT TEST IDs
+### 5.1 PLAYWRIGHT TEST IDs
 ```html
 <button data-testid="login-btn">Login</button>
 <input data-testid="email-input">
 <div data-testid="error-message">
 ```
 
-### 6.2 VISUAL CONSISTENCY
-- Same spacing everywhere (8px, 16px, 24px, 32px)
-- Same size for similar elements
-- Use flexbox/grid, not manual positioning
-
-**Before finishing UI → Screenshot with Playwright and check if uniform!**
-
-### 6.3 PLAYWRIGHT URL
+### 5.2 PLAYWRIGHT URL & SCREENSHOTS
 ```python
 from playwright.sync_api import sync_playwright
 
@@ -424,7 +417,82 @@ with sync_playwright() as p:
     context = browser.new_context(ignore_https_errors=True)  # REQUIRED!
     page = context.new_page()
     page.goto(url)
-    page.screenshot(path='/tmp/screenshot.png')
+
+    # Desktop screenshot (full page!)
+    page.set_viewport_size({"width": 1920, "height": 1080})
+    page.screenshot(path='/tmp/desktop_full.png', full_page=True)
+
+    # Mobile screenshot (full page!)
+    page.set_viewport_size({"width": 375, "height": 667})
+    page.screenshot(path='/tmp/mobile_full.png', full_page=True)
+```
+
+### 5.3 ⚠️ UI QUALITY ENFORCEMENT
+
+**CRITICAL: Before marking ANY UI task as complete:**
+1. Take screenshots (desktop + mobile, full page)
+2. Read them with Read tool - ACTUALLY LOOK AT THEM!
+3. Check for issues below
+4. Fix issues → Screenshot again → Repeat until perfect
+
+**Working functionality ≠ Good UI. A form that works but looks terrible = INCOMPLETE!**
+
+### 5.4 COMMON UI KILLERS (Auto-fix without asking)
+
+| Problem | Bad Example | Fix To |
+|---------|-------------|--------|
+| Giant padding/margins | `padding: 48px, 64px, 128px` | `padding: 16px` or `24px` max |
+| Oversized icons | `width: 96px, 128px` | `width: 32px-48px` |
+| Excessive spacing | `gap: 48px`, `margin-bottom: 64px` | `gap: 16px`, `margin-bottom: 16px` |
+| Huge text (not H1) | `font-size: 3rem` | `font-size: 1.1rem-1.5rem` |
+
+### 5.5 GOOD SIZING REFERENCE
+
+| Element | Good Size |
+|---------|-----------|
+| Header height | 60-80px |
+| Card padding | 16-24px |
+| Card gap | 16-24px |
+| Small icons | 24-32px |
+| Medium icons | 40-48px |
+| Profile photos | 80-120px |
+| Section padding | 32-48px |
+| H1 | 2-3rem (32-48px) |
+| H2 | 1.5-2rem (24-32px) |
+| Body text | 1rem (16px) |
+
+### 5.6 VISUAL QUALITY CHECKLIST
+
+Before marking UI task complete, verify:
+```
+□ No giant empty white spaces?
+□ Icons/images proportional to containers?
+□ Spacing consistent (8px, 12px, 16px, 24px multiples)?
+□ Text readable (min 14px body, 16px ideal)?
+□ Layout balanced (not all on one side)?
+□ Cards similar sizes?
+□ Responsive (no horizontal scroll on mobile)?
+□ Looks professional (like Bootstrap/Tailwind sites)?
+```
+
+### 5.7 UI WORKFLOW
+
+**Simple rule:**
+```
+UI CHANGE (HTML/CSS/JS)?  → Screenshot BOTH (desktop + mobile)
+BACKEND ONLY (Python/PHP)? → No screenshot needed
+```
+
+**No gray areas.** If you touched HTML, CSS, or JS → test both viewports.
+
+**Steps:**
+```
+1. Write HTML/CSS/JS
+2. Take screenshots (full page, BOTH viewports!)
+3. Read screenshots with Read tool
+4. Check quality checklist (5.6)
+5. Fix issues → Repeat from step 2
+6. ONLY when perfect → Mark task complete
 ```
 
 ---
@@ -595,7 +663,10 @@ POST /api/login → AuthController::login
 
 **UI:**
 - [ ] data-testid on elements
-- [ ] Visual consistency check
+- [ ] Screenshots taken (desktop + mobile, full page)
+- [ ] Screenshots reviewed (actually looked at them!)
+- [ ] No giant padding/margins/icons
+- [ ] Visual quality checklist passed (5.6)
 
 ---
 
