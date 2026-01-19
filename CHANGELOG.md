@@ -5,6 +5,21 @@ All notable changes to CodeHero will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.72.6] - 2026-01-19
+
+### Fixed
+- **Upgrade Script Reliability** - Removed `set -e` to prevent premature exit on minor errors
+  - Script no longer fails on non-critical warnings
+  - Better error handling for each step
+
+### Improved
+- **Smart Migration Logic** - Migrations now only run between current and target version
+  - Skips migrations older than current version (no re-running old migrations)
+  - Skips migrations newer than target version (future migrations)
+  - Prevents duplicate migration attempts on repeated upgrades
+
+---
+
 ## [2.72.5] - 2026-01-19
 
 ### Added

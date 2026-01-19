@@ -8,7 +8,8 @@
 #   sudo ./upgrade.sh --dry-run # Show what would be done
 # =====================================================
 
-set -e
+# Note: We don't use 'set -e' to allow graceful error handling
+# Each critical step checks for errors explicitly
 
 # Colors
 RED='\033[0;31m'
@@ -231,14 +232,41 @@ log_info "Database migrations to apply:"
 MIGRATIONS_DIR="${SOURCE_DIR}/database/migrations"
 PENDING_MIGRATIONS=()
 
+# Extract version from migration filename (e.g., 2.72.0_auto_review.sql → 2.72.0)
+extract_migration_version() {
+    local name="$1"
+    echo "$name" | grep -oE '^[0-9]+\.[0-9]+\.[0-9]+' || echo ""
+}
+
 if [ -d "$MIGRATIONS_DIR" ]; then
     for migration in $(ls -1 "${MIGRATIONS_DIR}"/*.sql 2>/dev/null | sort -V); do
         migration_name=$(basename "$migration" .sql)
-        applied=$(run_sql "SELECT version FROM schema_migrations WHERE version='${migration_name}';" 2>/dev/null | tail -1)
-        if [ -z "$applied" ]; then
-            echo "  [PENDING] $migration_name"
-            PENDING_MIGRATIONS+=("$migration")
+        migration_version=$(extract_migration_version "$migration_name")
+
+        # Skip if no version found in filename
+        if [ -z "$migration_version" ]; then
+            echo "  [SKIP] $migration_name (no version in filename)"
+            continue
         fi
+
+        # Skip if migration version <= current version (already should be applied)
+        if version_gte "$CURRENT_VERSION" "$migration_version" 2>/dev/null; then
+            continue
+        fi
+
+        # Skip if migration version > new version (future migration)
+        if version_gt "$migration_version" "$NEW_VERSION" 2>/dev/null; then
+            continue
+        fi
+
+        # Skip if already applied
+        applied=$(run_sql "SELECT version FROM schema_migrations WHERE version='${migration_name}';" 2>/dev/null | tail -1)
+        if [ -n "$applied" ]; then
+            continue
+        fi
+
+        echo "  [PENDING] $migration_name (v$migration_version)"
+        PENDING_MIGRATIONS+=("$migration")
     done
 fi
 
