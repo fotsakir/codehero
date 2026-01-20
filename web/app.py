@@ -6963,6 +6963,16 @@ NGINXPMA''',
             'python3 /opt/codehero/scripts/update_windows_config.py',
             'echo "Windows development environment fully configured!"'
         ]
+    },
+    'setup-waf': {
+        'name': 'WAF Security Setup',
+        'check': 'test -f /etc/modsecurity/main.conf && grep -q "modsecurity on" /etc/nginx/sites-available/codehero-admin 2>/dev/null && echo configured',
+        'version_regex': r'(configured)',
+        'install': [
+            'echo "Running ModSecurity WAF setup..."',
+            'bash /opt/codehero/scripts/setup_waf.sh',
+            'echo "ModSecurity WAF fully configured!"'
+        ]
     }
 }
 

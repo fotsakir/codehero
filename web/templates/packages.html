@@ -591,6 +591,20 @@
                         <button class="btn btn-primary" onclick="installPackage('setup-windows')">Run Setup</button>
                     </div>
                 </div>
+
+                <div class="package-card" id="pkg-setup-waf">
+                    <div class="package-header">
+                        <span class="package-name">🛡️ WAF Security Setup</span>
+                        <span class="package-status status-not-installed" id="status-setup-waf">Checking...</span>
+                    </div>
+                    <div class="package-desc">ModSecurity WAF with OWASP CRS: SQL injection, XSS, and attack protection for Nginx.</div>
+                    <div class="package-includes">
+                        <span>modsecurity</span><span>owasp-crs</span><span>nginx</span><span>waf-rules</span>
+                    </div>
+                    <div class="package-actions">
+                        <button class="btn btn-primary" onclick="installPackage('setup-waf')">Run Setup</button>
+                    </div>
+                </div>
             </div>
         </div>
 
