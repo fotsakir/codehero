@@ -5437,7 +5437,8 @@ class ClaudeChatSession:
             model = 'sonnet'
 
         # Build command arguments
-        cmd_args = [claude_path, '--dangerously-skip-permissions', '--model', model]
+        # Use settings with hook for permission filtering (not --dangerously-skip-permissions)
+        cmd_args = [claude_path, '--model', model, '--settings', '/opt/codehero/config/assistant_settings.json']
 
         # Add system prompt if provided (context auto-loads via CLI flag)
         if self.system_prompt:

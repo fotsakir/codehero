@@ -253,13 +253,21 @@ def evaluate_file_operation(tool_name, file_path, project_path):
             '/opt/codehero',
             '/etc/',
             '/.ssh',
+            '/home/claude/.ssh',
             '/.aws',
+            '/home/claude/.aws',
             '/.claude',
             '/root',
+            '/var/lib/mysql',
+            '/var/backups',
         ]
         for blocked in blocked_paths:
             if blocked in file_path or file_path.startswith(blocked.lstrip('/')):
                 return ("deny", f"Blocked: {blocked} is a protected system path")
+
+        # Block backup zip files
+        if 'codehero-' in file_path and file_path.endswith('.zip'):
+            return ("deny", "Protected: backup zip files cannot be modified")
 
         # For Read operations outside project, allow (might need to read docs, examples)
         if tool_name == 'Read':
@@ -285,7 +293,7 @@ def evaluate_search_operation(tool_name, path, project_path):
         return ("deny", "Cannot search in .git folder")
 
     # Block searching in system paths
-    blocked_paths = ['/opt/codehero', '/etc/', '/.ssh', '/.aws']
+    blocked_paths = ['/opt/codehero', '/etc/', '/.ssh', '/.aws', '/root', '/var/lib/mysql', '/var/backups']
     for blocked in blocked_paths:
         if blocked in path:
             return ("deny", f"Cannot search in {blocked}")
@@ -305,6 +313,7 @@ def evaluate_bash_command(command, project_path):
 
     # === ALWAYS BLOCKED ===
     blocked_patterns = [
+        # System commands
         (r'^\s*sudo\s', "sudo commands not allowed"),
         (r'^\s*su\s', "su commands not allowed"),
         (r'\|\s*sudo', "piping to sudo not allowed"),
@@ -318,18 +327,40 @@ def evaluate_bash_command(command, project_path):
         (r'^\s*chmod\s+777', "chmod 777 not allowed (security risk)"),
         (r'^\s*chmod\s+-R\s+777', "chmod -R 777 not allowed"),
         (r'^\s*chown\s', "chown not allowed"),
-        (r'^\s*rm\s+-rf\s+/', "rm -rf / not allowed"),
-        (r'^\s*rm\s+-rf\s+~', "rm -rf ~ not allowed"),
-        (r'^\s*rm\s+-rf\s+\*', "rm -rf * at root not allowed"),
+        # Destructive commands
+        (r'rm\s+-rf\s+/', "rm -rf / not allowed"),
+        (r'rm\s+-rf\s+~', "rm -rf ~ not allowed"),
+        (r'rm\s+-rf\s+/root', "rm -rf /root not allowed"),
+        (r'rm\s+-rf\s+/home', "rm -rf /home not allowed"),
+        (r'rm\s+-rf\s+\*', "rm -rf * at root not allowed"),
+        (r'rm\s+-rf\s+/var/www/projects\s*$', "rm -rf all projects not allowed"),
+        (r'rm\s+-rf\s+/opt/apps\s*$', "rm -rf all apps not allowed"),
+        (r'rm\s+-rf\s+/var/backups', "rm -rf backups not allowed"),
+        (r'rm\s+-rf\s+/var/lib/mysql', "rm -rf mysql data not allowed"),
+        (r'rm\s+.*\.git', "rm .git not allowed (version control)"),
+        (r'rm\s+.*codehero.*\.zip', "deleting backup zips not allowed"),
+        # Disk operations
         (r'^\s*mkfs', "mkfs not allowed"),
         (r'^\s*dd\s+if=', "dd not allowed"),
-        (r'^\s*>\s*/dev/', "writing to /dev not allowed"),
+        (r'>\s*/dev/', "writing to /dev not allowed"),
+        # Git protection
         (r'^\s*git\s+init', "git init not allowed (.git is protected)"),
         (r'^\s*git\s+clone', "git clone requires approval"),
+        # Database destruction
+        (r'drop\s+database', "DROP DATABASE not allowed"),
+        (r'drop\s+table', "DROP TABLE not allowed"),
+        (r'truncate\s+', "TRUNCATE not allowed"),
+        # Remote code execution
+        (r'curl.*\|\s*sh', "curl pipe to sh not allowed"),
+        (r'curl.*\|\s*bash', "curl pipe to bash not allowed"),
+        (r'wget.*\|\s*sh', "wget pipe to sh not allowed"),
+        (r'wget.*\|\s*bash', "wget pipe to bash not allowed"),
+        # Protected paths
         (r'/opt/codehero', "accessing /opt/codehero not allowed"),
         (r'/etc/', "accessing /etc not allowed"),
         (r'~/.ssh', "accessing ~/.ssh not allowed"),
         (r'~/.aws', "accessing ~/.aws not allowed"),
+        (r'/var/lib/mysql', "accessing mysql data not allowed"),
     ]
 
     for pattern, reason in blocked_patterns:

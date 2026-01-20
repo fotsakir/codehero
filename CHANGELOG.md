@@ -5,6 +5,27 @@ All notable changes to CodeHero will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.79.2] - 2026-01-20
+
+### Added
+- **Claude Assistant Security Hook** - Protection layer for Claude Assistant sessions
+  - Allows system-wide navigation (read access everywhere except sensitive paths)
+  - Asks permission for file edits outside safe paths (/home/claude, /var/www/projects, /opt/apps)
+  - Blocks access to credentials, SSH keys, database files, and system files
+  - Protects backup zip files and .git folders from modification
+
+### Improved
+- **Semi-Autonomous Hook Protections** - Enhanced security for ticket execution
+  - Added protection for /var/lib/mysql/ (database data directory)
+  - Added protection for /var/backups/ directory
+  - Blocks backup zip file deletion (codehero-*.zip)
+  - Blocks .git folder deletion (rm .git)
+  - Blocks destructive database commands (DROP DATABASE, TRUNCATE)
+  - Blocks remote code execution patterns (curl|sh, wget|bash)
+  - Blocks rm -rf on critical directories (/root, all projects, all apps, backups)
+
+---
+
 ## [2.79.1] - 2026-01-20
 
 ### Improved
