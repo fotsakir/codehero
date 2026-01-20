@@ -45,9 +45,16 @@ import shutil
 import uuid
 import urllib.request
 import urllib.error
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import wraps
 import logging
+
+# Optional 2FA support
+try:
+    import pyotp
+    TOTP_AVAILABLE = True
+except ImportError:
+    TOTP_AVAILABLE = False
 import sys
 sys.path.insert(0, '/opt/codehero/scripts')
 try:
@@ -192,6 +199,118 @@ except Exception as e:
 
 def get_db():
     return db_pool.get_connection() if db_pool else None
+
+# ============ AUTH HELPERS ============
+
+def get_auth_settings():
+    """Get authentication settings (lockout, 2FA)."""
+    try:
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM auth_settings WHERE id = 1")
+        result = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        if not result:
+            return {'failed_attempts': 0, 'locked_until': None, 'totp_secret': None, 'totp_enabled': False}
+        return result
+    except Exception:
+        return {'failed_attempts': 0, 'locked_until': None, 'totp_secret': None, 'totp_enabled': False}
+
+def update_auth_settings(**kwargs):
+    """Update authentication settings."""
+    try:
+        conn = get_db()
+        cursor = conn.cursor()
+        set_clauses = []
+        values = []
+        for key, value in kwargs.items():
+            set_clauses.append(f"{key} = %s")
+            values.append(value)
+        query = f"UPDATE auth_settings SET {', '.join(set_clauses)} WHERE id = 1"
+        cursor.execute(query, values)
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return True
+    except Exception:
+        return False
+
+def is_account_locked():
+    """Check if account is currently locked."""
+    settings = get_auth_settings()
+    if settings['locked_until']:
+        lock_time = settings['locked_until']
+        if isinstance(lock_time, str):
+            lock_time = datetime.fromisoformat(lock_time)
+        if lock_time > datetime.now():
+            remaining = lock_time - datetime.now()
+            return True, int(remaining.total_seconds() / 60) + 1
+    return False, 0
+
+def record_failed_login():
+    """Record a failed login attempt, lock if threshold reached."""
+    settings = get_auth_settings()
+    attempts = settings['failed_attempts'] + 1
+    if attempts >= 5:
+        # Lock for 30 minutes
+        locked_until = datetime.now() + timedelta(minutes=30)
+        update_auth_settings(failed_attempts=attempts, locked_until=locked_until)
+        return True, 30  # Account now locked
+    else:
+        update_auth_settings(failed_attempts=attempts)
+        return False, 5 - attempts  # Remaining attempts
+
+def reset_failed_attempts():
+    """Reset failed login attempts on successful login."""
+    update_auth_settings(failed_attempts=0, locked_until=None)
+
+def verify_totp(code):
+    """Verify a TOTP code."""
+    if not TOTP_AVAILABLE:
+        return False
+    settings = get_auth_settings()
+    if not settings['totp_enabled'] or not settings['totp_secret']:
+        return True  # 2FA not enabled, always pass
+    totp = pyotp.TOTP(settings['totp_secret'])
+    return totp.verify(code)
+
+def create_remember_token():
+    """Create a remember token that expires at end of month."""
+    import hashlib
+    import calendar
+    token = secrets.token_urlsafe(32)
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    # Expire at end of current month
+    now = datetime.now()
+    last_day = calendar.monthrange(now.year, now.month)[1]
+    expires = datetime(now.year, now.month, last_day, 23, 59, 59)
+    update_auth_settings(remember_token_hash=token_hash, remember_token_expires=expires)
+    return token, expires
+
+def verify_remember_token(token):
+    """Verify a remember token from cookie."""
+    if not token:
+        return False
+    import hashlib
+    settings = get_auth_settings()
+    if not settings.get('remember_token_hash') or not settings.get('remember_token_expires'):
+        return False
+    # Check expiry
+    expires = settings['remember_token_expires']
+    if isinstance(expires, str):
+        expires = datetime.fromisoformat(expires)
+    if expires < datetime.now():
+        # Token expired, clear it
+        update_auth_settings(remember_token_hash=None, remember_token_expires=None)
+        return False
+    # Check hash
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    return token_hash == settings['remember_token_hash']
+
+def clear_remember_token():
+    """Clear the remember token."""
+    update_auth_settings(remember_token_hash=None, remember_token_expires=None)
 
 def create_project_database(code):
     """Create a dedicated database and user for a project.
@@ -347,6 +466,11 @@ def health():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    # Check if account is locked
+    locked, remaining_mins = is_account_locked()
+    if locked:
+        return render_template('login.html', error=f"Account locked. Try again in {remaining_mins} minutes.")
+
     if request.method == 'POST':
         username = request.form.get('username')
         password = request.form.get('password')
@@ -356,16 +480,68 @@ def login():
             cursor.execute("SELECT * FROM developers WHERE username = %s AND is_active = TRUE", (username,))
             user = cursor.fetchone()
             cursor.close(); conn.close()
-            
+
             if user and bcrypt.checkpw(password.encode(), user['password_hash'].encode()):
-                session['user'] = username
-                session['user_id'] = user['id']
-                session['role'] = user['role']
-                return redirect(url_for('dashboard'))
-            return render_template('login.html', error="Invalid credentials")
+                # Password correct - check if 2FA is needed
+                auth_settings = get_auth_settings()
+                if auth_settings['totp_enabled'] and auth_settings['totp_secret']:
+                    # Check for valid remember token (skip 2FA)
+                    remember_token = request.cookies.get('remember_2fa')
+                    if remember_token and verify_remember_token(remember_token):
+                        # Remember token valid, skip 2FA
+                        reset_failed_attempts()
+                        session['user'] = username
+                        session['user_id'] = user['id']
+                        session['role'] = user['role']
+                        return redirect(url_for('dashboard'))
+                    # Store pending auth in session, redirect to 2FA
+                    session['pending_user'] = username
+                    session['pending_user_id'] = user['id']
+                    session['pending_role'] = user['role']
+                    return redirect(url_for('verify_2fa'))
+                else:
+                    # No 2FA, login directly
+                    reset_failed_attempts()
+                    session['user'] = username
+                    session['user_id'] = user['id']
+                    session['role'] = user['role']
+                    return redirect(url_for('dashboard'))
+            else:
+                # Wrong password
+                now_locked, remaining = record_failed_login()
+                if now_locked:
+                    return render_template('login.html', error=f"Account locked for {remaining} minutes due to too many failed attempts.")
+                else:
+                    return render_template('login.html', error=f"Invalid credentials. {remaining} attempts remaining.")
         except Exception as e:
-            return render_template('login.html', error=f"Error: {e}")
+            return render_template('login.html', error=f"Error: {sanitize_error(e)}")
     return render_template('login.html', error=None)
+
+@app.route('/verify-2fa', methods=['GET', 'POST'])
+def verify_2fa():
+    # Must have pending auth
+    if 'pending_user' not in session:
+        return redirect(url_for('login'))
+
+    if request.method == 'POST':
+        code = request.form.get('code', '').strip()
+        remember_me = request.form.get('remember_me') == 'on'
+        if verify_totp(code):
+            # 2FA verified, complete login
+            reset_failed_attempts()
+            session['user'] = session.pop('pending_user')
+            session['user_id'] = session.pop('pending_user_id')
+            session['role'] = session.pop('pending_role')
+            response = redirect(url_for('dashboard'))
+            # Set remember cookie if requested
+            if remember_me:
+                token, expires = create_remember_token()
+                response.set_cookie('remember_2fa', token, expires=expires, httponly=True, secure=True, samesite='Strict')
+            return response
+        else:
+            return render_template('verify_2fa.html', error="Invalid code. Please try again.")
+
+    return render_template('verify_2fa.html', error=None)
 
 @app.route('/logout')
 def logout():

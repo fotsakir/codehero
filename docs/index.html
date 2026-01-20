@@ -41,7 +41,7 @@
         "description": "The Developer That Never Rests. Self-hosted autonomous AI coding agent. Give it tasks. Walk away. Wake up to working code.",
         "url": "https://fotsakir.github.io/codehero/",
         "downloadUrl": "https://github.com/fotsakir/codehero/releases/latest",
-        "softwareVersion": "2.76.3",
+        "softwareVersion": "2.77.0",
         "applicationCategory": "DeveloperApplication",
         "operatingSystem": "Ubuntu 22.04, Ubuntu 24.04",
         "offers": {
@@ -85,7 +85,10 @@
             ".NET / ASP.NET Core - auto Nginx proxy and systemd services",
             "Mobile frameworks - Capacitor.js, React Native, Flutter, Native Android",
             "Monaco Editor with LSP - VS Code-quality code editing with autocomplete, hover docs, go-to-definition",
-            "Git Version Control - auto-commit, history, diff viewer, rollback"
+            "Git Version Control - auto-commit, history, diff viewer, rollback",
+            "Two-Factor Authentication (2FA) with Google Authenticator",
+            "Account Lockout - automatic protection after failed login attempts",
+            "Remember Device - skip 2FA on trusted devices until end of month"
         ]
     }
     </script>
@@ -1323,9 +1326,9 @@
                         Install on <strong>Ubuntu 22.04/24.04</strong> VM (VirtualBox, VMware, Hyper-V, or cloud VPS).
                     </p>
                     <div style="position: relative; background: rgba(0,0,0,0.3); padding: 0.8rem 3rem 0.8rem 0.8rem; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; overflow-x: auto;">
-                        <button onclick="copyCode(this, 'wget https://github.com/fotsakir/codehero/releases/latest/download/codehero-2.76.3.zip\nunzip codehero-*.zip && cd codehero && ./setup.sh')" style="position: absolute; top: 6px; right: 6px; background: rgba(255,255,255,0.1); border: none; color: var(--text-muted); padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.7rem; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">📋</button>
+                        <button onclick="copyCode(this, 'wget https://github.com/fotsakir/codehero/releases/latest/download/codehero-2.77.0.zip\nunzip codehero-*.zip && cd codehero && ./setup.sh')" style="position: absolute; top: 6px; right: 6px; background: rgba(255,255,255,0.1); border: none; color: var(--text-muted); padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.7rem; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">📋</button>
                         <span style="color: var(--text-muted);"># On Ubuntu VM (as root)</span><br>
-                        <span style="color: var(--accent-cyan);">wget https://github.com/fotsakir/codehero/releases/latest/download/codehero-2.76.3.zip</span><br>
+                        <span style="color: var(--accent-cyan);">wget https://github.com/fotsakir/codehero/releases/latest/download/codehero-2.77.0.zip</span><br>
                         <span style="color: var(--accent-cyan);">unzip codehero-*.zip && cd codehero && ./setup.sh</span>
                     </div>
                     <p style="margin-top: 0.8rem; font-size: 0.8rem;">
@@ -1488,6 +1491,11 @@
                 <div class="feature-icon">🔒</div>
                 <h3>Self-Hosted & Private</h3>
                 <p>Your code stays on your server. Complete control over your data and infrastructure.</p>
+            </div>
+            <div class="feature-card" style="border: 1px solid var(--accent-secondary); background: rgba(139, 92, 246, 0.05);">
+                <div class="feature-icon">🔐</div>
+                <h3>Two-Factor Authentication</h3>
+                <p><strong>Optional 2FA</strong> with Google Authenticator. Account lockout after failed attempts. <strong>Remember device</strong> until end of month.</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">⚡</div>

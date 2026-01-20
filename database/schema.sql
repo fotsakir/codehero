@@ -650,6 +650,26 @@ SET character_set_client = @saved_cs_client;
 -- Dump completed on 2026-01-10 16:50:27
 
 --
+-- Table structure for table `auth_settings`
+--
+
+DROP TABLE IF EXISTS `auth_settings`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `auth_settings` (
+  `id` int NOT NULL DEFAULT '1',
+  `failed_attempts` int DEFAULT '0',
+  `locked_until` timestamp NULL DEFAULT NULL,
+  `totp_secret` varchar(32) DEFAULT NULL,
+  `totp_enabled` tinyint(1) DEFAULT '0',
+  `remember_token_hash` varchar(64) DEFAULT NULL,
+  `remember_token_expires` timestamp NULL DEFAULT NULL,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Default data for daemon_status
 --
 
@@ -662,6 +682,13 @@ VALUES (1, 'stopped', NULL, NULL, NULL, NULL);
 
 INSERT INTO `developers` (`username`, `password_hash`, `role`, `is_active`)
 VALUES ('admin', '$2b$12$szAIZl2ejy.Y5Bj98prT3eZ2/ruBWlHqpwPtBhHj3pPC1Rk3PZsKO', 'admin', 1);
+
+--
+-- Default auth settings (2FA disabled by default)
+--
+
+INSERT INTO `auth_settings` (`id`, `failed_attempts`, `totp_enabled`)
+VALUES (1, 0, 0);
 
 --
 -- Default user preferences

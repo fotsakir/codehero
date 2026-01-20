@@ -241,8 +241,8 @@ fi
 # [6/12] PYTHON PACKAGES
 # =====================================================
 echo -e "${YELLOW}[6/12] Installing Python packages...${NC}"
-pip3 install --ignore-installed flask flask-socketio flask-cors mysql-connector-python bcrypt eventlet --break-system-packages 2>&1 || \
-pip3 install --ignore-installed flask flask-socketio flask-cors mysql-connector-python bcrypt eventlet 2>&1 || true
+pip3 install --ignore-installed flask flask-socketio flask-cors mysql-connector-python bcrypt eventlet pyotp qrcode pillow --break-system-packages 2>&1 || \
+pip3 install --ignore-installed flask flask-socketio flask-cors mysql-connector-python bcrypt eventlet pyotp qrcode pillow 2>&1 || true
 
 # Playwright (browser automation for visual verification)
 echo "  Installing Playwright browser dependencies..."

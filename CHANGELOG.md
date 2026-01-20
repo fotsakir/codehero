@@ -5,6 +5,34 @@ All notable changes to CodeHero will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.77.0] - 2026-01-20
+
+### Added
+- **Two-Factor Authentication (2FA)** - Optional TOTP-based 2FA with Google Authenticator
+  - Enable/disable via command line: `sudo manage-2fa.sh`
+  - QR code generation for easy setup
+  - Works with any TOTP app (Authy, Microsoft Authenticator, etc.)
+- **Account Lockout Protection** - Automatic account lockout after failed login attempts
+  - Locks after 5 failed attempts
+  - 30-minute lockout period
+  - Unlock via script: `sudo manage-2fa.sh unlock`
+- **Remember Device** - Skip 2FA on trusted devices
+  - Check "Remember this device" when verifying 2FA
+  - Valid until end of current month
+  - Secure cookie-based with SHA-256 hashed tokens
+- **2FA Management Script** - New `manage-2fa.sh` for terminal-based 2FA management
+  - Interactive menu or direct commands
+  - Commands: enable, disable, reset, unlock, status
+- **2FA Documentation** - New `docs/2FA_SETUP.md` with setup guide and troubleshooting
+
+### Security
+- Added `auth_settings` table for authentication state
+- TOTP secrets stored securely in database
+- Failed attempt tracking prevents brute force attacks
+- Secure remember token with hash comparison
+
+---
+
 ## [2.76.3] - 2026-01-20
 
 ### Improved
