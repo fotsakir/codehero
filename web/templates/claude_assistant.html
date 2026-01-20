@@ -442,7 +442,7 @@
 
     <div class="context-bar" id="contextBar">
         <div class="context-warning" id="contextWarning">
-            <span>⚠️ <b>Instructions:</b> 1) Wait for Claude Code to load 2) Select template & click "Load Context" 3) Click inside terminal & press ENTER. Same after "Send" - click terminal & ENTER!</span>
+            <span>⚠️ <b>Tip:</b> Context auto-loads when you start. To switch context, select a different template and click "Reload Context".</span>
         </div>
         <div class="context-controls">
             <select id="contextTemplate" class="model-select" style="width:auto;min-width:200px;" disabled>
@@ -822,27 +822,20 @@ Ask the user which project they want to check!`
                 term.writeln('\x1b[38;5;141m === Project Blueprint Planner === \x1b[0m');
                 term.writeln('');
                 term.writeln('\x1b[38;5;246m Click "Start Session" to begin designing your project. \x1b[0m');
-                term.writeln('\x1b[38;5;246m Claude will guide you through each section of the blueprint. \x1b[0m');
+                term.writeln('\x1b[38;5;246m Context auto-loads - Claude will guide you through each section. \x1b[0m');
             } else if (mode === 'help') {
                 term.writeln('\x1b[38;5;141m === Platform Help === \x1b[0m');
                 term.writeln('');
                 term.writeln('\x1b[38;5;246m Click "Start Session" to get help with CodeHero. \x1b[0m');
-                term.writeln('\x1b[38;5;246m Claude has knowledge about: \x1b[0m');
-                term.writeln('\x1b[38;5;246m  - Platform usage and features \x1b[0m');
-                term.writeln('\x1b[38;5;246m  - Troubleshooting common issues \x1b[0m');
-                term.writeln('\x1b[38;5;246m  - Code and configuration \x1b[0m');
-                term.writeln('\x1b[38;5;246m  - Development workflow \x1b[0m');
+                term.writeln('\x1b[38;5;246m Context auto-loads - Claude knows the platform. \x1b[0m');
             } else if (projectId) {
                 term.writeln('\x1b[38;5;141m === Project Assistant: ' + projectName + ' === \x1b[0m');
                 term.writeln('');
                 term.writeln('\x1b[38;5;246m Click "Start Session" to get help with this project. \x1b[0m');
-                term.writeln('\x1b[38;5;246m Claude can: \x1b[0m');
-                term.writeln('\x1b[38;5;246m  - Show project progress and status \x1b[0m');
-                term.writeln('\x1b[38;5;246m  - Identify blocked or failed tickets \x1b[0m');
-                term.writeln('\x1b[38;5;246m  - Retry failed tickets \x1b[0m');
-                term.writeln('\x1b[38;5;246m  - Add new tickets to the project \x1b[0m');
+                term.writeln('\x1b[38;5;246m Context auto-loads - Claude can check progress, retry tickets, etc. \x1b[0m');
             } else {
-                term.writeln('\x1b[38;5;246m Select AI model and click "Start Session" to launch Claude \x1b[0m');
+                term.writeln('\x1b[38;5;246m Click "Start Session" to launch Claude Assistant \x1b[0m');
+                term.writeln('\x1b[38;5;246m Context auto-loads based on where you came from. \x1b[0m');
             }
             term.writeln('');
 
@@ -886,11 +879,20 @@ Ask the user which project they want to check!`
             const modelNames = { opus: 'Opus', sonnet: 'Sonnet', haiku: 'Haiku' };
             document.getElementById('modelInfo').textContent = 'Model: ' + modelNames[model];
 
+            // Determine template based on mode/project_id
+            // mode=blueprint -> planner, project_id -> progress, else -> general
+            let template = 'general';
+            if (mode === 'blueprint') {
+                template = 'planner';
+            } else if (projectId) {
+                template = 'progress';
+            }
+
             try {
                 const resp = await fetch('/api/claude/chat/start', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ model: model })
+                    body: JSON.stringify({ model: model, template: template })
                 });
                 const data = await resp.json();
 
@@ -906,11 +908,12 @@ Ask the user which project they want to check!`
                     resizeTerminal();
                     pollInterval = setInterval(pollOutput, 100);
 
-                    // Enable context controls
+                    // Context is auto-loaded from backend - update UI
                     document.getElementById('contextTemplate').disabled = false;
                     document.getElementById('loadContextBtn').disabled = false;
-                    document.getElementById('contextWarning').classList.remove('hidden');
-                    document.getElementById('contextStatus').textContent = '';
+                    document.getElementById('contextWarning').classList.add('hidden');  // Hide warning - context is auto-loading
+                    document.getElementById('contextStatus').textContent = '✓ ' + (data.template || 'Context') + ' auto-loaded';
+                    document.getElementById('loadContextBtn').textContent = 'Reload Context';
                 } else {
                     setStatus('Failed to start', false);
                     term.writeln('\x1b[31mFailed to start: ' + (data.error || 'Unknown error') + '\x1b[0m');
