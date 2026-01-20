@@ -1469,8 +1469,9 @@
                             <label style="display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 8px;">
                                 <span style="min-width: 100px;">Execution Mode:</span>
                                 <select name="execution_mode" style="flex: 1; font-size: 12px; padding: 4px 8px;">
-                                    <option value="" selected>📋 Inherit ({{ '🛡️ Supervised' if project.default_execution_mode == 'supervised' else '⚡ Autonomous' }})</option>
+                                    <option value="" selected>📋 Inherit ({{ '🛡️ Supervised' if project.default_execution_mode == 'supervised' else ('🔒 Semi-Auto' if project.default_execution_mode == 'semi-autonomous' else '⚡ Autonomous') }})</option>
                                     <option value="autonomous">⚡ Autonomous</option>
+                                    <option value="semi-autonomous">🔒 Semi-Autonomous</option>
                                     <option value="supervised">🛡️ Supervised</option>
                                 </select>
                             </label>

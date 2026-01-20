@@ -215,8 +215,8 @@ TOOLS = [
                 },
                 "execution_mode": {
                     "type": "string",
-                    "description": "Execution mode: autonomous (full access), supervised (asks for permissions), or omit to inherit from project default",
-                    "enum": ["autonomous", "supervised"]
+                    "description": "Execution mode: autonomous (full access), semi-autonomous (smart sandbox), supervised (asks for permissions), or omit to inherit from project default",
+                    "enum": ["autonomous", "semi-autonomous", "supervised"]
                 },
                 "deps_include_awaiting": {
                     "type": "boolean",
@@ -339,8 +339,8 @@ TOOLS = [
                 },
                 "execution_mode": {
                     "type": "string",
-                    "description": "Execution mode for ALL tickets: autonomous (full access), supervised (asks for permissions). Default: inherit from project",
-                    "enum": ["autonomous", "supervised"]
+                    "description": "Execution mode for ALL tickets: autonomous (full access), semi-autonomous (smart sandbox), supervised (asks for permissions). Default: inherit from project",
+                    "enum": ["autonomous", "semi-autonomous", "supervised"]
                 },
                 "deps_include_awaiting": {
                     "type": "boolean",
@@ -879,7 +879,7 @@ def handle_create_ticket(args: Dict[str, Any]) -> Dict[str, Any]:
     ai_model = args.get('ai_model')  # None = inherit from project
 
     # Validate execution_mode (None = inherit from project)
-    if execution_mode and execution_mode not in ('autonomous', 'supervised'):
+    if execution_mode and execution_mode not in ('autonomous', 'semi-autonomous', 'supervised'):
         execution_mode = None
 
     # Validate ai_model (None = inherit from project)
@@ -1221,7 +1221,7 @@ def handle_bulk_create_tickets(args: Dict[str, Any]) -> Dict[str, Any]:
     deps_include_awaiting = args.get('deps_include_awaiting', False)  # Relaxed mode
 
     # Validate execution_mode
-    if execution_mode and execution_mode not in ('autonomous', 'supervised'):
+    if execution_mode and execution_mode not in ('autonomous', 'semi-autonomous', 'supervised'):
         execution_mode = None
 
     if not project_id:

@@ -767,14 +767,17 @@ class ProjectWorker(threading.Thread):
         except Exception as e:
             self.log(f"Error updating ticket: {e}", "ERROR")
 
-    def broadcast_status(self, ticket_id, status):
+    def broadcast_status(self, ticket_id, status, pending_permission=None):
         """Broadcast ticket status change to web app"""
         try:
-            data = json.dumps({
+            payload = {
                 'type': 'status',
                 'ticket_id': ticket_id,
                 'status': status
-            }).encode('utf-8')
+            }
+            if pending_permission:
+                payload['pending_permission'] = pending_permission
+            data = json.dumps(payload).encode('utf-8')
             req = urllib.request.Request(
                 f"{WEB_APP_URL}/api/internal/broadcast",
                 data=data,
@@ -1285,10 +1288,44 @@ Complete this task. When finished, say "TASK COMPLETED" with a summary."""
             )
             db.commit()
             cursor.close()
+            # Broadcast status change with pending permission for real-time UI update
+            self.broadcast_status(ticket_id, 'awaiting_input', pending)
             return True
         except Exception as e:
             self.log(f"Error saving pending permission: {e}", "ERROR")
             return False
+
+    def create_semi_autonomous_settings(self, project_path):
+        """Create .claude/settings.json for semi-autonomous mode with hooks"""
+        try:
+            settings_dir = os.path.join(project_path, '.claude')
+            os.makedirs(settings_dir, exist_ok=True)
+
+            settings = {
+                "hooks": {
+                    "PreToolUse": [
+                        {
+                            "matcher": ".*",
+                            "hooks": [
+                                {
+                                    "type": "command",
+                                    "command": "/opt/codehero/scripts/semi_autonomous_hook.py"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+
+            settings_file = os.path.join(settings_dir, 'settings.json')
+            with open(settings_file, 'w') as f:
+                json.dump(settings, f, indent=2)
+
+            self.log(f"Created semi-autonomous settings at {settings_file}")
+            return settings_file
+        except Exception as e:
+            self.log(f"Error creating semi-autonomous settings: {e}", "ERROR")
+            return None
 
     def run_claude(self, ticket, prompt):
         """Run Claude Code within project directory"""
@@ -1315,7 +1352,7 @@ Complete this task. When finished, say "TASK COMPLETED" with a summary."""
         ai_model = ticket.get('ticket_ai_model') or ticket.get('project_ai_model') or 'sonnet'
         self.log(f"Using AI model: {ai_model}")
 
-        # Check execution mode: autonomous (default) or supervised
+        # Check execution mode: autonomous (default), semi-autonomous, or supervised
         execution_mode = ticket.get('execution_mode') or ticket.get('default_execution_mode') or 'autonomous'
         self.log(f"Execution mode: {execution_mode}")
 
@@ -1327,28 +1364,38 @@ Complete this task. When finished, say "TASK COMPLETED" with a summary."""
             '--output-format', 'stream-json',
         ]
 
-        # Supervised mode: Claude's built-in permission system asks for approval
-        # Autonomous mode: skip all permission prompts
-        if execution_mode == 'supervised':
-            self.log(f"Supervised mode: Claude will ask for permission on write operations")
-        else:
+        # Load API key from .env if exists (needed early for environment setup)
+        claude_env = os.environ.copy()
+        env_file = os.path.join(os.path.expanduser("~"), ".claude/.env")
+        if os.path.exists(env_file):
+            with open(env_file, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if '=' in line and not line.startswith('#'):
+                        key, value = line.split('=', 1)
+                        claude_env[key] = value
+
+        # Execution mode handling:
+        # - autonomous: skip all permission prompts
+        # - semi-autonomous: use hooks to auto-approve safe operations, ask for risky ones
+        # - supervised: ask for permission on all write operations
+        if execution_mode == 'autonomous':
             cmd.append('--dangerously-skip-permissions')
+            self.log("Autonomous mode: skipping all permission prompts")
+        elif execution_mode == 'semi-autonomous':
+            # Create hook settings for smart permission handling
+            self.create_semi_autonomous_settings(work_path)
+            # Set environment variables for the hook to use
+            claude_env['CODEHERO_PROJECT_PATH'] = work_path
+            claude_env['CODEHERO_TICKET_ID'] = str(ticket.get('id', ''))
+            self.log("Semi-autonomous mode: using hooks for smart permission handling")
+        else:  # supervised
+            self.log("Supervised mode: Claude will ask for permission on write operations")
 
         cmd.extend(['-p', prompt])
 
         self.log(f"Starting Claude in {work_path}")
         try:
-            # Load API key from .env if exists
-            claude_env = os.environ.copy()
-            env_file = os.path.join(os.path.expanduser("~"), ".claude/.env")
-            if os.path.exists(env_file):
-                with open(env_file, 'r') as f:
-                    for line in f:
-                        line = line.strip()
-                        if '=' in line and not line.startswith('#'):
-                            key, value = line.split('=', 1)
-                            claude_env[key] = value
-
             # Run in project directory
             process = subprocess.Popen(
                 cmd,
@@ -1416,8 +1463,8 @@ Complete this task. When finished, say "TASK COMPLETED" with a summary."""
                             self.current_process = None
                         return 'stuck'
             
-            # Check for permission denials in supervised mode
-            if execution_mode == 'supervised' and self.permission_denials:
+            # Check for permission denials in supervised or semi-autonomous mode
+            if execution_mode in ('supervised', 'semi-autonomous') and self.permission_denials:
                 # Take the first denied permission
                 denied = self.permission_denials[0]
                 pending = {

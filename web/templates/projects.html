@@ -845,7 +845,8 @@
                         <label>Default Execution Mode</label>
                         <select name="default_execution_mode">
                             <option value="autonomous" selected>⚡ Autonomous - Full access, no interruptions</option>
-                            <option value="supervised">🛡️ Supervised - Asks for dangerous operations</option>
+                            <option value="semi-autonomous">🔒 Semi-Autonomous - Smart sandbox (asks for risky ops)</option>
+                            <option value="supervised">🛡️ Supervised - Asks for all write operations</option>
                         </select>
                         <small>New tickets inherit this setting. Can be overridden per ticket.</small>
                     </div>
@@ -1026,7 +1027,8 @@
                         <label>Default Execution Mode</label>
                         <select name="default_execution_mode" id="edit_default_execution_mode">
                             <option value="autonomous">⚡ Autonomous - Full access, no interruptions</option>
-                            <option value="supervised">🛡️ Supervised - Asks for dangerous operations</option>
+                            <option value="semi-autonomous">🔒 Semi-Autonomous - Smart sandbox (asks for risky ops)</option>
+                            <option value="supervised">🛡️ Supervised - Asks for all write operations</option>
                         </select>
                         <small>New tickets inherit this setting. Can be overridden per ticket.</small>
                     </div>

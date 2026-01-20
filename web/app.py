@@ -5061,9 +5061,11 @@ def internal_broadcast():
 
     elif msg_type == 'status' and ticket_id:
         status = data.get('status')
+        pending_permission = data.get('pending_permission')
         socketio.emit('ticket_status', {
             'ticket_id': int(ticket_id),
-            'status': status
+            'status': status,
+            'pending_permission': pending_permission
         }, room=f'ticket_{ticket_id}')
 
     return jsonify({'success': True})

@@ -5,6 +5,30 @@ All notable changes to CodeHero will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.79.0] - 2026-01-20
+
+### Added
+- **Semi-Autonomous Execution Mode** - New smart sandbox between autonomous and supervised
+  - Auto-approves safe operations (file edits within project, tests, builds, linting)
+  - Asks permission for risky operations (package installs, git commits, database migrations)
+  - Blocks dangerous operations (system files, .git folder, sudo commands)
+  - Real-time permission banner via WebSocket (no page refresh needed)
+- **"Approve All Similar" Feature** - One-click approval for similar future operations
+  - Approve `npm install express` → auto-approves all future `npm install` commands
+  - Pattern-based matching stored in database per ticket
+  - Hook reads approved patterns and auto-allows matching operations
+- **PreToolUse Hook System** - Claude Code hooks for intelligent permission filtering
+  - `semi_autonomous_hook.py` - Evaluates each tool request
+  - Returns allow/deny/ask decisions based on safety rules
+  - Environment variables for project path and ticket ID
+
+### Improved
+- **Execution Mode Selection** - Now offers 3 modes: autonomous, semi-autonomous, supervised
+- **Documentation** - Comprehensive execution modes guide in USER_GUIDE.md
+- **Claude Assistant Context** - Updated with semi-autonomous mode instructions
+
+---
+
 ## [2.78.0] - 2026-01-20
 
 ### Added

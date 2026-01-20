@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Dual-blue.svg" alt="License"></a>
-  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-2.78.0-green.svg" alt="Version"></a>
+  <a href="CHANGELOG.md"><img src="https://img.shields.io/badge/version-2.79.0-green.svg" alt="Version"></a>
   <img src="https://img.shields.io/badge/Ubuntu-22.04%20|%2024.04-orange.svg" alt="Ubuntu">
   <a href="https://anthropic.com"><img src="https://img.shields.io/badge/Powered%20by-Claude%20AI-blueviolet.svg" alt="Claude AI"></a>
   <a href="https://github.com/fotsakir/codehero/stargazers"><img src="https://img.shields.io/github/stars/fotsakir/codehero?style=social" alt="Stars"></a>
@@ -118,7 +118,7 @@ Let Claude design and build your entire project from a single description:
 - **Guided questionnaire** - Claude asks about requirements
 - **Auto-creates project** with correct paths and settings
 - **Auto-creates tickets** with dependencies and sequences
-- **Choose execution mode** - supervised or autonomous
+- **Choose execution mode** - autonomous, semi-autonomous, or supervised
 
 #### Claude Assistant
 Interactive Claude terminal with full control:
@@ -128,10 +128,21 @@ Interactive Claude terminal with full control:
 - **Full Terminal**: Real PTY with color support
 
 #### Execution Modes
-Control how Claude runs your tickets:
-- **Autonomous** (default) - Full access, Claude works without interruption
-- **Supervised** - Claude asks for permission before write/edit/bash operations
-- **Per-ticket or project-wide** - Set default for project or override per ticket
+Control how Claude runs your tickets with three security levels:
+
+| Mode | Description | Best For |
+|------|-------------|----------|
+| **Autonomous** | Full access, no permission prompts | Trusted tasks, experienced users |
+| **Semi-Autonomous** | Smart sandbox with automatic rules (recommended) | Most projects |
+| **Supervised** | Asks permission for all write operations | Sensitive projects, learning |
+
+**Semi-Autonomous Mode** (New!) - The smart middle ground:
+- ✅ **Auto-allows**: File operations within project, running tests, builds, linting
+- ⚠️ **Asks permission**: Package installs (`npm install`, `pip install`), git commits, database migrations
+- 🚫 **Blocks**: System files, `/etc`, `.git` folder modifications, dangerous commands
+- 🔄 **"Approve Similar"**: Approve once, auto-approve similar operations
+
+Set per-ticket or project-wide - override defaults as needed
 
 #### Dependency Modes
 Control how tickets progress and close:
@@ -360,8 +371,8 @@ apt-get update && apt-get install -y unzip wget net-tools
 
 # Download and extract
 cd /root
-wget https://github.com/fotsakir/codehero/releases/latest/download/codehero-2.78.0.zip
-unzip codehero-2.78.0.zip
+wget https://github.com/fotsakir/codehero/releases/latest/download/codehero-2.79.0.zip
+unzip codehero-2.79.0.zip
 cd codehero
 
 # Run setup
@@ -387,7 +398,7 @@ The installer automatically sets up:
 ```bash
 # Download new version
 cd /root
-unzip codehero-2.78.0.zip
+unzip codehero-2.79.0.zip
 cd codehero
 
 # Preview changes (recommended)

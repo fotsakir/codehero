@@ -793,9 +793,10 @@
                         <div class="form-group">
                             <label style="font-size:11px;color:var(--text-muted)">Execution Mode</label>
                             <select id="edit_execution_mode" style="width:100%;padding:8px;border:1px solid var(--border-subtle);border-radius:6px;background:var(--bg-card);color:var(--text-primary);font-size:12px">
-                                <option value="" {% if not ticket.execution_mode %}selected{% endif %}>📋 Inherit ({{ '🛡️ Supervised' if ticket.project_default_execution_mode == 'supervised' else '⚡ Autonomous' }})</option>
-                                <option value="autonomous" {% if ticket.execution_mode == 'autonomous' %}selected{% endif %}>⚡ Autonomous</option>
-                                <option value="supervised" {% if ticket.execution_mode == 'supervised' %}selected{% endif %}>🛡️ Supervised</option>
+                                <option value="" {% if not ticket.execution_mode %}selected{% endif %}>📋 Inherit ({{ '🛡️ Supervised' if ticket.project_default_execution_mode == 'supervised' else ('🔒 Semi-Auto' if ticket.project_default_execution_mode == 'semi-autonomous' else '⚡ Autonomous') }})</option>
+                                <option value="autonomous" {% if ticket.execution_mode == 'autonomous' %}selected{% endif %}>⚡ Autonomous (full access)</option>
+                                <option value="semi-autonomous" {% if ticket.execution_mode == 'semi-autonomous' %}selected{% endif %}>🔒 Semi-Autonomous (smart sandbox)</option>
+                                <option value="supervised" {% if ticket.execution_mode == 'supervised' %}selected{% endif %}>🛡️ Supervised (asks everything)</option>
                             </select>
                         </div>
                     </div>
@@ -1094,11 +1095,31 @@
                     badge.className = 'status-badge ' + data.status;
                     badge.textContent = data.status.replace('_', ' ');
                 }
-                // Show/hide awaiting banner
+
+                // Show/hide permission banner and awaiting banner
+                const permissionBanner = document.getElementById('permission-banner');
                 const awaitingBanner = document.getElementById('awaiting-banner');
-                if (awaitingBanner) {
-                    awaitingBanner.style.display = data.status === 'awaiting_input' ? 'block' : 'none';
+                const permissionDetails = document.getElementById('permission-details');
+
+                if (data.pending_permission) {
+                    // Show permission banner, hide awaiting banner
+                    if (permissionBanner) {
+                        permissionBanner.style.display = 'block';
+                        if (permissionDetails) {
+                            const perm = data.pending_permission;
+                            permissionDetails.textContent = perm.tool + ': ' + JSON.stringify(perm.input || {});
+                        }
+                    }
+                    if (awaitingBanner) awaitingBanner.style.display = 'none';
+                } else {
+                    // Hide permission banner
+                    if (permissionBanner) permissionBanner.style.display = 'none';
+                    // Show awaiting banner only if status is awaiting_input
+                    if (awaitingBanner) {
+                        awaitingBanner.style.display = data.status === 'awaiting_input' ? 'block' : 'none';
+                    }
                 }
+
                 // Show/hide kill switch button
                 const killBtn = document.getElementById('kill-btn');
                 if (killBtn) {

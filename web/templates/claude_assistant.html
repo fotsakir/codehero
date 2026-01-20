@@ -629,7 +629,7 @@ Create multiple tickets at once:
   - priority: low, medium, high, critical
   - sequence_order: Execution order (1, 2, 3...)
   - depends_on: Array of sequence numbers [1, 2] (ticket waits for these)
-- execution_mode: "autonomous" or "supervised" (IMPORTANT!)
+- execution_mode: "autonomous", "semi-autonomous", or "supervised" (IMPORTANT!)
 - deps_include_awaiting: true for relaxed, false for strict (IMPORTANT!)
 
 ## DEFAULTS (use these if user says "proceed as you see fit" or doesn't know):

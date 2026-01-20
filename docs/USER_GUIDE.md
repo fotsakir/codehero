@@ -137,6 +137,48 @@ Make tickets wait for other tickets to complete:
 
 **Tip**: Dependencies work with `awaiting_input` by default - so if you're reviewing a ticket, dependent tickets can still run.
 
+### Execution Modes
+
+Control how much freedom Claude has when working on tickets:
+
+| Mode | Description |
+|------|-------------|
+| **Autonomous** | Full access, no permission prompts. Claude works uninterrupted. |
+| **Semi-Autonomous** | Smart sandbox (recommended). Auto-approves safe operations, asks for risky ones, blocks dangerous ones. |
+| **Supervised** | Claude asks permission before every write/edit/bash operation. |
+
+#### Semi-Autonomous Mode (Recommended)
+
+The smart middle ground between full access and constant prompts:
+
+**✅ Auto-Approved (No prompts):**
+- File create/edit/delete within project folder
+- Running tests (`npm test`, `pytest`, `phpunit`)
+- Build commands (`npm run build`, `composer install`)
+- Linting and formatting
+- Git read operations (`git status`, `git log`, `git diff`)
+
+**⚠️ Requires Approval:**
+- Installing packages (`npm install <package>`, `pip install`, `composer require`)
+- Git write operations (`git commit`, `git push`, `git checkout`)
+- Database migrations (`php artisan migrate`)
+- Network requests (`curl`, `wget` to external URLs)
+
+**🚫 Blocked (Cannot execute):**
+- System commands (`sudo`, `apt`, `systemctl`)
+- Modifying `.git` folder (backup protection)
+- Accessing system paths (`/etc`, `/opt/codehero`, `~/.ssh`)
+- Dangerous commands (`rm -rf /`, `chmod 777`)
+
+**"Approve Similar" Feature:**
+When a permission prompt appears, click **"Approve All Similar"** to auto-approve future similar operations. For example, approving `npm install express` will auto-approve all future `npm install` commands.
+
+#### Setting Execution Mode
+
+1. **Per Project**: Set default when creating project
+2. **Per Ticket**: Override project default when creating ticket
+3. **Change Later**: Edit ticket settings anytime
+
 ### Sub-tickets
 
 Break complex tasks into smaller pieces:

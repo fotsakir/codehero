@@ -41,7 +41,7 @@
         "description": "The Developer That Never Rests. Self-hosted autonomous AI coding agent. Give it tasks. Walk away. Wake up to working code.",
         "url": "https://fotsakir.github.io/codehero/",
         "downloadUrl": "https://github.com/fotsakir/codehero/releases/latest",
-        "softwareVersion": "2.78.0",
+        "softwareVersion": "2.79.0",
         "applicationCategory": "DeveloperApplication",
         "operatingSystem": "Ubuntu 22.04, Ubuntu 24.04",
         "offers": {
@@ -67,7 +67,7 @@
             "SmartContext - intelligent context management",
             "AI Failsafe (Watchdog) - automatic stuck detection",
             "AI Project Manager - describe, plan, build automatically",
-            "Execution Modes - autonomous or supervised per ticket",
+            "Execution Modes - autonomous, semi-autonomous (smart sandbox), or supervised per ticket",
             "Dependency Modes - strict (user closes) or relaxed (AI auto-closes)",
             "Claude Assistant with model selection",
             "Visual Verification - Claude sees what you see",
@@ -1328,9 +1328,9 @@
                         Install on <strong>Ubuntu 22.04/24.04</strong> VM (VirtualBox, VMware, Hyper-V, or cloud VPS).
                     </p>
                     <div style="position: relative; background: rgba(0,0,0,0.3); padding: 0.8rem 3rem 0.8rem 0.8rem; border-radius: 6px; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; overflow-x: auto;">
-                        <button onclick="copyCode(this, 'wget https://github.com/fotsakir/codehero/releases/latest/download/codehero-2.78.0.zip\nunzip codehero-*.zip && cd codehero && ./setup.sh')" style="position: absolute; top: 6px; right: 6px; background: rgba(255,255,255,0.1); border: none; color: var(--text-muted); padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.7rem; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">📋</button>
+                        <button onclick="copyCode(this, 'wget https://github.com/fotsakir/codehero/releases/latest/download/codehero-2.79.0.zip\nunzip codehero-*.zip && cd codehero && ./setup.sh')" style="position: absolute; top: 6px; right: 6px; background: rgba(255,255,255,0.1); border: none; color: var(--text-muted); padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.7rem; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">📋</button>
                         <span style="color: var(--text-muted);"># On Ubuntu VM (as root)</span><br>
-                        <span style="color: var(--accent-cyan);">wget https://github.com/fotsakir/codehero/releases/latest/download/codehero-2.78.0.zip</span><br>
+                        <span style="color: var(--accent-cyan);">wget https://github.com/fotsakir/codehero/releases/latest/download/codehero-2.79.0.zip</span><br>
                         <span style="color: var(--accent-cyan);">unzip codehero-*.zip && cd codehero && ./setup.sh</span>
                     </div>
                     <p style="margin-top: 0.8rem; font-size: 0.8rem;">
@@ -1522,7 +1522,7 @@
             <div class="feature-card" style="border: 1px solid var(--accent-secondary); background: rgba(139, 92, 246, 0.05);">
                 <div class="feature-icon">🔐</div>
                 <h3>Execution Modes</h3>
-                <p><strong>Autonomous</strong> (full access) or <strong>Supervised</strong> (asks permission). Choose per ticket or set project default.</p>
+                <p><strong>Autonomous</strong> (full access), <strong>Semi-Autonomous</strong> (smart sandbox - auto-approves safe ops, asks for risky), or <strong>Supervised</strong> (asks for all). Set per ticket or project.</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon">⚖️</div>
