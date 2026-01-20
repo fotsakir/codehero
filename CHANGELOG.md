@@ -5,6 +5,18 @@ All notable changes to CodeHero will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.76.3] - 2026-01-20
+
+### Improved
+- **GitHub Default Code Scanning** - Switched to GitHub's default CodeQL setup for simpler maintenance
+- **Security Documentation** - Added SECURITY.md with vulnerability reporting guidelines
+- **Dependabot** - Added automated dependency update checks
+
+### Fixed
+- **README Version URLs** - Fixed outdated download URLs in installation instructions
+
+---
+
 ## [2.76.2] - 2026-01-20
 
 ### Security
