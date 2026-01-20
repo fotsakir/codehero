@@ -13,7 +13,7 @@ Get instant alerts on your phone when Claude needs your attention.
 
    ```
    Use this token to access the HTTP API:
-   7123456789:AAHk5JxxxxxxxxxxxxxxxxxxxxxxxxxYYY
+   0000000000:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
    ```
 
 ## Step 2: Start a Chat with Your Bot
