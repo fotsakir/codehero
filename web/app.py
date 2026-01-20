@@ -47,6 +47,7 @@ import urllib.request
 import urllib.error
 from datetime import datetime
 from functools import wraps
+import logging
 import sys
 sys.path.insert(0, '/opt/codehero/scripts')
 try:
@@ -103,6 +104,65 @@ socketio = SocketIO(app, cors_allowed_origins="*", async_mode='eventlet', allow_
 @app.context_processor
 def inject_version():
     return {'version': VERSION}
+
+
+# Configure logging for error tracking
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger('codehero')
+
+
+def sanitize_error(error):
+    """
+    Sanitize error message to prevent exposing sensitive information.
+    Logs the full error for debugging while returning a safe message.
+    """
+    error_str = str(error)
+    logger.error(f"Exception occurred: {error_str}")
+
+    # List of patterns that might expose sensitive info
+    sensitive_patterns = [
+        (r'/home/\w+', '/home/***'),
+        (r'/opt/\w+', '/opt/***'),
+        (r'/var/\w+', '/var/***'),
+        (r'/etc/\w+', '/etc/***'),
+        (r'password["\']?\s*[:=]\s*["\']?[^"\']+["\']?', 'password=***'),
+        (r'api[_-]?key["\']?\s*[:=]\s*["\']?[^"\']+["\']?', 'api_key=***'),
+    ]
+
+    sanitized = error_str
+    for pattern, replacement in sensitive_patterns:
+        sanitized = re.sub(pattern, replacement, sanitized, flags=re.IGNORECASE)
+
+    return sanitized
+
+
+def safe_join_path(base_path, user_path):
+    """
+    Safely join base_path with user-provided path, preventing directory traversal.
+    Returns (safe_path, error) tuple. If error is not None, the path is invalid.
+    """
+    if not base_path:
+        return None, "No base path configured"
+
+    # Clean up user path
+    user_path = user_path.strip().strip('/') if user_path else ''
+
+    # Block obvious traversal attempts
+    if '..' in user_path or user_path.startswith('/'):
+        return None, "Invalid path: directory traversal not allowed"
+
+    # Construct full path and verify it's within base
+    full_path = os.path.abspath(os.path.join(base_path, user_path))
+    base_abs = os.path.abspath(base_path)
+
+    if not full_path.startswith(base_abs):
+        return None, "Invalid path: outside allowed directory"
+
+    return full_path, None
+
 
 def load_config():
     config = {}
@@ -283,7 +343,7 @@ def health():
         cursor.close(); conn.close()
         return jsonify({'status': 'ok', 'mysql': v})
     except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)})
+        return jsonify({'status': 'error', 'message': sanitize_error(e)})
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -556,7 +616,7 @@ def archive_project(project_id):
         conn.close()
         return jsonify({'success': True})
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 @app.route('/api/project/<int:project_id>/reopen', methods=['POST'])
 @login_required
@@ -571,7 +631,7 @@ def reopen_project(project_id):
         conn.close()
         return jsonify({'success': True})
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 
 @app.route('/api/project/<int:project_id>/export', methods=['GET'])
@@ -673,7 +733,7 @@ def export_project(project_id):
             raise e
 
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': sanitize_error(e)}), 500
 
 
 # ============ DATABASE EDITOR ============
@@ -756,7 +816,7 @@ def get_db_tables(project_id):
         return jsonify({'success': True, 'tables': table_info})
     except Exception as e:
         db_conn.close()
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 
 @app.route('/api/project/<int:project_id>/db/table/<table_name>/structure', methods=['GET'])
@@ -786,7 +846,7 @@ def get_table_structure(project_id, table_name):
         return jsonify({'success': True, 'columns': columns, 'indexes': indexes})
     except Exception as e:
         db_conn.close()
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 
 @app.route('/api/project/<int:project_id>/db/table/<table_name>/data', methods=['GET'])
@@ -837,7 +897,7 @@ def get_table_data(project_id, table_name):
         })
     except Exception as e:
         db_conn.close()
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 
 @app.route('/api/project/<int:project_id>/db/query', methods=['POST'])
@@ -893,7 +953,7 @@ def run_db_query(project_id):
 
     except Exception as e:
         db_conn.close()
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 
 @app.route('/api/project/<int:project_id>/db/table/<table_name>/row', methods=['DELETE'])
@@ -934,7 +994,7 @@ def delete_table_row(project_id, table_name):
         return jsonify({'success': True, 'affected': affected})
     except Exception as e:
         db_conn.close()
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 
 # ============ FILE EDITOR ============
@@ -1068,7 +1128,7 @@ def get_file_content(project_id):
             content = f.read()
         return jsonify({'success': True, 'content': content, 'path': file_path})
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 
 @app.route('/api/project/<int:project_id>/editor/file', methods=['POST'])
@@ -1100,7 +1160,7 @@ def save_file_content(project_id):
             f.write(content)
         return jsonify({'success': True, 'message': 'File saved'})
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 
 @app.route('/api/project/<int:project_id>/editor/create', methods=['POST'])
@@ -1136,7 +1196,7 @@ def create_file_or_folder(project_id):
                 f.write('')
         return jsonify({'success': True, 'message': f'{item_type.capitalize()} created'})
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 
 @app.route('/api/project/<int:project_id>/editor/rename', methods=['POST'])
@@ -1172,7 +1232,7 @@ def rename_file_or_folder(project_id):
         os.rename(old_full, new_full)
         return jsonify({'success': True, 'message': 'Renamed successfully'})
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 
 # ============ BACKUP & RESTORE ============
@@ -1447,7 +1507,7 @@ def api_list_backups(project_id):
         return jsonify({'success': True, 'backups': backups})
 
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 
 @app.route('/api/project/<int:project_id>/restore', methods=['POST'])
@@ -1490,7 +1550,7 @@ def api_download_backup(project_id, filename):
         return send_file(backup_path, as_attachment=True, download_name=filename)
 
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)}), 500
+        return jsonify({'success': False, 'message': sanitize_error(e)}), 500
 
 
 @app.route('/api/project/<int:project_id>/backup/<filename>', methods=['DELETE'])
@@ -1517,7 +1577,7 @@ def api_delete_backup(project_id, filename):
             return jsonify({'success': False, 'message': 'Backup not found'})
 
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 
 @app.route('/api/project/<int:project_id>/delete', methods=['DELETE'])
@@ -1674,7 +1734,7 @@ def api_delete_project(project_id):
         })
 
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 
 # ==========================================
@@ -1787,7 +1847,7 @@ def api_git_commits(project_id):
         return jsonify({'success': True, 'commits': commits})
 
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 
 @app.route('/api/project/<int:project_id>/git/commit/<commit_hash>', methods=['GET'])
@@ -1826,7 +1886,7 @@ def api_git_commit_detail(project_id, commit_hash):
         return jsonify({'success': True, 'commit': commit})
 
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 
 @app.route('/api/project/<int:project_id>/git/diff/<commit_hash>', methods=['GET'])
@@ -1867,7 +1927,7 @@ def api_git_diff(project_id, commit_hash):
         return jsonify({'success': True, 'diff': diff})
 
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 
 @app.route('/api/project/<int:project_id>/git/status', methods=['GET'])
@@ -1906,7 +1966,7 @@ def api_git_status(project_id):
         return jsonify({'success': True, 'initialized': True, 'status': status})
 
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 
 @app.route('/api/project/<int:project_id>/git/init', methods=['POST'])
@@ -1956,7 +2016,7 @@ def api_git_init(project_id):
         return jsonify({'success': success, 'message': msg})
 
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 
 @app.route('/api/project/<int:project_id>/git/rollback', methods=['POST'])
@@ -2042,7 +2102,7 @@ def api_git_rollback(project_id):
         })
 
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 
 @app.route('/api/project/<int:project_id>/git/file/<commit_hash>', methods=['GET'])
@@ -2085,7 +2145,7 @@ def api_git_file_at_commit(project_id, commit_hash):
         return jsonify({'success': True, 'content': content})
 
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 
 @app.route('/api/project/<int:project_id>/upload', methods=['POST'])
@@ -2112,10 +2172,12 @@ def upload_file(project_id):
         if not upload_dir:
             return jsonify({'success': False, 'message': 'No project path configured'})
 
-        # Get optional subdirectory
-        subdir = request.form.get('subdir', '').strip().strip('/')
+        # Get optional subdirectory with path traversal protection
+        subdir = request.form.get('subdir', '')
         if subdir:
-            upload_dir = os.path.join(upload_dir, subdir)
+            upload_dir, error = safe_join_path(upload_dir, subdir)
+            if error:
+                return jsonify({'success': False, 'message': error})
 
         # Create directory if needed
         os.makedirs(upload_dir, exist_ok=True)
@@ -2167,7 +2229,7 @@ def upload_file(project_id):
         })
 
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 @app.route('/api/project/<int:project_id>/files', methods=['GET'])
 @login_required
@@ -2225,7 +2287,7 @@ def list_files(project_id):
         })
 
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 @app.route('/api/project/<int:project_id>/files/delete', methods=['POST'])
 @login_required
@@ -2275,7 +2337,7 @@ def delete_file(project_id):
         return jsonify({'success': True, 'deleted': file_path})
 
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 @app.route('/api/projects', methods=['GET', 'POST'])
 @login_required
@@ -2417,7 +2479,7 @@ def api_projects():
             return jsonify(result)
         except Exception as e:
             cursor.close(); conn.close()
-            return jsonify({'success': False, 'message': str(e)})
+            return jsonify({'success': False, 'message': sanitize_error(e)})
     
     # GET
     cursor.execute("""
@@ -2542,7 +2604,7 @@ def api_project_detail(project_id):
         return jsonify({'success': True, 'message': 'Project updated'})
     except Exception as e:
         cursor.close(); conn.close()
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 
 # ============ TICKETS ============
@@ -2709,7 +2771,7 @@ def api_tickets():
             return jsonify({'success': True, 'ticket_id': ticket_id, 'ticket_number': ticket_number})
         except Exception as e:
             cursor.close(); conn.close()
-            return jsonify({'success': False, 'message': str(e)})
+            return jsonify({'success': False, 'message': sanitize_error(e)})
     
     # GET
     project_id = request.args.get('project_id')
@@ -2775,7 +2837,7 @@ def get_ticket_detail(ticket_id):
 
     except Exception as e:
         print(f"Get ticket detail error: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': sanitize_error(e)}), 500
 
 @app.route('/api/ticket/<int:ticket_id>/close', methods=['POST'])
 @login_required
@@ -2811,7 +2873,7 @@ def close_ticket(ticket_id):
 
         return jsonify({'success': True})
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 @app.route('/api/ticket/<int:ticket_id>/kill', methods=['POST'])
 @login_required
@@ -2877,7 +2939,7 @@ def kill_ticket(ticket_id):
         cursor.close(); conn.close()
         return jsonify({'success': True, 'message': 'Process stopped', 'killed': killed})
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 @app.route('/api/ticket/<int:ticket_id>/approve', methods=['POST'])
 @login_required
@@ -2915,7 +2977,7 @@ def approve_ticket(ticket_id):
 
         return jsonify({'success': True})
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 @app.route('/api/ticket/<int:ticket_id>/reopen', methods=['POST'])
 @login_required
@@ -2964,7 +3026,7 @@ def reopen_ticket(ticket_id):
 
         return jsonify({'success': True})
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 @app.route('/api/message/<int:message_id>', methods=['DELETE'])
 @login_required
@@ -2998,7 +3060,7 @@ def delete_message(message_id):
         conn.close()
         return jsonify({'success': True, 'message': 'Message deleted'})
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 @app.route('/api/ticket/<int:ticket_id>/summarize', methods=['POST'])
 @login_required
@@ -3049,7 +3111,7 @@ def create_ticket_summary(ticket_id):
             return jsonify({'success': False, 'message': 'Failed to create summary'})
 
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 @app.route('/api/ticket/<int:ticket_id>/settings', methods=['POST'])
 @login_required
@@ -3165,7 +3227,7 @@ def update_ticket_settings(ticket_id):
         conn.close()
         return jsonify({'success': True})
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 
 # ============ TICKET SEQUENCING & TYPES ============
@@ -3198,7 +3260,7 @@ def reorder_tickets():
         conn.close()
         return jsonify({'success': True, 'updated': len(tickets)})
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 
 @app.route('/api/ticket/<int:ticket_id>/type', methods=['POST'])
@@ -3224,7 +3286,7 @@ def update_ticket_type(ticket_id):
         conn.close()
         return jsonify({'success': True})
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 
 @app.route('/api/ticket/<int:ticket_id>/force', methods=['POST'])
@@ -3246,7 +3308,7 @@ def force_ticket(ticket_id):
         conn.close()
         return jsonify({'success': True, 'is_forced': force})
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 
 @app.route('/api/ticket/<int:ticket_id>/permission', methods=['POST'])
@@ -3356,7 +3418,7 @@ def handle_permission(ticket_id):
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 
 @app.route('/api/ticket/<int:ticket_id>/start', methods=['POST'])
@@ -3418,7 +3480,7 @@ def start_ticket(ticket_id):
             return jsonify({'success': True, 'message': f'Parent {target_number} queued to start next (will process sub-tickets)'})
         return jsonify({'success': True, 'message': 'Ticket queued to start next'})
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 
 @app.route('/api/ticket/<int:ticket_id>/dependencies', methods=['GET', 'POST'])
@@ -3470,7 +3532,7 @@ def ticket_dependencies(ticket_id):
         conn.close()
         return jsonify({'success': True})
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 
 @app.route('/api/ticket/<int:ticket_id>', methods=['DELETE'])
@@ -3500,7 +3562,7 @@ def delete_ticket(ticket_id):
             'message': f"Ticket {ticket['ticket_number']} deleted"
         })
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 
 @app.route('/api/ticket/<int:ticket_id>/retry', methods=['POST'])
@@ -3527,7 +3589,7 @@ def retry_ticket(ticket_id):
         conn.close()
         return jsonify({'success': True})
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 
 @app.route('/api/project/<int:project_id>/progress')
@@ -3646,7 +3708,7 @@ def get_project_progress(project_id):
             'blocked_tickets': blocked_tickets
         })
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': sanitize_error(e)}), 500
 
 
 # ============ CHAT ============
@@ -3864,7 +3926,7 @@ def send_ticket_message(ticket_id):
         
         return jsonify({'success': True, 'message_id': new_msg['id']})
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 # ============ DAEMON CONTROL ============
 
@@ -3882,7 +3944,7 @@ def start_daemon():
                         stderr=subprocess.STDOUT, start_new_session=True)
         return jsonify({"success": True, "message": "Daemon started"})
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)})
+        return jsonify({"success": False, "message": sanitize_error(e)})
 
 @app.route('/api/daemon/stop', methods=['POST'])
 @login_required
@@ -3894,7 +3956,7 @@ def stop_daemon():
             return jsonify({"success": True, "message": "Daemon stopped"})
         return jsonify({"success": False, "message": "Not running"})
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)})
+        return jsonify({"success": False, "message": sanitize_error(e)})
 
 @app.route('/api/daemon/status')
 @login_required
@@ -3987,7 +4049,7 @@ def emulator_start():
     except subprocess.TimeoutExpired:
         return jsonify({'status': 'error', 'message': 'Timeout starting emulator'})
     except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)})
+        return jsonify({'status': 'error', 'message': sanitize_error(e)})
 
 @app.route('/api/emulator/stop', methods=['POST'])
 @login_required
@@ -4000,7 +4062,7 @@ def emulator_stop():
             return jsonify({'status': 'stopped', 'message': 'Emulator stopped'})
         return jsonify({'status': 'stopped', 'message': 'Emulator was not running'})
     except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)})
+        return jsonify({'status': 'error', 'message': sanitize_error(e)})
 
 @app.route('/api/emulator/status')
 @login_required
@@ -4022,7 +4084,7 @@ def emulator_status():
             })
         return jsonify({'status': 'stopped', 'device': None})
     except Exception as e:
-        return jsonify({'status': 'error', 'message': str(e)})
+        return jsonify({'status': 'error', 'message': sanitize_error(e)})
 
 # ============ CONSOLE ============
 
@@ -4233,7 +4295,7 @@ def send_console_message():
 
         return jsonify({'success': True})
     except Exception as e:
-        return jsonify({'success': False, 'message': str(e)})
+        return jsonify({'success': False, 'message': sanitize_error(e)})
 
 # ============ HISTORY ============
 
@@ -4599,7 +4661,7 @@ def get_dashboard_stats():
         })
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': sanitize_error(e)}), 500
 
 @app.route('/api/stats/project/<int:project_id>')
 @login_required
@@ -4691,7 +4753,7 @@ def get_project_stats(project_id):
         })
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': sanitize_error(e)}), 500
 
 @app.route('/api/stats/ticket/<int:ticket_id>')
 @login_required
@@ -4799,7 +4861,7 @@ def get_ticket_stats(ticket_id):
         })
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': sanitize_error(e)}), 500
 
 # ============ INTERNAL API FOR DAEMON ============
 
@@ -5205,7 +5267,7 @@ def claude_activate_start():
         import traceback
         print(f"Activation start error: {e}")
         print(traceback.format_exc())
-        return jsonify({'success': False, 'error': str(e)})
+        return jsonify({'success': False, 'error': sanitize_error(e)})
 
 @app.route('/api/claude/activate/output/<session_id>')
 @login_required
@@ -5265,7 +5327,7 @@ def claude_deactivate():
                 removed.append('oauth')
         return jsonify({'success': True, 'message': f'Removed: {", ".join(removed)}' if removed else 'No credentials'})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+        return jsonify({'success': False, 'error': sanitize_error(e)})
 
 @app.route('/api/claude/apikey', methods=['POST'])
 @login_required
@@ -5297,7 +5359,7 @@ def claude_save_apikey():
         except: pass
         return jsonify({'success': True})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+        return jsonify({'success': False, 'error': sanitize_error(e)})
 
 # Settings API
 @app.route('/api/settings', methods=['GET'])
@@ -5326,7 +5388,7 @@ def get_settings():
             }
         })
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+        return jsonify({'success': False, 'error': sanitize_error(e)})
 
 @app.route('/api/settings', methods=['POST'])
 @login_required
@@ -5369,7 +5431,7 @@ def save_settings():
 
         return jsonify({'success': True})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+        return jsonify({'success': False, 'error': sanitize_error(e)})
 
 @app.route('/api/settings/test-telegram', methods=['POST'])
 @login_required
@@ -5406,7 +5468,7 @@ def test_telegram():
         except:
             return jsonify({'success': False, 'error': f'HTTP {e.code}'})
     except Exception as e:
-        return jsonify({'success': False, 'error': str(e)})
+        return jsonify({'success': False, 'error': sanitize_error(e)})
 
 # Claude Chat Routes
 @app.route('/api/claude/chat/start', methods=['POST'])
@@ -5563,7 +5625,7 @@ def check_update():
             'published_at': published_at
         })
     except Exception as e:
-        return jsonify({'error': str(e), 'has_update': False}), 500
+        return jsonify({'error': sanitize_error(e), 'has_update': False}), 500
 
 # Store active upgrade process
 active_upgrade = {'running': False, 'process': None, 'temp_dir': None, 'log': ''}
@@ -5651,7 +5713,7 @@ command2
     except subprocess.TimeoutExpired:
         return jsonify({'error': 'AI request timed out'}), 504
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': sanitize_error(e)}), 500
 
 @app.route('/api/run-fix-command', methods=['POST'])
 @login_required
@@ -5689,7 +5751,7 @@ def run_fix_command():
     except subprocess.TimeoutExpired:
         return jsonify({'error': 'Command timed out'}), 504
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': sanitize_error(e)}), 500
 
 @app.route('/api/do-update', methods=['POST'])
 @login_required
@@ -5766,7 +5828,7 @@ def do_update():
         })
 
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': sanitize_error(e)}), 500
 
 # ============ WEBSOCKET ============
 
@@ -5855,7 +5917,7 @@ def handle_start_upgrade():
                 }, room='upgrade')
 
         except Exception as e:
-            socketio.emit('upgrade_error', {'error': str(e)}, room='upgrade')
+            socketio.emit('upgrade_error', {'error': sanitize_error(e)}, room='upgrade')
         finally:
             active_upgrade['running'] = False
             active_upgrade['process'] = None
@@ -5952,7 +6014,7 @@ def handle_terminal_create(data):
             emit('terminal_created', {'id': terminal_id})
 
     except Exception as e:
-        emit('terminal_error', {'error': str(e)})
+        emit('terminal_error', {'error': sanitize_error(e)})
 
 @socketio.on('terminal_input')
 def handle_terminal_input(data):
@@ -6762,7 +6824,7 @@ def packages_status():
             else:
                 results[pkg_id] = {'installed': False, 'version': None}
         except Exception as e:
-            results[pkg_id] = {'installed': False, 'version': None, 'error': str(e)}
+            results[pkg_id] = {'installed': False, 'version': None, 'error': sanitize_error(e)}
 
     return jsonify(results)
 
@@ -6837,7 +6899,7 @@ def lsp_config():
         else:
             return jsonify({})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': sanitize_error(e)}), 500
 
 @app.route('/api/android/config')
 @login_required
@@ -6853,7 +6915,7 @@ def android_config():
         else:
             return jsonify({})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': sanitize_error(e)}), 500
 
 @app.route('/api/windows/config')
 @login_required
@@ -6869,7 +6931,7 @@ def windows_config():
         else:
             return jsonify({})
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': sanitize_error(e)}), 500
 
 # Background thread to push new messages
 def message_pusher():
