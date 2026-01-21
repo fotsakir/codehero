@@ -111,6 +111,60 @@ db = connect(os.getenv('DATABASE_URL'))
 | Constants | UPPER_SNAKE | `MAX_RETRIES` |
 | DB tables | snake_case plural | `order_items` |
 
+### 2.5 CODE QUALITY & READABILITY
+
+**⚠️ CRITICAL: Write HUMAN-READABLE code. NO obfuscation!**
+
+**Code MUST be:**
+- ✅ Well-formatted and properly indented
+- ✅ With meaningful comments explaining complex logic
+- ✅ Using descriptive, human-readable names
+- ✅ Easy to understand and maintain
+- ✅ Properly structured with clear separation of concerns
+
+**NAMING - ALWAYS HUMAN-READABLE:**
+
+| Type | Convention | ✅ Good Example | ❌ BAD Example |
+|------|------------|-----------------|----------------|
+| Variables | descriptive | `userEmail`, `totalPrice` | `x`, `tmp`, `data1` |
+| Functions | verb + noun | `calculateTotal()` | `calc()`, `doIt()` |
+| Classes | noun, clear purpose | `UserService` | `US`, `Handler1` |
+| Files | describe content | `user_authentication.py` | `ua.py`, `file1.py` |
+| Folders | logical grouping | `components/`, `services/` | `c/`, `s/`, `misc/` |
+
+**NEVER:**
+- ❌ Single-letter variable names (except loop counters `i`, `j`, `k`)
+- ❌ Abbreviated names that aren't universally known
+- ❌ Minified or obfuscated code in source files
+- ❌ Magic numbers without explanation
+- ❌ Functions longer than 50 lines without comments
+- ❌ Deeply nested code (max 3-4 levels)
+
+**ALWAYS:**
+```python
+# ✅ GOOD - Clear, readable
+def calculate_order_total(order_items, discount_percentage):
+    """Calculate total price with discount applied."""
+    subtotal = sum(item.price * item.quantity for item in order_items)
+    discount = subtotal * (discount_percentage / 100)
+    return subtotal - discount
+
+# ❌ BAD - Cryptic, unreadable
+def calc(x, d):
+    s = sum(i.p * i.q for i in x)
+    return s - s * d / 100
+```
+
+```javascript
+// ✅ GOOD - Descriptive names
+const MAX_LOGIN_ATTEMPTS = 5;
+const userAuthenticationStatus = checkUserCredentials(email, password);
+
+// ❌ BAD - Magic numbers, cryptic names
+const x = 5;
+const s = check(e, p);
+```
+
 ---
 
 ## 💻 PART 3: WRITING CODE
@@ -698,22 +752,37 @@ with sync_playwright() as p:
 | **Simple Website** | HTML + Tailwind CSS |
 | **API / Backend** | Based on project's tech_stack setting |
 
-### Complex Dashboards (Vue 3 + PrimeVue):
+### Complex Dashboards (Vue 3 + PrimeVue 4):
 ```bash
 npm create vite@latest myapp -- --template vue
 cd myapp
-npm install primevue primeicons primeflex
+npm install primevue primeicons primeflex @primeuix/themes
 ```
 
 ```javascript
 // main.js
-import PrimeVue from 'primevue/config'
-import 'primevue/resources/themes/lara-dark-indigo/theme.css'
-import 'primeicons/primeicons.css'
-import 'primeflex/primeflex.css'
+import { createApp } from 'vue';
+import App from './App.vue';
+import PrimeVue from 'primevue/config';
+import Aura from '@primeuix/themes/aura';  // Themes: aura, lara, nora
+import 'primeicons/primeicons.css';
+import 'primeflex/primeflex.css';
 
-app.use(PrimeVue)
+const app = createApp(App);
+app.use(PrimeVue, {
+  theme: {
+    preset: Aura,
+    options: {
+      darkModeSelector: '.p-dark'  // Add class="p-dark" to <html> for dark mode
+    }
+  }
+});
+app.mount('#app');
 ```
+
+**⚠️ IMPORTANT:** Use `@primeuix/themes` (NOT `@primevue/themes` which is deprecated!)
+
+**Dark mode:** Add `class="p-dark"` to `<html>` or `<body>` tag.
 
 **PrimeVue includes:** DataTable (with child rows, filtering, sorting, export), Charts, TreeTable, Drag&Drop, MultiSelect, and 90+ components.
 
