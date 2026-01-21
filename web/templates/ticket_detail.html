@@ -617,7 +617,7 @@
                                         {% if m.content %}<div class="tool-result-text">{{ m.content[:1000] }}{{ '...' if m.content|length > 1000 else '' }}</div>{% endif %}
                                     </div>
                                 {% else %}
-                                    <div class="formatted-content">{{ m.content|replace('\n', '<br>')|safe if m.content else '' }}</div>
+                                    <div class="formatted-content">{{ m.content|e|replace('\n', '<br>')|safe if m.content else '' }}</div>
                                 {% endif %}
                             </div>
                         </div>

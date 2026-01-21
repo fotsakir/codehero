@@ -5,6 +5,16 @@ All notable changes to CodeHero will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.79.6] - 2026-01-21
+
+### Fixed
+- **XSS Security Fix in Ticket Messages** - Fixed HTML injection vulnerability in ticket detail page
+  - Messages containing HTML tags (like `<style>`) were being rendered as actual HTML
+  - Added `|e` (escape) filter before `|replace` to properly escape HTML entities
+  - Prevents unclosed HTML tags from breaking page layout (e.g., sidebar disappearing)
+
+---
+
 ## [2.79.5] - 2026-01-21
 
 ### Fixed
