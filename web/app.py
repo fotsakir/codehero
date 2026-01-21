@@ -123,29 +123,16 @@ logging.basicConfig(
 logger = logging.getLogger('codehero')
 
 
-def sanitize_error(error):
+def sanitize_error(error, generic_message="An error occurred"):
     """
-    Sanitize error message to prevent exposing sensitive information.
-    Logs the full error for debugging while returning a safe message.
+    Log error details server-side and return a generic message to prevent
+    exposing sensitive information (stack traces, paths, etc.) to users.
     """
     error_str = str(error)
     logger.error(f"Exception occurred: {error_str}")
 
-    # List of patterns that might expose sensitive info
-    sensitive_patterns = [
-        (r'/home/\w+', '/home/***'),
-        (r'/opt/\w+', '/opt/***'),
-        (r'/var/\w+', '/var/***'),
-        (r'/etc/\w+', '/etc/***'),
-        (r'password["\']?\s*[:=]\s*["\']?[^"\']+["\']?', 'password=***'),
-        (r'api[_-]?key["\']?\s*[:=]\s*["\']?[^"\']+["\']?', 'api_key=***'),
-    ]
-
-    sanitized = error_str
-    for pattern, replacement in sensitive_patterns:
-        sanitized = re.sub(pattern, replacement, sanitized, flags=re.IGNORECASE)
-
-    return sanitized
+    # Return generic message - details are only in server logs
+    return generic_message
 
 
 def safe_join_path(base_path, user_path):
@@ -171,6 +158,52 @@ def safe_join_path(base_path, user_path):
         return None, "Invalid path: outside allowed directory"
 
     return full_path, None
+
+
+# Allowed base directories for project paths
+ALLOWED_PROJECT_BASES = [
+    '/var/www/projects',
+    '/opt/apps',
+    '/var/backups/codehero',
+    '/tmp',  # For temporary operations
+]
+
+
+def validate_project_path(path, must_exist=False):
+    """
+    Validate that a project path is within allowed directories.
+    Prevents path traversal attacks on absolute paths.
+    Returns (safe_path, error) tuple.
+    """
+    if not path:
+        return None, "Path is required"
+
+    # Resolve to absolute path and remove any traversal
+    try:
+        abs_path = os.path.realpath(path)
+    except (ValueError, OSError) as e:
+        return None, "Invalid path format"
+
+    # Block obvious traversal attempts in the original path
+    if '..' in path:
+        return None, "Invalid path: directory traversal not allowed"
+
+    # Check if path is within allowed directories
+    is_allowed = False
+    for base in ALLOWED_PROJECT_BASES:
+        if abs_path.startswith(base + '/') or abs_path == base:
+            is_allowed = True
+            break
+
+    if not is_allowed:
+        logger.warning(f"Path validation failed - outside allowed directories: {path}")
+        return None, "Path is outside allowed directories"
+
+    # Optionally check existence
+    if must_exist and not os.path.exists(abs_path):
+        return None, "Path does not exist"
+
+    return abs_path, None
 
 
 def load_config():
@@ -1286,9 +1319,9 @@ def get_file_content(project_id):
     if not file_path:
         return jsonify({'success': False, 'message': 'No file path provided'})
 
-    # Security: prevent path traversal
-    full_path = os.path.normpath(os.path.join(base_path, file_path))
-    if not full_path.startswith(os.path.normpath(base_path)):
+    # Security: prevent path traversal using safe_join_path
+    full_path, err = safe_join_path(base_path, file_path)
+    if err:
         return jsonify({'success': False, 'message': 'Invalid path'})
 
     if not os.path.exists(full_path):
@@ -1325,9 +1358,9 @@ def save_file_content(project_id):
     if not file_path:
         return jsonify({'success': False, 'message': 'No file path provided'})
 
-    # Security: prevent path traversal
-    full_path = os.path.normpath(os.path.join(base_path, file_path))
-    if not full_path.startswith(os.path.normpath(base_path)):
+    # Security: prevent path traversal using safe_join_path
+    full_path, err = safe_join_path(base_path, file_path)
+    if err:
         return jsonify({'success': False, 'message': 'Invalid path'})
 
     try:
@@ -1562,6 +1595,10 @@ def cleanup_old_backups(backup_dir):
 def restore_project_backup(project_id, backup_filename):
     """Restore project from a backup file"""
     try:
+        # Validate filename to prevent path traversal
+        if not backup_filename or '..' in backup_filename or '/' in backup_filename or '\\' in backup_filename:
+            return False, "Invalid backup filename"
+
         conn = get_db()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("SELECT * FROM projects WHERE id = %s", (project_id,))
@@ -1574,6 +1611,12 @@ def restore_project_backup(project_id, backup_filename):
 
         project_code = project['code']
         backup_path = os.path.join(BACKUP_DIR, project_code, backup_filename)
+
+        # Validate final path is within backup directory
+        safe_path, err = validate_project_path(backup_path, must_exist=True)
+        if err:
+            return False, "Invalid backup path"
+        backup_path = safe_path
 
         if not os.path.exists(backup_path):
             return False, "Backup file not found"
@@ -1821,6 +1864,26 @@ def import_project_from_backup(backup_path, new_project_name=None, web_path=None
     Returns (success, message, project_id)
     """
     try:
+        # Validate backup_path
+        safe_backup, err = validate_project_path(backup_path, must_exist=True)
+        if err:
+            return False, f"Invalid backup path: {err}", None
+        backup_path = safe_backup
+
+        # Validate web_path if provided
+        if web_path:
+            safe_web, err = validate_project_path(web_path)
+            if err:
+                return False, f"Invalid web path: {err}", None
+            web_path = safe_web
+
+        # Validate app_path if provided
+        if app_path:
+            safe_app, err = validate_project_path(app_path)
+            if err:
+                return False, f"Invalid app path: {err}", None
+            app_path = safe_app
+
         if not os.path.exists(backup_path):
             return False, "Backup file not found", None
 
@@ -2115,6 +2178,26 @@ def simple_import_project(backup_path, project_name, project_code, web_path=None
     Returns (success, message, project_id)
     """
     try:
+        # Validate backup_path
+        safe_backup, err = validate_project_path(backup_path, must_exist=True)
+        if err:
+            return False, f"Invalid backup path: {err}", None
+        backup_path = safe_backup
+
+        # Validate web_path if provided
+        if web_path:
+            safe_web, err = validate_project_path(web_path)
+            if err:
+                return False, f"Invalid web path: {err}", None
+            web_path = safe_web
+
+        # Validate app_path if provided
+        if app_path:
+            safe_app, err = validate_project_path(app_path)
+            if err:
+                return False, f"Invalid app path: {err}", None
+            app_path = safe_app
+
         if not os.path.exists(backup_path):
             return False, "Backup file not found", None
 
@@ -2473,14 +2556,17 @@ def api_export_migration(project_id):
 def api_download_migration_backup(filename):
     """Download a migration backup file"""
     try:
-        # Security: only allow downloading from migrations folder
-        if '..' in filename or '/' in filename:
+        # Security: validate filename
+        if not filename or '..' in filename or '/' in filename or '\\' in filename:
             return jsonify({'success': False, 'message': 'Invalid filename'}), 400
 
         backup_path = os.path.join(MIGRATION_BACKUP_DIR, filename)
 
-        if not os.path.exists(backup_path):
-            return jsonify({'success': False, 'message': 'Backup not found'}), 404
+        # Validate path is within allowed directory
+        safe_path, err = validate_project_path(backup_path, must_exist=True)
+        if err:
+            return jsonify({'success': False, 'message': 'Invalid backup path'}), 400
+        backup_path = safe_path
 
         return send_file(backup_path, as_attachment=True, download_name=filename)
 
@@ -2661,16 +2747,20 @@ def api_simple_import():
 def api_delete_migration_backup(filename):
     """Delete a migration backup file"""
     try:
-        if '..' in filename or '/' in filename:
+        # Security: validate filename
+        if not filename or '..' in filename or '/' in filename or '\\' in filename:
             return jsonify({'success': False, 'message': 'Invalid filename'}), 400
 
         backup_path = os.path.join(MIGRATION_BACKUP_DIR, filename)
 
-        if os.path.exists(backup_path):
-            os.remove(backup_path)
-            return jsonify({'success': True, 'message': 'Backup deleted'})
-        else:
-            return jsonify({'success': False, 'message': 'Backup not found'})
+        # Validate path is within allowed directory
+        safe_path, err = validate_project_path(backup_path, must_exist=True)
+        if err:
+            return jsonify({'success': False, 'message': 'Backup not found'}), 404
+        backup_path = safe_path
+
+        os.remove(backup_path)
+        return jsonify({'success': True, 'message': 'Backup deleted'})
 
     except Exception as e:
         return jsonify({'success': False, 'message': sanitize_error(e)})

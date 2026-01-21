@@ -51,10 +51,22 @@ sshpass -p 'PASSWORD' ssh -o StrictHostKeyChecking=no root@REMOTE_IP "systemctl 
 ```
 
 ### 5. Update version numbers
+**ALL files that need version update:**
 - `VERSION` - Single source of truth for version
+- `CHANGELOG.md` - New entry at the top
 - `README.md` - Badge version and zip filename
 - `INSTALL.md` - Zip filename and footer version
-- `CHANGELOG.md` - New entry at the top
+- `docs/index.html` - softwareVersion and zip filename
+- `docs/USER_GUIDE.md` - Zip filename in upgrade section
+- `docs/VM_INSTALLATION.md` - Zip filename
+- `docs/WSL_INSTALL.md` - Zip filename
+
+**Quick update command:**
+```bash
+sed -i 's/OLD_VERSION/NEW_VERSION/g' \
+  README.md INSTALL.md docs/index.html \
+  docs/USER_GUIDE.md docs/VM_INSTALLATION.md docs/WSL_INSTALL.md
+```
 
 ### 6. Create NEW zip (DON'T DELETE THE OLD ONE!)
 ```bash

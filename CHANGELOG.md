@@ -5,6 +5,19 @@ All notable changes to CodeHero will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.80.2] - 2026-01-21
+
+### Security
+- **Stack Trace Exposure Fix** - `sanitize_error()` now returns generic messages
+  - Error details logged server-side only, not exposed to users
+  - Fixes 12 medium-severity CodeQL alerts
+- **Path Injection Fix** - Added `validate_project_path()` for all file operations
+  - Validates paths are within allowed directories (`/var/www/projects`, `/opt/apps`, `/var/backups/codehero`)
+  - Protected endpoints: import, restore, editor, migration backups
+  - Fixes 18 high-severity CodeQL alerts
+
+---
+
 ## [2.80.1] - 2026-01-21
 
 ### Fixed
