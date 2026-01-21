@@ -5,6 +5,18 @@ All notable changes to CodeHero will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.79.5] - 2026-01-21
+
+### Fixed
+- **Ticket Detail Sidebar Layout (v2)** - Simplified CSS fix for sidebar appearing below conversation
+  - Removed overly complex flex properties that caused rendering issues
+  - Simplified `.main` to basic `display: flex`
+  - Simplified `.chat-panel` to `flex: 1` without max-width constraint
+  - Simplified `.sidebar` to `width: 320px; flex-shrink: 0;`
+  - More reliable cross-browser layout behavior
+
+---
+
 ## [2.79.4] - 2026-01-21
 
 ### Fixed
