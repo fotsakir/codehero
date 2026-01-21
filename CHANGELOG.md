@@ -5,6 +5,15 @@ All notable changes to CodeHero will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.79.9] - 2026-01-21
+
+### Fixed
+- **Domain Setup Script apt-get Fix** - Fixed `setup_domain.sh` failing on systems with expired GPG keys
+  - Script now ignores apt-get update errors (e.g., expired MySQL repo keys)
+  - Continues with package installation even if some repos fail
+
+---
+
 ## [2.79.8] - 2026-01-21
 
 ### Fixed
