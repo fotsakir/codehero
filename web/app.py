@@ -2045,15 +2045,15 @@ def import_project_from_backup(backup_path, new_project_name=None, web_path=None
                 if os.path.exists(web_src):
                     os.makedirs(final_web_path, exist_ok=True)
                     shutil.copytree(web_src, final_web_path, dirs_exist_ok=True)
-                    # Set permissions
-                    subprocess.run(f"chown -R claude:claude {final_web_path}", shell=True)
+                    # Set permissions (using list args to prevent command injection)
+                    subprocess.run(['chown', '-R', 'claude:claude', final_web_path], check=False)
 
             if backup_info.get('has_app_files') and final_app_path:
                 app_src = os.path.join(temp_dir, 'app')
                 if os.path.exists(app_src):
                     os.makedirs(final_app_path, exist_ok=True)
                     shutil.copytree(app_src, final_app_path, dirs_exist_ok=True)
-                    subprocess.run(f"chown -R claude:claude {final_app_path}", shell=True)
+                    subprocess.run(['chown', '-R', 'claude:claude', final_app_path], check=False)
 
             # Create tickets and map old numbers to new IDs
             ticket_number_to_id = {}
@@ -2308,7 +2308,9 @@ def simple_import_project(backup_path, project_name, project_code, web_path=None
                         for dump_name in ['full_dump.sql', 'dump.sql', f'{project_code.lower()}.sql']:
                             dump_file = os.path.join(db_dir, dump_name)
                             if os.path.exists(dump_file):
-                                subprocess.run(f"mysql -u '{db_user}' -p'{db_pass}' {db_name} < '{dump_file}' 2>/dev/null", shell=True)
+                                with open(dump_file, 'r') as sql_f:
+                                    subprocess.run(['mysql', '-u', db_user, f'-p{db_pass}', db_name],
+                                                   stdin=sql_f, stderr=subprocess.DEVNULL, check=False)
                                 sql_imported = True
                                 break
 
@@ -2323,13 +2325,19 @@ def simple_import_project(backup_path, project_name, project_code, web_path=None
                             sql_files.sort(key=sql_sort_key)
 
                             for sql_file in sql_files:
-                                subprocess.run(f"mysql -u '{db_user}' -p'{db_pass}' {db_name} < '{os.path.join(db_dir, sql_file)}' 2>/dev/null", shell=True)
+                                sql_path = os.path.join(db_dir, sql_file)
+                                with open(sql_path, 'r') as sql_f:
+                                    subprocess.run(['mysql', '-u', db_user, f'-p{db_pass}', db_name],
+                                                   stdin=sql_f, stderr=subprocess.DEVNULL, check=False)
                                 sql_imported = True
 
                     # Try root-level SQL files
                     if not sql_imported and root_sql_files:
                         for sql_file in root_sql_files:
-                            subprocess.run(f"mysql -u '{db_user}' -p'{db_pass}' {db_name} < '{os.path.join(project_root, sql_file)}' 2>/dev/null", shell=True)
+                            sql_path = os.path.join(project_root, sql_file)
+                            with open(sql_path, 'r') as sql_f:
+                                subprocess.run(['mysql', '-u', db_user, f'-p{db_pass}', db_name],
+                                               stdin=sql_f, stderr=subprocess.DEVNULL, check=False)
             except Exception as e:
                 import traceback
                 print(f"Database creation error: {e}\n{traceback.format_exc()}")
@@ -2345,18 +2353,24 @@ def simple_import_project(backup_path, project_name, project_code, web_path=None
                     for item in os.listdir(project_root):
                         if item not in ['database', '__MACOSX', 'app', 'web', '.git'] and not item.endswith('.sql'):
                             src_path = os.path.join(project_root, item)
-                            subprocess.run(f"cp -r '{src_path}' '{web_path}/' 2>/dev/null || true", shell=True)
+                            dest_path = os.path.join(web_path, item)
+                            if os.path.isdir(src_path):
+                                shutil.copytree(src_path, dest_path, dirs_exist_ok=True)
+                            else:
+                                shutil.copy2(src_path, dest_path)
                 else:
-                    subprocess.run(f"cp -r '{web_source}'/. '{web_path}/' 2>/dev/null || true", shell=True)
-                subprocess.run(f"chown -R www-data:www-data '{web_path}' 2>/dev/null || true", shell=True)
+                    shutil.copytree(web_source, web_path, dirs_exist_ok=True)
+                subprocess.run(['chown', '-R', 'www-data:www-data', web_path],
+                               stderr=subprocess.DEVNULL, check=False)
                 if os.listdir(web_path):
                     files_copied.append(f"web: {web_path}")
 
             # Copy app files
             if app_path and app_source:
                 os.makedirs(app_path, exist_ok=True)
-                subprocess.run(f"cp -r '{app_source}'/. '{app_path}/' 2>/dev/null || true", shell=True)
-                subprocess.run(f"chown -R claude:claude '{app_path}' 2>/dev/null || true", shell=True)
+                shutil.copytree(app_source, app_path, dirs_exist_ok=True)
+                subprocess.run(['chown', '-R', 'claude:claude', app_path],
+                               stderr=subprocess.DEVNULL, check=False)
                 if os.listdir(app_path):
                     files_copied.append(f"app: {app_path}")
 
