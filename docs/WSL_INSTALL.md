@@ -131,10 +131,10 @@ apt-get install -y unzip wget curl
 
 # Download latest release
 cd /root
-wget https://github.com/fotsakir/codehero/releases/latest/download/codehero-2.80.2.zip
+wget https://github.com/fotsakir/codehero/releases/latest/download/codehero-2.80.3.zip
 
 # Extract and install
-unzip codehero-2.80.2.zip
+unzip codehero-2.80.3.zip
 cd codehero
 chmod +x setup.sh
 ./setup.sh
