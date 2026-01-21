@@ -29,23 +29,40 @@ RESET = '\033[0m'
 BOLD = '\033[1m'
 
 def get_db_connection():
-    """Get database connection using install.conf credentials."""
-    config_path = '/opt/codehero/install.conf'
-    if not os.path.exists(config_path):
-        config_path = '/home/claude/codehero/install.conf'
+    """Get database connection using config credentials."""
+    db_password = None
 
-    config = {}
-    with open(config_path, 'r') as f:
-        for line in f:
-            line = line.strip()
-            if '=' in line and not line.startswith('#'):
-                key, value = line.split('=', 1)
-                config[key] = value.strip('"\'')
+    # Try /etc/codehero/mysql.conf first (production)
+    mysql_conf = '/etc/codehero/mysql.conf'
+    if os.path.exists(mysql_conf):
+        with open(mysql_conf, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith('DB_PASSWORD='):
+                    db_password = line.split('=', 1)[1].strip('"\'')
+                    break
+
+    # Fallback to install.conf
+    if not db_password:
+        for config_path in ['/opt/codehero/install.conf', '/home/claude/codehero/install.conf']:
+            if os.path.exists(config_path):
+                with open(config_path, 'r') as f:
+                    for line in f:
+                        line = line.strip()
+                        if line.startswith('DB_PASSWORD='):
+                            db_password = line.split('=', 1)[1].strip('"\'')
+                            break
+                if db_password:
+                    break
+
+    # Default fallback
+    if not db_password:
+        db_password = 'claudepass123'
 
     return mysql.connector.connect(
         host='localhost',
         user='claude_user',
-        password=config.get('DB_PASSWORD', 'claudepass123'),
+        password=db_password,
         database='claude_knowledge'
     )
 
