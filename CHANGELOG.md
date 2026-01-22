@@ -5,6 +5,16 @@ All notable changes to CodeHero will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.80.9] - 2026-01-22
+
+### Fixed
+- **Config Inline Comments** - Daemon now correctly parses config values with inline comments
+  - `VALUE=30 # comment` now correctly parses as `30`
+  - Preserves `#` in passwords (only strips ` #` with space)
+  - Fixes daemon startup failure on fresh installs with commented configs
+
+---
+
 ## [2.80.8] - 2026-01-22
 
 ### Added

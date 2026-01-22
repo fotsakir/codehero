@@ -2319,6 +2319,9 @@ Reply with ONLY one word: COMPLETED, QUESTION, or ERROR"""
                     line = line.strip()
                     if '=' in line and not line.startswith('#'):
                         key, value = line.split('=', 1)
+                        # Remove inline comments (but be careful with # in passwords)
+                        if ' #' in value:
+                            value = value.split(' #')[0]
                         config[key.strip()] = value.strip().strip('"').strip("'")
         return config
     
