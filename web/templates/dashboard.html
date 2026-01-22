@@ -1794,9 +1794,11 @@
             const activationModal = document.getElementById('activationModal');
             const settingsModal = document.getElementById('settingsModal');
             const importModal = document.getElementById('importModal');
+            const updateModal = document.getElementById('updateModal');
             const isModalOpen = (activationModal && activationModal.classList.contains('show')) ||
                                (settingsModal && settingsModal.classList.contains('show')) ||
-                               (importModal && importModal.classList.contains('show'));
+                               (importModal && importModal.classList.contains('show')) ||
+                               (updateModal && updateModal.classList.contains('show'));
             if (!isModalOpen) {
                 location.reload();
             }

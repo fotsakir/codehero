@@ -850,7 +850,7 @@ cat > /etc/systemd/system/codehero-daemon.service << SVCEOF
 [Unit]
 Description=CodeHero Daemon
 After=network.target mysql.service codehero-web.service
-Wants=mysql.service
+Requires=mysql.service
 
 [Service]
 Type=simple
@@ -861,7 +861,9 @@ ExecStartPre=/bin/mkdir -p /var/run/codehero
 ExecStartPre=/bin/chown ${CLAUDE_USER}:${CLAUDE_USER} /var/run/codehero
 ExecStart=/usr/bin/python3 ${INSTALL_DIR}/scripts/claude-daemon.py
 Restart=always
-RestartSec=5
+RestartSec=10
+StartLimitIntervalSec=300
+StartLimitBurst=10
 StandardOutput=append:${LOG_DIR}/daemon.log
 StandardError=append:${LOG_DIR}/daemon.log
 Environment=PYTHONUNBUFFERED=1

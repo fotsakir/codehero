@@ -11,13 +11,38 @@ import mysql.connector
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
-# Database configuration
-DB_CONFIG = {
-    'host': 'localhost',
-    'user': 'claude_user',
-    'password': 'claudepass123',
-    'database': 'claude_knowledge'
-}
+# Database configuration - read from system config or use defaults
+def load_db_config():
+    """Load database config from system.conf or use defaults."""
+    config = {
+        'host': 'localhost',
+        'user': 'claude_user',
+        'password': 'claudepass123',
+        'database': 'claude_knowledge'
+    }
+    config_file = '/etc/codehero/system.conf'
+    if os.path.exists(config_file):
+        try:
+            with open(config_file, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    if '=' in line and not line.startswith('#'):
+                        key, value = line.split('=', 1)
+                        key = key.strip()
+                        value = value.strip()
+                        if key == 'DB_HOST':
+                            config['host'] = value
+                        elif key == 'DB_USER':
+                            config['user'] = value
+                        elif key == 'DB_PASSWORD':
+                            config['password'] = value
+                        elif key == 'DB_NAME':
+                            config['database'] = value
+        except Exception as e:
+            sys.stderr.write(f"[CodeHero MCP] Warning: Could not read config: {e}\n")
+    return config
+
+DB_CONFIG = load_db_config()
 
 def get_db_connection():
     """Get a database connection."""

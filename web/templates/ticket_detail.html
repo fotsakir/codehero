@@ -590,6 +590,12 @@
                     <span style="color:var(--text-primary)">Formatted</span>
                 </div>
                 <div class="conversation" id="conversation">
+                    {% if total_messages and total_messages > message_limit %}
+                    <div id="load-more-banner" style="background:rgba(99, 102, 241, 0.1);border:1px solid rgba(99, 102, 241, 0.3);border-radius:8px;padding:12px 16px;margin-bottom:16px;text-align:center;font-size:13px">
+                        <span id="load-more-text" style="color:var(--text-secondary)">📜 Showing last <span id="showing-count">{{ messages|length }}</span> of {{ total_messages }} messages</span>
+                        <button id="load-more-btn" onclick="loadEarlierMessages()" style="margin-left:12px;background:var(--accent-primary);color:white;border:none;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px">Load earlier</button>
+                    </div>
+                    {% endif %}
                     {% if messages %}
                         {% for m in messages %}
                         <div class="message {{ m.role }}" data-content="{{ m.content|e if m.content else '' }}" data-message-id="{{ m.id }}">
@@ -1007,6 +1013,121 @@
         const projectId = {{ ticket.project_id }};
         const previewUrl = '{{ ticket.preview_url|default("", true) }}';
         const isEmbed = {{ 'true' if embed else 'false' }};
+        let oldestMessageId = {% if messages and messages|length > 0 %}{{ messages[0].id }}{% else %}null{% endif %};
+        const totalMessages = {{ total_messages|default(0, true) }};
+
+        async function loadEarlierMessages() {
+            const btn = document.getElementById('load-more-btn');
+            const banner = document.getElementById('load-more-banner');
+            if (!btn || !oldestMessageId) return;
+
+            btn.disabled = true;
+            btn.textContent = 'Loading...';
+
+            try {
+                const resp = await fetch(`/api/ticket/${ticketId}/messages?before_id=${oldestMessageId}&limit=100`);
+                const data = await resp.json();
+
+                if (data.messages && data.messages.length > 0) {
+                    const conversation = document.getElementById('conversation');
+                    const firstExistingMessage = conversation.querySelector('.message');
+
+                    // Insert messages in correct order (oldest first, before existing messages)
+                    // Reverse iterate so oldest ends up at top
+                    const fragment = document.createDocumentFragment();
+                    data.messages.forEach(m => {
+                        const div = createMessageElement(m);
+                        fragment.appendChild(div);
+                    });
+
+                    // Insert all new messages before the first existing message
+                    if (firstExistingMessage) {
+                        conversation.insertBefore(fragment, firstExistingMessage);
+                    } else {
+                        conversation.appendChild(fragment);
+                    }
+
+                    // Format the new tool inputs
+                    data.messages.forEach(m => {
+                        if (m.tool_input) {
+                            const el = conversation.querySelector(`.message[data-message-id="${m.id}"] .tool-input`);
+                            if (el) formatToolInputDirect(el, m.tool_name, m.tool_input);
+                        }
+                    });
+
+                    oldestMessageId = data.oldest_id;
+
+                    // Update counter
+                    const showingCount = document.getElementById('showing-count');
+                    if (showingCount) {
+                        const current = parseInt(showingCount.textContent) || 0;
+                        showingCount.textContent = current + data.messages.length;
+                    }
+
+                    // Hide banner if no more messages
+                    if (!data.has_more) {
+                        banner.style.display = 'none';
+                    }
+                }
+
+                btn.disabled = false;
+                btn.textContent = 'Load earlier';
+
+            } catch (e) {
+                console.error('Error loading messages:', e);
+                btn.disabled = false;
+                btn.textContent = 'Load earlier';
+            }
+        }
+
+        function createMessageElement(m) {
+            const div = document.createElement('div');
+            div.className = `message ${m.role}`;
+            div.dataset.content = m.content || '';
+            div.dataset.messageId = m.id;
+
+            let roleLabel = 'System';
+            if (m.role === 'user') roleLabel = 'User';
+            else if (m.role === 'assistant') roleLabel = 'Claude';
+            else if (m.role === 'tool_use') roleLabel = 'Tool Call';
+            else if (m.role === 'tool_result') roleLabel = 'Result';
+
+            // Format time
+            let timeStr = '';
+            if (m.created_at) {
+                const d = new Date(m.created_at);
+                timeStr = d.toLocaleTimeString('en-GB', {hour: '2-digit', minute: '2-digit', second: '2-digit'});
+            }
+
+            // Delete button only if ticket not done/failed
+            const canDelete = !['done', 'failed'].includes(ticketStatus);
+            const deleteBtn = canDelete ? `<button class="message-delete" onclick="deleteMessage(${m.id})" title="Delete message">Delete</button>` : '';
+
+            let contentHtml = '';
+            if (m.role === 'tool_use' || m.role === 'tool_result') {
+                const toolInputAttr = m.tool_input ? ` data-tool="${escapeHtml(m.tool_name || '')}" data-raw="${escapeHtml(JSON.stringify(m.tool_input))}"` : '';
+                contentHtml = `
+                    ${m.tool_name ? `<div class="tool-name" onclick="toggleToolBody(this)">${escapeHtml(m.tool_name)}</div>` : ''}
+                    <div class="tool-body">
+                        ${m.tool_input ? `<div class="tool-input"${toolInputAttr}>Loading...</div>` : ''}
+                        ${m.content ? `<div class="tool-result-text">${escapeHtml((m.content || '').substring(0, 1000))}${(m.content || '').length > 1000 ? '...' : ''}</div>` : ''}
+                    </div>`;
+            } else {
+                const content = m.content || '';
+                const formattedContent = isFormatted ? formatMarkdown(content) : escapeHtml(content).replace(/\n/g, '<br>');
+                contentHtml = `<div class="formatted-content">${formattedContent}</div>`;
+            }
+
+            div.innerHTML = `
+                <div class="message-header">
+                    <span class="role ${m.role}">${roleLabel}</span>
+                    <span class="time">${timeStr}</span>
+                    ${deleteBtn}
+                </div>
+                <div class="message-content">${contentHtml}</div>`;
+
+            return div;
+        }
 
         function goToProject() {
             const url = '/project/' + projectId;

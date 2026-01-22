@@ -5,6 +5,29 @@ All notable changes to CodeHero will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.80.8] - 2026-01-22
+
+### Added
+- **Message Pagination** - Ticket detail now loads last 100 messages by default
+  - "Load earlier" button to fetch older messages
+  - Prevents HTTP/2 protocol errors on tickets with many messages
+  - Shows "Showing last X of Y messages" banner
+
+### Fixed
+- **Tool Call Display** - Fixed "Loading..." showing for all tool calls on large tickets
+  - Root cause was HTTP/2 error when page exceeded size limits
+- **Ticket Dependency Order** - Fixed `deps_include_awaiting` flag being ignored
+  - Tickets now correctly wait for dependencies in relaxed/strict mode
+- **Daemon Startup** - Added retry logic (10 attempts, 5 seconds apart)
+  - Prevents startup failure when MySQL isn't ready after VM reboot
+- **Dashboard Auto-Refresh** - No longer interrupts upgrade modal
+
+### Changed
+- **Systemd Service** - Changed `Wants=mysql.service` to `Requires=mysql.service`
+- **Upgrade Script** - Added STEP 7 to update systemd service files
+
+---
+
 ## [2.80.7] - 2026-01-22
 
 ### Fixed

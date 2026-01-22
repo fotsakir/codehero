@@ -423,8 +423,7 @@ class ProjectWorker(threading.Thread):
                       WHERE td.ticket_id = t.id
                         AND NOT (
                             dt.status IN ('done', 'skipped')
-                            -- Relaxed mode no longer treats awaiting_input as done
-                            -- Auto-review will close ticket to 'done' after 15 minutes
+                            OR (t.deps_include_awaiting = 1 AND dt.status = 'awaiting_input')
                         )
                   )
                 ORDER BY
@@ -470,8 +469,7 @@ class ProjectWorker(threading.Thread):
                       WHERE td.ticket_id = t.id
                         AND NOT (
                             dt.status IN ('done', 'skipped')
-                            -- Relaxed mode no longer treats awaiting_input as done
-                            -- Auto-review will close ticket to 'done' after 15 minutes
+                            OR (t.deps_include_awaiting = 1 AND dt.status = 'awaiting_input')
                         )
                   )
                 ORDER BY
@@ -2871,7 +2869,25 @@ Answer briefly:"""
 
 
 if __name__ == '__main__':
-    daemon = ClaudeDaemon()
-    signal.signal(signal.SIGTERM, lambda s, f: setattr(daemon, 'running', False))
-    signal.signal(signal.SIGINT, lambda s, f: setattr(daemon, 'running', False))
-    daemon.run()
+    # Retry startup if MySQL not ready (common after VM restart)
+    max_retries = 10
+    retry_delay = 5
+
+    for attempt in range(max_retries):
+        try:
+            daemon = ClaudeDaemon()
+            signal.signal(signal.SIGTERM, lambda s, f: setattr(daemon, 'running', False))
+            signal.signal(signal.SIGINT, lambda s, f: setattr(daemon, 'running', False))
+            daemon.run()
+            break
+        except mysql.connector.Error as e:
+            print(f"[STARTUP] MySQL not ready (attempt {attempt + 1}/{max_retries}): {e}")
+            if attempt < max_retries - 1:
+                print(f"[STARTUP] Retrying in {retry_delay} seconds...")
+                time.sleep(retry_delay)
+            else:
+                print(f"[STARTUP] Failed to connect to MySQL after {max_retries} attempts. Exiting.")
+                sys.exit(1)
+        except Exception as e:
+            print(f"[STARTUP] Fatal error: {e}")
+            sys.exit(1)

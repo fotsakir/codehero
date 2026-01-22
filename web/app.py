@@ -3854,11 +3854,29 @@ def ticket_detail(ticket_id):
                         ticket['pending_permission'] = json.loads(ticket['pending_permission'])
                     except:
                         ticket['pending_permission'] = None
+            # Get message count first
+            cursor.execute("SELECT COUNT(*) as cnt FROM conversation_messages WHERE ticket_id = %s", (ticket_id,))
+            msg_count = cursor.fetchone()['cnt']
+
+            # Limit messages to last 100 for performance (large tickets cause HTTP/2 errors)
+            message_limit = 100
             cursor.execute("""
                 SELECT * FROM conversation_messages
                 WHERE ticket_id = %s ORDER BY created_at ASC
-            """, (ticket_id,))
+                LIMIT %s
+            """, (ticket_id, message_limit if msg_count <= message_limit else message_limit))
             messages = cursor.fetchall()
+
+            # If we have more messages, get the last 100 instead (most recent)
+            if msg_count > message_limit:
+                cursor.execute("""
+                    SELECT * FROM (
+                        SELECT * FROM conversation_messages
+                        WHERE ticket_id = %s ORDER BY created_at DESC
+                        LIMIT %s
+                    ) sub ORDER BY created_at ASC
+                """, (ticket_id, message_limit))
+                messages = cursor.fetchall()
 
             # Get other tickets in the same project (for dependencies/parent selection)
             cursor.execute("""
@@ -3879,9 +3897,12 @@ def ticket_detail(ticket_id):
         print(f"Ticket detail error: {e}")
 
     embed = request.args.get('embed') == '1'
+    # msg_count may not be set if ticket wasn't found
+    total_messages = msg_count if 'msg_count' in dir() else len(messages)
     return render_template('ticket_detail.html', user=session['user'], role=session.get('role'),
                          ticket=ticket, messages=messages, embed=embed,
-                         project_tickets=project_tickets, current_deps=set(current_deps))
+                         project_tickets=project_tickets, current_deps=set(current_deps),
+                         total_messages=total_messages, message_limit=100)
 
 @app.route('/api/tickets', methods=['GET', 'POST'])
 @login_required
@@ -4041,6 +4062,69 @@ def get_ticket_detail(ticket_id):
 
     except Exception as e:
         print(f"Get ticket detail error: {e}")
+        return jsonify({'error': sanitize_error(e)}), 500
+
+@app.route('/api/ticket/<int:ticket_id>/messages')
+@login_required
+def get_ticket_messages(ticket_id):
+    """Get paginated messages for a ticket"""
+    before_id = request.args.get('before_id', type=int)  # Get messages before this ID
+    limit = request.args.get('limit', 100, type=int)
+    limit = min(limit, 200)  # Cap at 200
+
+    try:
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+
+        if before_id:
+            cursor.execute("""
+                SELECT * FROM (
+                    SELECT * FROM conversation_messages
+                    WHERE ticket_id = %s AND id < %s
+                    ORDER BY id DESC LIMIT %s
+                ) sub ORDER BY id ASC
+            """, (ticket_id, before_id, limit))
+        else:
+            cursor.execute("""
+                SELECT * FROM (
+                    SELECT * FROM conversation_messages
+                    WHERE ticket_id = %s ORDER BY id DESC LIMIT %s
+                ) sub ORDER BY id ASC
+            """, (ticket_id, limit))
+
+        messages = cursor.fetchall()
+
+        # Convert datetime to string for JSON
+        for m in messages:
+            if m.get('created_at'):
+                m['created_at'] = m['created_at'].isoformat()
+            if m.get('tool_input') and isinstance(m['tool_input'], str):
+                try:
+                    m['tool_input'] = json.loads(m['tool_input'])
+                except:
+                    pass
+
+        # Check if there are more messages
+        if messages:
+            cursor.execute("""
+                SELECT COUNT(*) as cnt FROM conversation_messages
+                WHERE ticket_id = %s AND id < %s
+            """, (ticket_id, messages[0]['id']))
+            has_more = cursor.fetchone()['cnt'] > 0
+        else:
+            has_more = False
+
+        cursor.close()
+        conn.close()
+
+        return jsonify({
+            'messages': messages,
+            'has_more': has_more,
+            'oldest_id': messages[0]['id'] if messages else None
+        })
+
+    except Exception as e:
+        print(f"Get ticket messages error: {e}")
         return jsonify({'error': sanitize_error(e)}), 500
 
 @app.route('/api/ticket/<int:ticket_id>/close', methods=['POST'])
@@ -5028,29 +5112,6 @@ def get_project_progress(project_id):
 
 
 # ============ CHAT ============
-
-@app.route('/api/ticket/<int:ticket_id>/messages')
-@login_required
-def get_ticket_messages(ticket_id):
-    try:
-        conn = get_db()
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("""
-            SELECT * FROM conversation_messages 
-            WHERE ticket_id = %s ORDER BY created_at ASC
-        """, (ticket_id,))
-        messages = cursor.fetchall()
-        cursor.close(); conn.close()
-        
-        for m in messages:
-            if m.get('created_at'): m['created_at'] = to_iso_utc(m['created_at'])
-            if m.get('tool_input') and isinstance(m['tool_input'], str):
-                try: m['tool_input'] = json.loads(m['tool_input'])
-                except: pass
-        
-        return jsonify(messages)
-    except Exception as e:
-        return jsonify([])
 
 @app.route('/api/ticket/<int:ticket_id>/logs')
 @login_required
@@ -6570,7 +6631,13 @@ class ClaudeChatSession:
             pw = pwd.getpwnam(username)
             uid, gid = pw.pw_uid, pw.pw_gid
         except KeyError:
+            logger.warning(f"[ClaudeChatSession] User {username} not found, using current user")
             uid, gid = None, None
+
+        # Check if Claude CLI exists
+        if not os.path.exists(claude_path):
+            logger.error(f"[ClaudeChatSession] Claude CLI not found at {claude_path}")
+            return False
 
         # Use simple model aliases (opus, sonnet, haiku)
         if model not in ('opus', 'sonnet', 'haiku'):
@@ -6585,6 +6652,9 @@ class ClaudeChatSession:
             cmd_args.extend(['--system-prompt', self.system_prompt])
             # Add initial prompt to trigger Claude's greeting response
             cmd_args.append('Greet me and introduce yourself briefly.')
+
+        # Log the command (without full system prompt to avoid log spam)
+        logger.info(f"[ClaudeChatSession] Starting Claude: model={model}, user={username}, prompt_len={len(self.system_prompt) if self.system_prompt else 0}")
 
         pid, fd = pty.fork()
         if pid == 0:
@@ -6961,13 +7031,21 @@ def claude_chat_start():
     system_prompt = CLAUDE_ASSISTANT_TEMPLATES.get(template)
     template_name = {'general': 'General Assistant', 'planner': 'Project Planner', 'progress': 'Project Progress'}.get(template, 'General Assistant')
 
+    logger.info(f"[Claude Chat] Starting session: template={template}, model={model}, prompt_len={len(system_prompt) if system_prompt else 0}")
+
     session_id = str(uuid.uuid4())
     sess = ClaudeChatSession(system_prompt=system_prompt)
     sess.template_name = template_name
-    if sess.start(model=model):
-        claude_sessions[session_id] = sess
-        return jsonify({'success': True, 'session_id': session_id, 'template': template_name})
-    return jsonify({'success': False, 'error': 'Failed to start'})
+    try:
+        if sess.start(model=model):
+            claude_sessions[session_id] = sess
+            logger.info(f"[Claude Chat] Session {session_id} started successfully with template={template}")
+            return jsonify({'success': True, 'session_id': session_id, 'template': template_name})
+        logger.error(f"[Claude Chat] Failed to start session with template={template}")
+        return jsonify({'success': False, 'error': 'Failed to start Claude session'})
+    except Exception as e:
+        logger.error(f"[Claude Chat] Exception starting session: {e}")
+        return jsonify({'success': False, 'error': 'Failed to start Claude session'})
 
 @app.route('/api/claude/chat/output/<session_id>')
 @login_required

@@ -477,7 +477,44 @@ else
 fi
 
 # =====================================================
-# STEP 7: RESTART SERVICES
+# STEP 7: UPDATE SYSTEMD SERVICES
+# =====================================================
+
+log_info "Updating systemd service files..."
+
+# Update daemon service with improved startup handling
+cat > /etc/systemd/system/codehero-daemon.service << 'SVCEOF'
+[Unit]
+Description=CodeHero Daemon
+After=network.target mysql.service codehero-web.service
+Requires=mysql.service
+
+[Service]
+Type=simple
+User=claude
+Group=claude
+WorkingDirectory=/opt/codehero
+ExecStartPre=/bin/mkdir -p /var/run/codehero
+ExecStartPre=/bin/chown claude:claude /var/run/codehero
+ExecStart=/usr/bin/python3 /opt/codehero/scripts/claude-daemon.py
+Restart=always
+RestartSec=10
+StartLimitIntervalSec=300
+StartLimitBurst=10
+StandardOutput=append:/var/log/codehero/daemon.log
+StandardError=append:/var/log/codehero/daemon.log
+Environment=PYTHONUNBUFFERED=1
+Environment=PATH=/home/claude/.local/bin:/usr/local/bin:/usr/bin:/bin
+Environment=HOME=/home/claude
+
+[Install]
+WantedBy=multi-user.target
+SVCEOF
+
+log_success "Systemd services updated"
+
+# =====================================================
+# STEP 8: RESTART SERVICES
 # =====================================================
 
 log_info "Restarting services..."
@@ -491,7 +528,7 @@ sleep 1
 log_success "Services restarted"
 
 # =====================================================
-# STEP 8: VERIFY
+# STEP 9: VERIFY
 # =====================================================
 
 log_info "Verifying services..."
