@@ -2405,6 +2405,59 @@
                     if (upgradeSocket) upgradeSocket.disconnect();
                 });
 
+                // Handle disconnect during upgrade (happens when services restart)
+                upgradeSocket.on('disconnect', () => {
+                    // Check if we disconnected during "restart services" phase
+                    const consoleText = upgradeLog.toLowerCase();
+                    const atRestartPhase = consoleText.includes('restarting services') ||
+                                          consoleText.includes('services restarted') ||
+                                          consoleText.includes('step 8');
+
+                    if (atRestartPhase) {
+                        // This is expected - server is restarting after successful upgrade
+                        document.getElementById('updateStatusText').textContent = 'Server restarting...';
+                        appendToConsole('\n🔄 Server is restarting. Waiting for it to come back...\n');
+
+                        // Wait for server to come back up, then reload
+                        let attempts = 0;
+                        const maxAttempts = 30; // 30 seconds max
+                        const checkServer = async () => {
+                            attempts++;
+                            try {
+                                const resp = await fetch('/login', {
+                                    method: 'HEAD',
+                                    cache: 'no-store'
+                                });
+                                if (resp.ok || resp.status === 302 || resp.status === 200) {
+                                    appendToConsole('✅ Server is back online!\n');
+                                    document.getElementById('updateStatusText').textContent = 'Update complete!';
+                                    document.getElementById('updateStatusText').style.color = 'var(--accent-green)';
+                                    document.getElementById('updateSpinner').style.display = 'none';
+                                    document.getElementById('updateBadge').style.display = 'none';
+                                    appendToConsole('\n🔄 Reloading page in 3 seconds...\n');
+                                    setTimeout(() => location.reload(), 3000);
+                                    return;
+                                }
+                            } catch (e) {
+                                // Server not ready yet
+                            }
+
+                            if (attempts < maxAttempts) {
+                                appendToConsole('.');
+                                setTimeout(checkServer, 1000);
+                            } else {
+                                appendToConsole('\n\n⚠️ Server taking too long. Please refresh the page manually.\n');
+                                document.getElementById('updateSpinner').style.display = 'none';
+                            }
+                        };
+
+                        setTimeout(checkServer, 2000); // Start checking after 2 seconds
+                    } else {
+                        // Unexpected disconnect - show error
+                        appendToConsole('\n⚠️ Connection lost during upgrade.\n');
+                    }
+                });
+
                 // Start the upgrade
                 upgradeSocket.emit('start_upgrade');
 
