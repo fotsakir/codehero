@@ -53,7 +53,7 @@ except ImportError:
 
 # Auto-review settings (uses Claude CLI with --model haiku)
 AUTO_REVIEW_ENABLED = False
-AUTO_REVIEW_DELAY_MINUTES = 15
+AUTO_REVIEW_DELAY_SECONDS = 10  # 10 seconds default
 
 BACKUP_DIR = "/var/backups/codehero"
 MAX_BACKUPS = 30
@@ -67,7 +67,7 @@ LOG_FILE = "/var/log/codehero/daemon.log"
 GLOBAL_CONTEXT_FILE = "/etc/codehero/global-context.md"
 STUCK_TIMEOUT_MINUTES = 30
 POLL_INTERVAL = 3
-MAX_PARALLEL_PROJECTS = 3
+MAX_PARALLEL_PROJECTS = 10
 
 # Rate limit and retry cooldown settings (defaults, can be overridden in system.conf)
 RATE_LIMIT_COOLDOWN_MINUTES = 30  # Wait time after hitting API rate limit
@@ -208,22 +208,101 @@ class ProjectWorker(threading.Thread):
         self.global_context = global_context
         self.context_manager = context_manager  # SmartContextManager instance
         self.running = True
-        self.current_ticket_id = None
-        self.current_session_id = None
+        # Thread-local storage for parallel ticket execution
+        self._thread_local = threading.local()
         self.last_activity = None
-        # Token tracking
-        self.session_start_time = None
-        self.session_input_tokens = 0
-        self.session_output_tokens = 0
-        self.session_cache_read_tokens = 0
-        self.session_cache_creation_tokens = 0
-        self.session_api_calls = 0
-        # Permission denials (supervised mode)
-        self.permission_denials = []
+        # Token tracking - NOW THREAD-LOCAL (see properties below)
+        # These are initialized per-thread in reset_token_tracking()
+        # Permission denials (supervised mode) - also thread-local
+        # Last task summary - also thread-local
         # Current running Claude process (for watchdog to kill if stuck)
         self.current_process = None
         self.current_process_lock = threading.Lock()
-        
+
+    # Thread-local properties for parallel execution safety
+    @property
+    def current_ticket_id(self):
+        return getattr(self._thread_local, 'ticket_id', None)
+
+    @current_ticket_id.setter
+    def current_ticket_id(self, value):
+        self._thread_local.ticket_id = value
+
+    @property
+    def current_session_id(self):
+        return getattr(self._thread_local, 'session_id', None)
+
+    @current_session_id.setter
+    def current_session_id(self, value):
+        self._thread_local.session_id = value
+
+    # Thread-local token tracking properties (for parallel ticket safety)
+    @property
+    def session_start_time(self):
+        return getattr(self._thread_local, 'session_start_time', None)
+
+    @session_start_time.setter
+    def session_start_time(self, value):
+        self._thread_local.session_start_time = value
+
+    @property
+    def session_input_tokens(self):
+        return getattr(self._thread_local, 'session_input_tokens', 0)
+
+    @session_input_tokens.setter
+    def session_input_tokens(self, value):
+        self._thread_local.session_input_tokens = value
+
+    @property
+    def session_output_tokens(self):
+        return getattr(self._thread_local, 'session_output_tokens', 0)
+
+    @session_output_tokens.setter
+    def session_output_tokens(self, value):
+        self._thread_local.session_output_tokens = value
+
+    @property
+    def session_cache_read_tokens(self):
+        return getattr(self._thread_local, 'session_cache_read_tokens', 0)
+
+    @session_cache_read_tokens.setter
+    def session_cache_read_tokens(self, value):
+        self._thread_local.session_cache_read_tokens = value
+
+    @property
+    def session_cache_creation_tokens(self):
+        return getattr(self._thread_local, 'session_cache_creation_tokens', 0)
+
+    @session_cache_creation_tokens.setter
+    def session_cache_creation_tokens(self, value):
+        self._thread_local.session_cache_creation_tokens = value
+
+    @property
+    def session_api_calls(self):
+        return getattr(self._thread_local, 'session_api_calls', 0)
+
+    @session_api_calls.setter
+    def session_api_calls(self, value):
+        self._thread_local.session_api_calls = value
+
+    @property
+    def permission_denials(self):
+        if not hasattr(self._thread_local, 'permission_denials'):
+            self._thread_local.permission_denials = []
+        return self._thread_local.permission_denials
+
+    @permission_denials.setter
+    def permission_denials(self, value):
+        self._thread_local.permission_denials = value
+
+    @property
+    def last_summary(self):
+        return getattr(self._thread_local, 'last_summary', None)
+
+    @last_summary.setter
+    def last_summary(self, value):
+        self._thread_local.last_summary = value
+
     def log(self, message, level="INFO"):
         self.daemon_ref.log(f"[{self.project_name}] {message}", level)
 
@@ -411,20 +490,23 @@ class ProjectWorker(threading.Thread):
                 JOIN projects p ON t.project_id = p.id
                 WHERE t.project_id = %s
                   AND t.status IN ('open', 'new', 'pending')
-                  AND t.parent_ticket_id IS NULL  -- Skip sub-tickets (handled by parent)
                   AND (t.retry_after IS NULL OR t.retry_after <= NOW())  -- Skip if in cooldown
                   AND NOT EXISTS (
                       -- Skip if has unfinished dependencies
-                      -- Respects deps_include_awaiting per ticket:
-                      --   FALSE (strict): only 'done'/'skipped' count as complete
-                      --   TRUE (relaxed): 'awaiting_input' also counts as complete
+                      -- Dependencies must ALWAYS be 'done' or 'skipped' before proceeding
                       SELECT 1 FROM ticket_dependencies td
                       JOIN tickets dt ON dt.id = td.depends_on_ticket_id
                       WHERE td.ticket_id = t.id
-                        AND NOT (
-                            dt.status IN ('done', 'skipped')
-                            OR (t.deps_include_awaiting = 1 AND dt.status = 'awaiting_input')
-                        )
+                        AND dt.status NOT IN ('done', 'skipped')
+                  )
+                  AND (
+                      -- Parent ticket must be done/skipped (parent = implicit dependency)
+                      t.parent_ticket_id IS NULL
+                      OR EXISTS (
+                          SELECT 1 FROM tickets pt
+                          WHERE pt.id = t.parent_ticket_id
+                            AND pt.status IN ('done', 'skipped')
+                      )
                   )
                 ORDER BY
                     t.is_forced DESC,  -- Forced tickets first
@@ -464,13 +546,11 @@ class ProjectWorker(threading.Thread):
                   AND (t.retry_after IS NULL OR t.retry_after <= NOW())  -- Skip if in cooldown
                   AND NOT EXISTS (
                       -- Respect dependencies for sub-tickets too
+                      -- Dependencies must ALWAYS be 'done' or 'skipped'
                       SELECT 1 FROM ticket_dependencies td
                       JOIN tickets dt ON dt.id = td.depends_on_ticket_id
                       WHERE td.ticket_id = t.id
-                        AND NOT (
-                            dt.status IN ('done', 'skipped')
-                            OR (t.deps_include_awaiting = 1 AND dt.status = 'awaiting_input')
-                        )
+                        AND dt.status NOT IN ('done', 'skipped')
                   )
                 ORDER BY
                     CASE WHEN t.sequence_order IS NOT NULL THEN 0 ELSE 1 END,
@@ -555,6 +635,118 @@ class ProjectWorker(threading.Thread):
             if conn:
                 conn.close()
     
+    def generate_summary_with_haiku(self, ticket_id):
+        """Generate a brief summary of the ticket using Haiku"""
+        if not AUTO_REVIEW_ENABLED:
+            return None
+
+        try:
+            conn = self.get_db()
+            cursor = conn.cursor(dictionary=True)
+
+            # Get ticket info
+            cursor.execute("SELECT title, description FROM tickets WHERE id = %s", (ticket_id,))
+            ticket = cursor.fetchone()
+
+            # Get last 50 messages from conversation
+            cursor.execute("""
+                SELECT role, content FROM conversation_messages
+                WHERE ticket_id = %s AND role IN ('user', 'assistant')
+                ORDER BY created_at DESC LIMIT 50
+            """, (ticket_id,))
+            messages = cursor.fetchall()
+            cursor.close()
+            conn.close()
+
+            if not messages:
+                return None
+
+            # Build conversation for Haiku (truncate each message to fit context)
+            conversation = []
+            for msg in reversed(messages):
+                role = msg['role'].upper()
+                content = (msg['content'] or '')[:500]  # Shorter per message since we have more
+                conversation.append(f"[{role}]: {content}")
+
+            # Use all messages but limit total size
+            conv_text = chr(10).join(conversation)
+            if len(conv_text) > 15000:
+                conv_text = conv_text[-15000:]  # Keep last 15k chars
+
+            prompt = f"""Analyze this completed task and provide a brief summary.
+
+TASK: {ticket['title'] if ticket else 'Unknown'}
+DESCRIPTION: {(ticket['description'] or '')[:500] if ticket else ''}
+
+CONVERSATION (last 50 messages):
+{conv_text}
+
+Provide a 1-2 sentence summary of what was accomplished. Be specific about files created/modified and features implemented. Just the summary text, no labels or prefixes."""
+
+            result = subprocess.run(
+                ['/home/claude/.local/bin/claude', '--model', 'haiku', '--print'],
+                input=prompt,
+                capture_output=True,
+                text=True,
+                timeout=30,
+                cwd='/tmp'
+            )
+
+            if result.returncode == 0 and result.stdout:
+                summary = result.stdout.strip()
+                # Clean up - remove any prefixes Haiku might add
+                for prefix in ['Summary:', 'SUMMARY:', 'Result:', 'Accomplished:']:
+                    if summary.startswith(prefix):
+                        summary = summary[len(prefix):].strip()
+                self.log(f"Haiku summary generated for ticket {ticket_id}")
+                return summary[:500]  # Limit length
+            else:
+                self.log(f"Haiku summary failed: {result.stderr[:100] if result.stderr else 'no output'}", "WARNING")
+                return None
+
+        except subprocess.TimeoutExpired:
+            self.log(f"Haiku summary timeout for ticket {ticket_id}", "WARNING")
+            return None
+        except Exception as e:
+            self.log(f"Haiku summary error: {e}", "WARNING")
+            return None
+
+    def get_ancestor_summaries(self, cursor, parent_ticket_id):
+        """Get combined summaries from all ancestors (recursive)"""
+        if not parent_ticket_id:
+            return ""
+
+        ancestors = []
+        current_parent_id = parent_ticket_id
+        max_depth = 10
+
+        while current_parent_id and len(ancestors) < max_depth:
+            cursor.execute("""
+                SELECT id, parent_ticket_id, ticket_number, title, result_summary
+                FROM tickets WHERE id = %s
+            """, (current_parent_id,))
+            parent = cursor.fetchone()
+            if parent:
+                ancestors.append(parent)
+                current_parent_id = parent.get('parent_ticket_id')
+            else:
+                break
+
+        if not ancestors:
+            return ""
+
+        # Reverse to show from oldest to most recent
+        ancestors.reverse()
+
+        summary_parts = []
+        for ancestor in ancestors:
+            if ancestor.get('result_summary'):
+                summary_parts.append(f"[{ancestor['ticket_number']}] {ancestor['result_summary']}")
+
+        if summary_parts:
+            return "=== Ancestor Summary ===\n" + "\n".join(summary_parts) + "\n========================\n"
+        return ""
+
     def update_ticket(self, ticket_id, status, result=None):
         try:
             conn = self.get_db()
@@ -563,11 +755,19 @@ class ProjectWorker(threading.Thread):
             # Get ticket info for notification (including current status and retry info)
             cursor.execute("""
                 SELECT t.ticket_number, t.title, t.status as current_status, p.name as project_name,
-                       t.retry_count, t.max_retries, t.is_forced, t.test_command, t.require_tests_pass
+                       t.retry_count, t.max_retries, t.is_forced, t.test_command, t.require_tests_pass,
+                       t.parent_ticket_id
                 FROM tickets t JOIN projects p ON t.project_id = p.id
                 WHERE t.id = %s
             """, (ticket_id,))
             ticket_info = cursor.fetchone()
+
+            # Build combined summary with ancestors (for sub-tickets)
+            combined_result = result
+            if result and ticket_info and ticket_info.get('parent_ticket_id'):
+                ancestor_summary = self.get_ancestor_summaries(cursor, ticket_info['parent_ticket_id'])
+                if ancestor_summary:
+                    combined_result = ancestor_summary + result
 
             # If trying to set 'failed' but ticket is already 'awaiting_input' (from /stop command),
             # don't overwrite - the user intentionally paused it
@@ -620,17 +820,19 @@ class ProjectWorker(threading.Thread):
 
             if status == 'done':
                 # Set to awaiting_input instead of done - user must respond or close
+                # Summary will be generated when ticket is actually closed
                 actual_status = 'awaiting_input'
                 reset_forced = ticket_info.get('is_forced', False)
-                # Schedule auto-review after configured delay (default 15 minutes)
+
+                # Schedule auto-review after configured delay
                 cursor.execute(f"""
-                    UPDATE tickets SET status = 'awaiting_input', result_summary = %s,
+                    UPDATE tickets SET status = 'awaiting_input',
                     review_deadline = DATE_ADD(NOW(), INTERVAL 7 DAY),
-                    review_scheduled_at = DATE_ADD(NOW(), INTERVAL {AUTO_REVIEW_DELAY_MINUTES} MINUTE),
+                    review_scheduled_at = DATE_ADD(NOW(), INTERVAL {AUTO_REVIEW_DELAY_SECONDS} SECOND),
                     updated_at = NOW(),
                     is_forced = FALSE, retry_count = 0, retry_after = NULL
                     WHERE id = %s
-                """, (result[:1000] if result else None, ticket_id))
+                """, (ticket_id,))
             elif status == 'failed':
                 # Already past max retries if we get here
                 reset_forced = ticket_info.get('is_forced', False)
@@ -1094,6 +1296,54 @@ Password: {ticket['db_password']}
 ======================
 """
 
+        # Parent ticket context (for sub-tickets) - recursive to get all ancestors
+        parent_context = ""
+        if ticket.get('parent_ticket_id'):
+            try:
+                conn = self.get_db()
+                cursor = conn.cursor(dictionary=True)
+
+                # Get all ancestors recursively (grandparent → parent → current)
+                ancestors = []
+                current_parent_id = ticket['parent_ticket_id']
+                max_depth = 10  # Prevent infinite loops
+
+                while current_parent_id and len(ancestors) < max_depth:
+                    cursor.execute("""
+                        SELECT id, parent_ticket_id, ticket_number, title, description, result_summary
+                        FROM tickets WHERE id = %s
+                    """, (current_parent_id,))
+                    parent = cursor.fetchone()
+                    if parent:
+                        ancestors.append(parent)
+                        current_parent_id = parent.get('parent_ticket_id')
+                    else:
+                        break
+
+                cursor.close()
+                conn.close()
+
+                if ancestors:
+                    # Reverse to show from oldest ancestor to immediate parent
+                    ancestors.reverse()
+                    parent_info = ""
+                    for i, ancestor in enumerate(ancestors):
+                        level = "Root" if i == 0 else f"Level {i}"
+                        parent_info += f"[{level}] {ancestor['ticket_number']} - {ancestor['title']}\n"
+                        parent_info += f"  Description: {ancestor['description']}\n"
+                        if ancestor.get('result_summary'):
+                            parent_info += f"  Result: {ancestor['result_summary']}\n"
+                        parent_info += "\n"
+
+                    parent_context = f"""
+=== PARENT TICKET CONTEXT ({len(ancestors)} level{'s' if len(ancestors) > 1 else ''}) ===
+{parent_info}
+This is a sub-task. Use the parent context to understand the overall goal.
+{'=' * 50}
+"""
+            except Exception as e:
+                self.log(f"Error getting parent context: {e}", "DEBUG")
+
         # Git version control context
         git_context = ""
         if GIT_ENABLED:
@@ -1142,7 +1392,7 @@ Do NOT modify files in the reference path - only use it for reference.
 
         system = f"""You are working on project: {ticket['project_name']}
 {paths_str}{tech_info}
-{global_context_str}{smart_context_str}{db_info}{project_context}{ticket_context}{git_context}{reference_context}
+{global_context_str}{smart_context_str}{db_info}{project_context}{ticket_context}{parent_context}{git_context}{reference_context}
 Ticket: {ticket['ticket_number']} - {ticket['title']}
 
 IMPORTANT: You can ONLY create/modify files within: {allowed_str}
@@ -1205,6 +1455,19 @@ Complete this task. When finished, say "TASK COMPLETED" with a summary."""
                     self.save_log('output', preview)
 
                     if 'TASK COMPLETED' in content.upper():
+                        # Extract summary after "TASK COMPLETED"
+                        upper_content = content.upper()
+                        idx = upper_content.find('TASK COMPLETED')
+                        if idx != -1:
+                            # Get the text after "TASK COMPLETED" as summary
+                            summary_text = content[idx + len('TASK COMPLETED'):].strip()
+                            # Clean up common prefixes
+                            for prefix in [':', '-', '.', '\n']:
+                                if summary_text.startswith(prefix):
+                                    summary_text = summary_text[1:].strip()
+                            self.last_summary = summary_text[:1000] if summary_text else "Completed successfully"
+                        else:
+                            self.last_summary = "Completed successfully"
                         return 'completed'
 
             elif msg_type == 'result':
@@ -1525,12 +1788,58 @@ Complete this task. When finished, say "TASK COMPLETED" with a summary."""
                 self.current_process = None
             return 'failed'
     
+    def ensure_ancestor_summaries(self, ticket):
+        """Generate summaries for ancestors that don't have one (called when child starts)"""
+        if not ticket.get('parent_ticket_id'):
+            return
+
+        try:
+            conn = self.get_db()
+            cursor = conn.cursor(dictionary=True)
+
+            # Get all ancestors
+            ancestors = []
+            current_parent_id = ticket['parent_ticket_id']
+            max_depth = 10
+
+            while current_parent_id and len(ancestors) < max_depth:
+                cursor.execute("""
+                    SELECT id, parent_ticket_id, ticket_number, result_summary
+                    FROM tickets WHERE id = %s
+                """, (current_parent_id,))
+                parent = cursor.fetchone()
+                if parent:
+                    ancestors.append(parent)
+                    current_parent_id = parent.get('parent_ticket_id')
+                else:
+                    break
+
+            # Generate summaries for ancestors that don't have one
+            for ancestor in ancestors:
+                if not ancestor.get('result_summary'):
+                    self.log(f"Generating summary for ancestor {ancestor['ticket_number']}...")
+                    summary = self.generate_summary_with_haiku(ancestor['id'])
+                    if summary:
+                        cursor.execute("""
+                            UPDATE tickets SET result_summary = %s WHERE id = %s
+                        """, (summary[:2000], ancestor['id']))
+                        conn.commit()
+                        self.log(f"Summary generated for {ancestor['ticket_number']}")
+
+            cursor.close()
+            conn.close()
+        except Exception as e:
+            self.log(f"Error ensuring ancestor summaries: {e}", "WARNING")
+
     def process_ticket(self, ticket):
         self.current_ticket_id = ticket['id']
         self.current_session_id = self.create_session(ticket['id'])
         self.last_activity = datetime.now()
 
         self.log(f"Processing: {ticket['ticket_number']} - {ticket['title']}")
+
+        # Generate summaries for ancestors if this is a sub-ticket
+        self.ensure_ancestor_summaries(ticket)
 
         # Auto backup disabled - backup happens on ticket close instead
         # self.create_backup(ticket['id'])
@@ -1590,27 +1899,11 @@ Complete this task. When finished, say "TASK COMPLETED" with a summary."""
                     self.log(f"Processing user feedback before completing...")
                     continue
 
-                # Check for pending sub-tickets (process within parent context)
-                sub_tickets = self.get_pending_sub_tickets(ticket['id'])
-                if sub_tickets:
-                    self.log(f"📦 Parent ticket has {len(sub_tickets)} pending sub-tickets, processing...")
-                    for sub_ticket in sub_tickets:
-                        self.log(f"  ↳ Processing sub-ticket: {sub_ticket['ticket_number']}")
-                        self.process_ticket(sub_ticket)  # Recursive call
-                        # Check if we should stop (daemon stopped)
-                        stop_event = getattr(self, 'stop_event', None)
-                        if stop_event and stop_event.is_set():
-                            break
-                    # After sub-tickets, check if all are done
-                    if not self.all_sub_tickets_done(ticket['id']):
-                        self.log(f"⚠️ Some sub-tickets not completed, parent remains open")
-                        self.update_ticket(ticket['id'], 'open')
-                        self.end_session(self.current_session_id, 'completed')
-                        break
-
-                self.update_ticket(ticket['id'], 'done', 'Completed successfully')
+                summary = self.last_summary or 'Completed successfully'
+                self.update_ticket(ticket['id'], 'done', summary)
                 self.end_session(self.current_session_id, 'completed')
                 self.log(f"✅ Completed: {ticket['ticket_number']}")
+                self.last_summary = None  # Reset for next ticket
                 break
 
             elif result == 'skipped':
@@ -1642,9 +1935,10 @@ Complete this task. When finished, say "TASK COMPLETED" with a summary."""
                     self.log(f"Continuing with user feedback...")
                     continue
                 else:
-                    self.update_ticket(ticket['id'], 'awaiting_input')
+                    # Use 'done' to ensure review_scheduled_at is set for auto-review
+                    self.update_ticket(ticket['id'], 'done', 'Task completed - awaiting review')
                     self.end_session(self.current_session_id, 'completed')
-                    self.log(f"✅ Success: {ticket['ticket_number']} - awaiting user input")
+                    self.log(f"✅ Success: {ticket['ticket_number']} - awaiting review")
                     break
 
             elif result == 'rate_limited':
@@ -1663,24 +1957,117 @@ Complete this task. When finished, say "TASK COMPLETED" with a summary."""
         self.current_ticket_id = None
         self.current_session_id = None
     
+    def get_parallel_tickets(self, max_parallel=5):
+        """Get tickets with the same sequence_order for parallel execution (max 5)"""
+        try:
+            conn = self.get_db()
+            cursor = conn.cursor(dictionary=True)
+
+            # First, get the lowest available sequence_order
+            cursor.execute("""
+                SELECT MIN(t.sequence_order) as min_seq
+                FROM tickets t
+                WHERE t.project_id = %s
+                  AND t.status IN ('open', 'new', 'pending')
+                  AND (t.retry_after IS NULL OR t.retry_after <= NOW())
+                  AND NOT EXISTS (
+                      SELECT 1 FROM ticket_dependencies td
+                      JOIN tickets dt ON dt.id = td.depends_on_ticket_id
+                      WHERE td.ticket_id = t.id
+                        AND dt.status NOT IN ('done', 'skipped')
+                  )
+                  AND (
+                      t.parent_ticket_id IS NULL
+                      OR EXISTS (
+                          SELECT 1 FROM tickets pt
+                          WHERE pt.id = t.parent_ticket_id
+                            AND pt.status IN ('done', 'skipped')
+                      )
+                  )
+            """, (self.project_id,))
+            result = cursor.fetchone()
+            min_seq = result['min_seq'] if result else None
+
+            if min_seq is None:
+                cursor.close()
+                conn.close()
+                return []
+
+            # Get all tickets with that sequence_order (up to max_parallel)
+            cursor.execute("""
+                SELECT t.*, p.web_path, p.app_path, p.name as project_name, p.code as project_code,
+                       p.project_type, p.tech_stack, p.context as project_context, t.context as ticket_context,
+                       p.db_name, p.db_user, p.db_password, p.db_host,
+                       p.ai_model as project_ai_model, t.ai_model as ticket_ai_model,
+                       p.android_device_type, p.android_remote_host, p.android_remote_port, p.android_screen_size,
+                       p.dotnet_port, p.default_test_command,
+                       p.default_execution_mode, p.reference_path
+                FROM tickets t
+                JOIN projects p ON t.project_id = p.id
+                WHERE t.project_id = %s
+                  AND t.status IN ('open', 'new', 'pending')
+                  AND t.sequence_order = %s
+                  AND (t.retry_after IS NULL OR t.retry_after <= NOW())
+                  AND NOT EXISTS (
+                      SELECT 1 FROM ticket_dependencies td
+                      JOIN tickets dt ON dt.id = td.depends_on_ticket_id
+                      WHERE td.ticket_id = t.id
+                        AND dt.status NOT IN ('done', 'skipped')
+                  )
+                  AND (
+                      t.parent_ticket_id IS NULL
+                      OR EXISTS (
+                          SELECT 1 FROM tickets pt
+                          WHERE pt.id = t.parent_ticket_id
+                            AND pt.status IN ('done', 'skipped')
+                      )
+                  )
+                ORDER BY t.is_forced DESC, t.created_at ASC
+                LIMIT %s
+            """, (self.project_id, min_seq, max_parallel))
+            tickets = cursor.fetchall()
+            cursor.close()
+            conn.close()
+            return tickets
+        except Exception as e:
+            self.log(f"Error getting parallel tickets: {e}", "ERROR")
+            return []
+
     def run(self):
         self.log(f"Worker started")
-        
+
         while self.running and self.daemon_ref.running:
             try:
-                ticket = self.get_next_ticket()
-                if ticket:
-                    self.process_ticket(ticket)
+                # Get tickets with same sequence_order for parallel execution
+                tickets = self.get_parallel_tickets(max_parallel=5)
+
+                if tickets:
+                    if len(tickets) == 1:
+                        # Single ticket - run directly
+                        self.process_ticket(tickets[0])
+                    else:
+                        # Multiple tickets - run in parallel
+                        self.log(f"Running {len(tickets)} tickets in parallel (seq={tickets[0].get('sequence_order')})")
+                        from concurrent.futures import ThreadPoolExecutor, as_completed
+
+                        with ThreadPoolExecutor(max_workers=5) as executor:
+                            futures = {executor.submit(self.process_ticket, t): t for t in tickets}
+                            for future in as_completed(futures):
+                                ticket = futures[future]
+                                try:
+                                    future.result()
+                                except Exception as e:
+                                    self.log(f"Parallel ticket error {ticket['ticket_number']}: {e}", "ERROR")
                 else:
                     time.sleep(POLL_INTERVAL)
-                    ticket = self.get_next_ticket()
-                    if not ticket:
+                    tickets = self.get_parallel_tickets(max_parallel=5)
+                    if not tickets:
                         self.log("No more tickets, worker stopping")
                         break
             except Exception as e:
                 self.log(f"Error: {e}", "ERROR")
                 time.sleep(POLL_INTERVAL)
-        
+
         self.log(f"Worker stopped")
     
     def stop(self):
@@ -1968,14 +2355,14 @@ class ClaudeDaemon:
         print(f"[INFO] Retry cooldowns: rate_limit={RATE_LIMIT_COOLDOWN_MINUTES}min, errors={RETRY_COOLDOWN_MINUTES}min")
 
         # Load Auto-review settings (uses Claude CLI with --model haiku)
-        global AUTO_REVIEW_ENABLED, AUTO_REVIEW_DELAY_MINUTES
-        AUTO_REVIEW_DELAY_MINUTES = int(self.config.get('AUTO_REVIEW_DELAY_MINUTES', '15'))
+        global AUTO_REVIEW_ENABLED, AUTO_REVIEW_DELAY_SECONDS
+        AUTO_REVIEW_DELAY_SECONDS = int(self.config.get('AUTO_REVIEW_DELAY_SECONDS', '10'))
 
         # Check if Claude CLI exists
         claude_cli = '/home/claude/.local/bin/claude'
         if os.path.exists(claude_cli):
             AUTO_REVIEW_ENABLED = True
-            print(f"[INFO] Auto-review enabled (Haiku via CLI, {AUTO_REVIEW_DELAY_MINUTES}min delay)")
+            print(f"[INFO] Auto-review enabled (Haiku via CLI, {AUTO_REVIEW_DELAY_SECONDS}s delay)")
         else:
             AUTO_REVIEW_ENABLED = False
             print("[INFO] Auto-review disabled (Claude CLI not found)")
@@ -2264,7 +2651,7 @@ Reply with ONLY one word: COMPLETED, QUESTION, or ERROR"""
                     continue
 
                 if result == 'completed':
-                    # Auto-close ticket
+                    # Auto-close ticket (summary will be generated when child starts, if needed)
                     cursor.execute("""
                         UPDATE tickets SET
                             status = 'done',

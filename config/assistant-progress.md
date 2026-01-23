@@ -179,6 +179,33 @@ Phase 3/3 waiting ⏳ (1 ticket)
 
 ---
 
+## 🎨 GLOBAL CONTEXT RULES (Reference)
+
+AI workers follow **Global Context** rules. When troubleshooting ticket issues, know these defaults:
+
+### Default Tech Stack
+
+| Project Type | Default Stack |
+|--------------|---------------|
+| **Dashboard / Admin / ERP** | PHP + Alpine.js + Tailwind CSS |
+| **Landing Page / Marketing** | HTML + Alpine.js + Tailwind CSS |
+| **Simple Website** | HTML + Tailwind CSS |
+
+### Code Requirements (Always Apply)
+
+- ✅ Prepared statements for SQL
+- ✅ Escape output (htmlspecialchars)
+- ✅ Hash passwords (bcrypt)
+- ✅ No hardcoded credentials (use .env)
+- ✅ Download libraries locally (no CDN)
+- ✅ No TypeScript (use plain JavaScript .js)
+
+**If a ticket fails due to design conflicts:**
+- Check if ticket description contradicts global context
+- Suggest updating ticket description to be explicit about desired approach
+
+---
+
 ## LANGUAGE
 
 Respond in the same language the user uses (Greek or English).

@@ -5,6 +5,37 @@ All notable changes to CodeHero will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.81.0] - 2026-01-23
+
+### Added
+- **Chat File Upload** - New 📎 button in conversation input
+  - Upload files directly from chat area
+  - Shows full file path in conversation for AI to use
+  - Upload hint with "Use for task" quick action
+  - Auto-focus on input after upload with helpful placeholder
+
+### Fixed
+- **Parallel Ticket Token Tracking** - Critical bug fix
+  - Token counters are now thread-local (per-ticket)
+  - Previously, parallel tickets shared counters causing incorrect token counts
+  - Affected: session_input_tokens, session_output_tokens, cache tokens, api_calls
+
+### Improved
+- **Global Context Rules** - New sections added:
+  - **1.4 Git Control** - AI won't auto-create git repos without permission
+  - **1.5 Authentication Verification** - Must check auth on EVERY protected file
+  - **5.6.1 Color Harmony** - Design guidelines for harmonious color palettes
+    - Avoid pure black/white, use soft transitions
+    - Maximum 5 colors in palette
+    - Section transitions should flow smoothly
+
+- **Assistant Context Sync** - All 3 assistant files now include:
+  - Global context awareness (default tech stack, code requirements)
+  - Color harmony rules for design tickets
+  - Authentication verification reminders for login-related tickets
+
+---
+
 ## [2.80.11] - 2026-01-23
 
 ### Improved

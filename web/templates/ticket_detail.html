@@ -711,6 +711,10 @@
             <div class="input-area">
                 <input type="text" id="message-input" placeholder="Send a message to Claude..."
                        {% if ticket.status in ['done', 'failed'] %}disabled{% endif %} />
+                <input type="file" id="chat-file-input" multiple style="display:none" onchange="handleChatUpload(this.files)">
+                <button onclick="document.getElementById('chat-file-input').click()" id="attach-btn" title="Attach file"
+                        style="background:var(--bg-secondary);border:1px solid var(--border-subtle);font-size:18px"
+                        {% if ticket.status in ['done', 'failed'] %}disabled{% endif %}>📎</button>
                 <button onclick="toggleVoiceInput()" id="voice-btn" title="Voice input"
                         style="background:var(--bg-secondary);border:1px solid var(--border-subtle);font-size:18px"
                         {% if ticket.status in ['done', 'failed'] %}disabled{% endif %}>🎤</button>
@@ -1851,7 +1855,15 @@
         }
 
         input.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
-        conversation.scrollTop = conversation.scrollHeight;
+
+        // Scroll to bottom - multiple attempts to handle async content loading
+        function scrollToBottom() {
+            conversation.scrollTop = conversation.scrollHeight;
+        }
+        scrollToBottom();
+        setTimeout(scrollToBottom, 100);
+        setTimeout(scrollToBottom, 300);
+        window.addEventListener('load', scrollToBottom);
 
         document.querySelectorAll('.time[data-utc]').forEach(el => {
             const utc = el.dataset.utc;
@@ -2253,6 +2265,83 @@
                 uploadResult.textContent = 'Upload failed';
             }
             document.getElementById('fileInput').value = '';
+        }
+
+        // Chat attachment upload - shows full path in conversation
+        async function handleChatUpload(files) {
+            if (!files.length) return;
+
+            const attachBtn = document.getElementById('attach-btn');
+            const originalText = attachBtn.textContent;
+            attachBtn.textContent = '⏳';
+            attachBtn.disabled = true;
+
+            // Get file names for the prompt
+            const fileNames = Array.from(files).map(f => f.name).join(', ');
+
+            const formData = new FormData();
+            for (let file of files) formData.append('files', file);
+            formData.append('ticket_id', ticketId);
+            formData.append('subdir', 'ticket_files');
+            formData.append('path_type', currentPathType);
+            formData.append('show_full_path', 'true');  // Flag to show full path
+
+            try {
+                const resp = await fetch(`/api/project/${projectId}/upload`, { method: 'POST', body: formData });
+                const result = await resp.json();
+                if (result.success) {
+                    // Refresh file list in sidebar
+                    loadFileList();
+                    attachBtn.textContent = '✓';
+                    setTimeout(() => { attachBtn.textContent = originalText; }, 1500);
+
+                    // Focus on input and suggest a message
+                    const msgInput = document.getElementById('message-input');
+                    msgInput.placeholder = `What should I do with ${fileNames}?`;
+                    msgInput.focus();
+
+                    // Show a helpful hint
+                    showUploadHint(fileNames);
+                } else {
+                    alert('Upload failed: ' + result.message);
+                    attachBtn.textContent = originalText;
+                }
+            } catch (err) {
+                alert('Upload failed: ' + err.message);
+                attachBtn.textContent = originalText;
+            }
+
+            attachBtn.disabled = false;
+            document.getElementById('chat-file-input').value = '';
+        }
+
+        function showUploadHint(fileNames) {
+            // Remove existing hint if any
+            const existingHint = document.getElementById('upload-hint');
+            if (existingHint) existingHint.remove();
+
+            // Create hint element
+            const hint = document.createElement('div');
+            hint.id = 'upload-hint';
+            hint.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--accent-primary);color:white;padding:10px 20px;border-radius:8px;font-size:13px;z-index:1000;box-shadow:0 4px 12px rgba(0,0,0,0.3);display:flex;align-items:center;gap:10px;';
+            hint.innerHTML = `
+                <span>📎 File uploaded! Tell Claude what to do, or:</span>
+                <button onclick="sendDefaultFileMessage()" style="background:white;color:var(--accent-primary);border:none;padding:5px 12px;border-radius:4px;cursor:pointer;font-weight:600;">Use for task</button>
+                <button onclick="this.parentElement.remove()" style="background:transparent;border:none;color:white;cursor:pointer;font-size:16px;opacity:0.7;">✕</button>
+            `;
+            document.body.appendChild(hint);
+
+            // Auto-hide after 10 seconds
+            setTimeout(() => { if (hint.parentElement) hint.remove(); }, 10000);
+        }
+
+        function sendDefaultFileMessage() {
+            const hint = document.getElementById('upload-hint');
+            if (hint) hint.remove();
+
+            const msgInput = document.getElementById('message-input');
+            msgInput.value = 'Please use the uploaded file for the current task.';
+            sendMessage();
         }
 
         async function createBackup() {

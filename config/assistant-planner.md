@@ -197,6 +197,111 @@ Ask: **"Autonomous, semi-autonomous, or supervised?"**
 
 ---
 
+## 🎨 GLOBAL CONTEXT RULES (IMPORTANT!)
+
+The AI workers that execute tickets follow the **Global Context** rules.
+Your ticket descriptions should be **compatible** with these rules, or **explicitly override** them.
+
+### Default Tech Stack
+
+| Project Type | Default Stack |
+|--------------|---------------|
+| **Dashboard / Admin / ERP** | PHP + Alpine.js + Tailwind CSS |
+| **Landing Page / Marketing** | HTML + Alpine.js + Tailwind CSS |
+| **Simple Website** | HTML + Tailwind CSS |
+| **API / Backend** | Based on project's tech_stack setting |
+
+**When writing ticket descriptions:**
+- If you want to use the default stack → Don't specify CSS framework (AI will use Tailwind)
+- If user wants something different → **Explicitly state it** in the ticket description:
+  ```
+  "Use Bootstrap 5 instead of Tailwind CSS"
+  "Use custom CSS (no framework)"
+  "Use specific color scheme: primary #0066cc, secondary #003366"
+  ```
+
+### Code Requirements (Always Apply)
+
+These rules ALWAYS apply - don't contradict them in tickets:
+- ✅ Prepared statements for SQL (no string concatenation)
+- ✅ Escape output (htmlspecialchars in PHP)
+- ✅ Hash passwords (bcrypt/password_hash)
+- ✅ No hardcoded credentials (use .env)
+- ✅ Download libraries locally (no CDN in production)
+- ✅ Relative paths for links (not absolute)
+
+### UI Requirements
+
+- ✅ Add `data-testid` attributes for testing
+- ✅ Desktop + Mobile responsive design
+- ✅ No build step required (no TypeScript, no webpack bundles)
+- ✅ JavaScript files use `.js` (not `.ts`)
+
+### Design Guidance
+
+When describing design in tickets:
+
+**Option A: Use Default (Tailwind)**
+```
+"Create homepage with hero section, services grid, and contact CTA.
+Use Tailwind CSS classes for styling."
+```
+
+**Option B: Custom Design (Override Default)**
+```
+"Create homepage with hero section.
+Design: Custom CSS (NOT Tailwind).
+Colors: primary #0066cc, secondary #003366, accent #00aaff
+Font: Roboto from Google Fonts"
+```
+
+**⚠️ IMPORTANT:** If you specify custom colors/design, make sure ALL related tickets
+use the same design specification to avoid inconsistency!
+
+### Color Harmony (Global Context Rule 5.6.1)
+
+**AI workers must follow these color rules:**
+- Maximum 5 colors in palette
+- Avoid pure black (#000) and pure white (#fff)
+- Use soft backgrounds (#f8fafc instead of #ffffff)
+- Use deep colors for dark sections (#1e3a5f instead of #1f2937)
+- Ensure smooth transitions between sections
+
+When specifying colors in tickets, ensure they follow harmony principles:
+```
+❌ BAD: "Dark sidebar #1f2937 with white content #ffffff"
+✅ GOOD: "Deep blue sidebar #1e3a5f with soft gray content #f0f4f8"
+```
+
+### Ticket Description Best Practices
+
+1. **Be explicit about design choices** - Don't assume the AI knows what you want
+2. **Reference shared config** - "Use the color scheme defined in /css/variables.css"
+3. **Set design in FIRST ticket** - The first styling ticket should define all colors/fonts
+4. **Reference it in later tickets** - "Follow the design established in ticket #1"
+
+### Authentication Tickets (CRITICAL!)
+
+When creating login/admin tickets, include verification step:
+
+```
+"Create admin login system.
+
+1. Create /admin/includes/auth_check.php - session verification
+2. Create /admin/login.php - login form
+3. Create /admin/dashboard.php - WITH auth check
+4. Create /admin/users.php - WITH auth check
+5. Create /admin/settings.php - WITH auth check
+
+⚠️ VERIFICATION: After completing, test EVERY admin/*.php file
+directly in browser WITHOUT login - must redirect to login page.
+No page should be accessible without authentication!"
+```
+
+**Always include the verification step** in login-related tickets!
+
+---
+
 ## WORKFLOW
 
 1. User describes project

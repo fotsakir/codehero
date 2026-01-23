@@ -3401,12 +3401,23 @@ def upload_file(project_id):
 
         # If ticket_id provided, save message to conversation
         ticket_id = request.form.get('ticket_id')
+        show_full_path = request.form.get('show_full_path', 'false') == 'true'
         if ticket_id and uploaded:
             try:
                 conn2 = get_db()
                 cursor2 = conn2.cursor()
-                file_list = ', '.join(uploaded)
-                msg = f"[Uploaded files to ticket_files/: {file_list}]"
+
+                # Show full path when requested (for chat uploads)
+                if show_full_path:
+                    file_paths = [os.path.join(upload_dir, f) for f in uploaded]
+                    if len(file_paths) == 1:
+                        msg = f"📎 Uploaded file: {file_paths[0]}"
+                    else:
+                        paths_list = '\n'.join([f"  - {p}" for p in file_paths])
+                        msg = f"📎 Uploaded {len(file_paths)} files:\n{paths_list}"
+                else:
+                    file_list = ', '.join(uploaded)
+                    msg = f"[Uploaded files to ticket_files/: {file_list}]"
                 msg_tokens = len(msg.encode('utf-8')) // 4
                 cursor2.execute(
                     "INSERT INTO conversation_messages (ticket_id, role, content, token_count) VALUES (%s, 'user', %s, %s)",
@@ -4127,6 +4138,105 @@ def get_ticket_messages(ticket_id):
         print(f"Get ticket messages error: {e}")
         return jsonify({'error': sanitize_error(e)}), 500
 
+def generate_ticket_summary(ticket_id):
+    """Generate summary for ticket using Haiku"""
+    try:
+        conn = get_db()
+        cursor = conn.cursor(dictionary=True)
+
+        # Get ticket info
+        cursor.execute("SELECT title, description, parent_ticket_id FROM tickets WHERE id = %s", (ticket_id,))
+        ticket = cursor.fetchone()
+
+        # Get last messages
+        cursor.execute("""
+            SELECT role, content FROM conversation_messages
+            WHERE ticket_id = %s AND role IN ('user', 'assistant')
+            ORDER BY created_at DESC LIMIT 10
+        """, (ticket_id,))
+        messages = cursor.fetchall()
+
+        if not messages:
+            cursor.close(); conn.close()
+            return "Completed successfully", None
+
+        # Build conversation for Haiku
+        conversation = []
+        for msg in reversed(messages):
+            role = msg['role'].upper()
+            content = (msg['content'] or '')[:1000]
+            conversation.append(f"[{role}]: {content}")
+
+        prompt = f"""Analyze this completed task and provide a brief summary.
+
+TASK: {ticket['title'] if ticket else 'Unknown'}
+DESCRIPTION: {(ticket['description'] or '')[:500] if ticket else ''}
+
+CONVERSATION (last messages):
+{chr(10).join(conversation[-6:])}
+
+Provide a 1-2 sentence summary of what was accomplished. Be specific about files created/modified and features implemented. Just the summary text, no labels or prefixes."""
+
+        result = subprocess.run(
+            ['/home/claude/.local/bin/claude', '--model', 'haiku', '--print'],
+            input=prompt,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            cwd='/tmp'
+        )
+
+        parent_ticket_id = ticket.get('parent_ticket_id') if ticket else None
+        cursor.close(); conn.close()
+
+        if result.returncode == 0 and result.stdout:
+            summary = result.stdout.strip()
+            for prefix in ['Summary:', 'SUMMARY:', 'Result:', 'Accomplished:']:
+                if summary.startswith(prefix):
+                    summary = summary[len(prefix):].strip()
+            return summary[:500], parent_ticket_id
+        return "Completed successfully", parent_ticket_id
+
+    except Exception as e:
+        print(f"Summary generation error: {e}")
+        return "Completed successfully", None
+
+
+def get_ancestor_summaries_web(cursor, parent_ticket_id):
+    """Get combined summaries from all ancestors (recursive)"""
+    if not parent_ticket_id:
+        return ""
+
+    ancestors = []
+    current_parent_id = parent_ticket_id
+    max_depth = 10
+
+    while current_parent_id and len(ancestors) < max_depth:
+        cursor.execute("""
+            SELECT id, parent_ticket_id, ticket_number, result_summary
+            FROM tickets WHERE id = %s
+        """, (current_parent_id,))
+        parent = cursor.fetchone()
+        if parent:
+            ancestors.append(parent)
+            current_parent_id = parent.get('parent_ticket_id')
+        else:
+            break
+
+    if not ancestors:
+        return ""
+
+    ancestors.reverse()
+    summary_parts = []
+    for ancestor in ancestors:
+        if ancestor.get('result_summary'):
+            summary_parts.append(f"[{ancestor['ticket_number']}] {ancestor['result_summary']}")
+
+    if summary_parts:
+        return "=== Ancestor Summary ===\n" + "\n".join(summary_parts) + "\n========================\n"
+    return ""
+
+
 @app.route('/api/ticket/<int:ticket_id>/close', methods=['POST'])
 @login_required
 def close_ticket(ticket_id):
@@ -4141,7 +4251,7 @@ def close_ticket(ticket_id):
         cursor.execute("SELECT project_id FROM tickets WHERE id = %s", (ticket_id,))
         ticket = cursor.fetchone()
 
-        # Close ticket first (fast operation)
+        # Close ticket (summary will be generated when child starts, if needed)
         cursor.execute("""
             UPDATE tickets SET status = 'done', closed_at = NOW(),
             closed_by = %s, close_reason = %s, updated_at = NOW()
@@ -4283,9 +4393,11 @@ def reopen_ticket(ticket_id):
 
         # Update ticket status first (fast)
         # Update ticket status and reset retry count
+        # Also disable relaxed mode (deps_include_awaiting) so it doesn't auto-close
         cursor.execute("""
             UPDATE tickets SET status = 'open', retry_count = 0, closed_at = NULL,
-            closed_by = NULL, close_reason = NULL, review_deadline = NULL, updated_at = NOW()
+            closed_by = NULL, close_reason = NULL, review_deadline = NULL,
+            deps_include_awaiting = FALSE, updated_at = NOW()
             WHERE id = %s
         """, (ticket_id,))
 
@@ -4920,9 +5032,10 @@ def bulk_ticket_action():
 
         elif action == 'reopen':
             # Reopen tickets (set to open)
+            # Also disable relaxed mode (deps_include_awaiting) so they don't auto-close
             cursor.execute(f"""
                 UPDATE tickets
-                SET status = 'open', updated_at = NOW()
+                SET status = 'open', deps_include_awaiting = FALSE, updated_at = NOW()
                 WHERE id IN ({placeholders}) AND status IN ('done', 'failed', 'timeout', 'stuck', 'skipped')
             """, ticket_ids)
             affected = cursor.rowcount
@@ -6463,149 +6576,24 @@ class ActivationSession:
         return False
 
 
-# Context templates for Claude Assistant auto-load
-CLAUDE_ASSISTANT_TEMPLATES = {
-    'general': """You are the CodeHero AI Assistant. You help users with EVERYTHING related to the platform.
-
-## CRITICAL: ALWAYS USE MCP TOOLS!
-You have MCP (Model Context Protocol) tools available. **YOU MUST USE THEM** for ALL project and ticket operations.
-DO NOT use curl, HTTP requests, or bash commands for these operations - use the MCP tools directly!
-
-## YOUR MCP TOOLS (USE THESE!):
-
-### PROJECT MANAGEMENT:
-- **codehero_list_projects** - List all projects (USE THIS for "show my projects")
-- **codehero_get_project** - Get project details
-- **codehero_create_project** - Create new project
-
-### TICKET MANAGEMENT:
-- **codehero_list_tickets** - List tickets for a project
-- **codehero_get_ticket** - Get ticket details
-- **codehero_create_ticket** - Create single ticket
-- **codehero_bulk_create_tickets** - Create multiple tickets with sequence/dependencies
-- **codehero_update_ticket** - Update ticket status/priority
-- **codehero_start_ticket** - Start ticket immediately (jump queue)
-- **codehero_retry_ticket** - Retry failed ticket
-- **codehero_delete_ticket** - Delete a ticket
-
-### SYSTEM:
-- **codehero_dashboard_stats** - Get platform overview
-- **codehero_kill_switch** - Stop a running ticket
-
-## EXAMPLES OF USING MCP TOOLS:
-
-User: "Show me my projects"
-→ Call: codehero_list_projects()
-
-User: "Create a new project called E-Shop"
-→ Call: codehero_create_project(name="E-Shop", project_type="web", web_path="/var/www/projects/eshop")
-
-User: "Add a ticket to create login page"
-→ Call: codehero_create_ticket(project_id=X, title="Create login page", execution_mode="autonomous")
-
-## OTHER HELP:
-- Platform troubleshooting and explanation
-- Linux system administration (services, logs)
-- Admin panel code fixes (source: /home/claude/codehero/)
-
-## LANGUAGE: Respond in the same language the user uses (Greek or English).
-
-Greet the user and ask how you can help!""",
-
-    'planner': """You are the CodeHero Project Planner. Help users design and create projects with tickets.
-
-## CRITICAL: ALWAYS USE MCP TOOLS!
-You have MCP (Model Context Protocol) tools available. **YOU MUST USE THEM** to create projects and tickets.
-DO NOT use curl, HTTP requests, or bash commands - use the MCP tools directly!
-
-## YOUR MCP TOOLS (USE THESE!):
-
-### codehero_create_project
-Create new project:
-- name: Project name (required)
-- description: Project description
-- project_type: "web" for PHP/HTML, "app" for Node/Python/API
-- tech_stack: "php", "node", "python", etc.
-- web_path: "/var/www/projects/{project_name}" (for web projects)
-- app_path: "/opt/apps/{project_name}" (for app projects)
-
-### codehero_bulk_create_tickets
-Create multiple tickets at once:
-- project_id: The project ID (required)
-- tickets: Array of ticket objects, each with:
-  - title: Ticket title (required)
-  - description: Detailed task description
-  - ticket_type: feature, bug, task, improvement, docs, rnd, debug
-  - priority: low, medium, high, critical
-  - sequence_order: Execution order (1, 2, 3...)
-  - depends_on: Array of sequence numbers [1, 2] (ticket waits for these)
-- execution_mode: "autonomous", "semi-autonomous", or "supervised" (IMPORTANT!)
-- deps_include_awaiting: true for relaxed, false for strict (IMPORTANT!)
-
-## DEFAULTS (use these if user says "proceed as you see fit" or doesn't know):
-- **Tech Stack**: HTML, JavaScript, PHP, MySQL (simple, widely known)
-- **Project Type**: "web" with web_path
-- **Execution Mode**: "autonomous" (no permission prompts)
-- **Dependency Mode**: "relaxed" (deps_include_awaiting: true)
-
-## WORKFLOW:
-1. Ask: "What do you want to build?" - Get project idea
-2. If user doesn't specify tech: suggest PHP/MySQL for web, ask if OK
-3. If user says "proceed" or "you decide": use defaults (autonomous + relaxed)
-4. Propose ticket plan with sequence_order and depends_on
-5. **USE MCP TOOL**: codehero_create_project(...)
-6. **USE MCP TOOL**: codehero_bulk_create_tickets(...)
-
-## LANGUAGE: Respond in the same language the user uses (Greek or English).
-
-Ask the user what they want to build!""",
-
-    'progress': """You are the Project Progress Assistant. Help users check and manage their project tickets.
-
-## CRITICAL: ALWAYS USE MCP TOOLS!
-You have MCP (Model Context Protocol) tools available. **YOU MUST USE THEM** for ALL operations.
-DO NOT use curl, HTTP requests, or bash commands - use the MCP tools directly!
-
-## YOUR MCP TOOLS (USE THESE!):
-
-### PROJECT INFO:
-- **codehero_list_projects** - List all projects
-- **codehero_get_project** - Get project details and stats
-- **codehero_get_project_progress** - Get detailed progress stats
-
-### TICKET MANAGEMENT:
-- **codehero_list_tickets** - List tickets (filter by status: open, in_progress, completed, closed)
-- **codehero_get_ticket** - Get ticket details and conversation history
-- **codehero_retry_ticket** - Retry a failed ticket
-- **codehero_start_ticket** - Start ticket immediately (jump queue)
-- **codehero_update_ticket** - Update status/priority
-
-## EXAMPLES:
-
-User: "Show my projects"
-→ Call: codehero_list_projects()
-
-User: "What's the progress on project 5?"
-→ Call: codehero_get_project_progress(project_id=5)
-
-User: "Show failed tickets"
-→ Call: codehero_list_tickets(project_id=X, status="closed")
-
-User: "Retry ticket 123"
-→ Call: codehero_retry_ticket(ticket_id=123)
-
-## WHAT YOU CAN DO:
-1. Show project progress and completion percentage
-2. List tickets by status (open, in_progress, completed, closed)
-3. Find blocked or failed tickets
-4. Retry failed tickets
-5. Start specific tickets immediately
-6. Show ticket conversation history
-
-## LANGUAGE: Respond in the same language the user uses (Greek or English).
-
-Ask the user which project they want to check!"""
+# Context templates for Claude Assistant - loaded from files
+ASSISTANT_TEMPLATE_FILES = {
+    'general': '/etc/codehero/assistant-general.md',
+    'planner': '/etc/codehero/assistant-planner.md',
+    'progress': '/etc/codehero/assistant-progress.md'
 }
+
+def get_assistant_template(template_name):
+    """Load assistant template from file"""
+    file_path = ASSISTANT_TEMPLATE_FILES.get(template_name)
+    if not file_path:
+        return None
+    try:
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return f.read()
+    except Exception as e:
+        logger.error(f"Failed to load assistant template {template_name}: {e}")
+        return None
 
 
 class ClaudeChatSession:
@@ -7028,7 +7016,7 @@ def claude_chat_start():
     # Determine system prompt based on template parameter
     # Template options: general, planner, progress
     template = data.get('template', 'general')
-    system_prompt = CLAUDE_ASSISTANT_TEMPLATES.get(template)
+    system_prompt = get_assistant_template(template)
     template_name = {'general': 'General Assistant', 'planner': 'Project Planner', 'progress': 'Project Progress'}.get(template, 'General Assistant')
 
     logger.info(f"[Claude Chat] Starting session: template={template}, model={model}, prompt_len={len(system_prompt) if system_prompt else 0}")

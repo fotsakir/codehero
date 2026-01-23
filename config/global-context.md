@@ -73,6 +73,135 @@ load_dotenv()
 db = connect(os.getenv('DATABASE_URL'))
 ```
 
+### 1.4 GIT - DO NOT INITIALIZE WITHOUT PERMISSION
+
+**⚠️ DO NOT create git repositories in project folders!**
+
+```bash
+# ❌ NEVER do this automatically:
+git init
+git add .
+git commit -m "Initial commit"
+```
+
+**Why:**
+- User may have their own version control setup
+- Creates extra files that may not be wanted
+- Takes time away from the actual task
+- `.git` folder can be security risk if exposed
+
+**If user wants git:**
+- They will explicitly ask: "Initialize git" or "Add version control"
+- Only then create the repository
+
+**If project already has .git folder:**
+- Do NOT make commits unless user asks
+- Do NOT push to remote
+- Respect existing git configuration
+
+---
+
+### 1.5 AUTHENTICATION - VERIFY EVERY FILE
+
+**⚠️ CRITICAL: When building login/admin systems, EVERY protected file must check authentication!**
+
+#### The Problem
+
+```
+/admin/
+  login.php        ← Public (login form)
+  dashboard.php    ← Has auth check ✅
+  users.php        ← FORGOT auth check! ❌ Anyone can access!
+  settings.php     ← FORGOT auth check! ❌ Anyone can access!
+  api/data.php     ← FORGOT auth check! ❌ Data exposed!
+```
+
+#### The Solution
+
+**Step 1: Create auth check include**
+```php
+// /admin/includes/auth_check.php
+<?php
+session_start();
+if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== true) {
+    header('Location: login.php');
+    exit;
+}
+?>
+```
+
+**Step 2: Include at TOP of EVERY protected file**
+```php
+<?php
+// /admin/dashboard.php - FIRST LINE!
+require_once __DIR__ . '/includes/auth_check.php';
+
+// Rest of the file...
+?>
+```
+
+#### Verification Checklist
+
+**After creating login system, verify EVERY file in protected folder:**
+
+```bash
+# List all PHP files in admin folder
+find /admin -name "*.php" -type f
+
+# For EACH file, check if it has auth:
+grep -l "auth_check\|session.*admin\|isLoggedIn" /admin/*.php
+```
+
+**Manual checklist:**
+```
+□ login.php - NO auth (it's the login page)
+□ logout.php - NO auth (destroys session)
+□ dashboard.php - HAS auth check at top?
+□ users.php - HAS auth check at top?
+□ settings.php - HAS auth check at top?
+□ ALL other .php files - HAS auth check?
+□ API endpoints - HAS auth check?
+□ AJAX handlers - HAS auth check?
+```
+
+#### Common Mistakes
+
+| Mistake | Risk | Fix |
+|---------|------|-----|
+| Auth check after HTML | Page partially loads | Put auth check at VERY TOP, before any output |
+| Only checking on dashboard | Other pages exposed | Check on EVERY file |
+| Checking $_SESSION without session_start() | Always fails | Include session_start() in auth check |
+| API returns data without auth | Data leak | API endpoints need auth too |
+| Forgot AJAX handlers | Actions without auth | All handlers need auth |
+
+#### Testing Authentication
+
+**After implementing login, test EACH protected URL directly:**
+
+```python
+import requests
+
+# List of ALL protected pages
+protected_urls = [
+    "https://site/admin/dashboard.php",
+    "https://site/admin/users.php",
+    "https://site/admin/settings.php",
+    "https://site/admin/api/data.php",
+]
+
+# Test WITHOUT login (should redirect or 403)
+for url in protected_urls:
+    r = requests.get(url, allow_redirects=False, verify=False)
+    if r.status_code == 200:
+        print(f"❌ VULNERABLE: {url} - accessible without login!")
+    elif r.status_code in [301, 302, 303, 307, 308]:
+        print(f"✅ Protected: {url} - redirects to login")
+    elif r.status_code == 403:
+        print(f"✅ Protected: {url} - returns 403")
+```
+
+**CRITICAL: Run this test BEFORE marking login task complete!**
+
 ---
 
 ## 📋 PART 2: BEFORE WRITING CODE
@@ -660,7 +789,82 @@ Before marking UI task complete, verify:
 □ Cards similar sizes?
 □ Responsive (no horizontal scroll on mobile)?
 □ Looks professional (like Bootstrap/Tailwind sites)?
+□ Color harmony (see 5.6.1)?
 ```
+
+### 5.6.1 COLOR HARMONY & DESIGN CONSISTENCY
+
+**⚠️ CRITICAL: Avoid jarring color combinations!**
+
+#### The Problem: Extreme Contrast
+
+```css
+/* ❌ BAD - Jarring contrast */
+.sidebar { background: #1f2937; }  /* Almost black */
+.main    { background: #ffffff; }  /* Pure white */
+/* Result: Visual "shock" between sections */
+
+/* ✅ GOOD - Smooth transitions */
+.sidebar { background: #1e3a5f; }  /* Deep blue */
+.main    { background: #f0f4f8; }  /* Soft blue-gray */
+/* Result: Harmonious, professional look */
+```
+
+#### Color Palette Rules
+
+1. **Use 3-5 colors maximum** (primary, secondary, accent, neutral, background)
+2. **Keep colors in the same temperature** (all warm OR all cool)
+3. **Use tints/shades of the same hue** for variations
+4. **Avoid pure black (#000) and pure white (#fff)** - use soft alternatives
+
+#### Recommended Color Approach
+
+| Element | Approach | Example |
+|---------|----------|---------|
+| **Background** | Soft, not pure white | `#f8fafc`, `#f1f5f9` |
+| **Dark sections** | Deep but not black | `#1e3a5f`, `#1e293b` |
+| **Text on light** | Dark gray, not black | `#1f2937`, `#334155` |
+| **Text on dark** | Off-white, not pure white | `#e2e8f0`, `#f1f5f9` |
+| **Primary color** | Saturated but not neon | `#2563eb`, `#0066cc` |
+| **Accent** | Complementary to primary | If blue primary → orange/yellow accent |
+
+#### Section Transitions
+
+When sections have different backgrounds, ensure smooth visual flow:
+
+```css
+/* ❌ BAD - Abrupt change */
+.hero    { background: #0f172a; }  /* Very dark */
+.content { background: #ffffff; }  /* Pure white */
+
+/* ✅ GOOD - Gradual transition */
+.hero    { background: #1e3a5f; }  /* Deep blue */
+.bridge  { background: #e2e8f0; }  /* Light blue-gray (optional transition) */
+.content { background: #f8fafc; }  /* Very light blue-gray */
+```
+
+#### Harmony Checklist
+
+```
+□ Maximum 5 colors in palette?
+□ Colors share same temperature (warm/cool)?
+□ No pure black (#000) or pure white (#fff)?
+□ Dark backgrounds use deep colors (not gray)?
+□ Light backgrounds use soft tints (not stark white)?
+□ Sections flow smoothly (no jarring transitions)?
+□ Text has sufficient contrast but isn't harsh?
+□ Accent color complements (not clashes with) primary?
+```
+
+#### Quick Fixes for Common Issues
+
+| Issue | Fix |
+|-------|-----|
+| Sidebar too dark vs content | Use deep blue/green instead of gray |
+| Sections feel disconnected | Add subtle gradient or transition section |
+| Colors feel random | Pick colors from same palette (Tailwind, Material, etc.) |
+| Text too stark | Use `#1f2937` instead of `#000`, `#f1f5f9` instead of `#fff` |
+| Accent color clashes | Use color wheel - pick complementary or analogous |
 
 ### 5.7 UI WORKFLOW
 
