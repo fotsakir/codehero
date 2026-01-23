@@ -1,34 +1,25 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 120">
   <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+    <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" style="stop-color:#6366f1"/>
-      <stop offset="100%" style="stop-color:#8b5cf6"/>
+      <stop offset="100%" style="stop-color:#4f46e5"/>
     </linearGradient>
-    <linearGradient id="cape" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#22d3ee"/>
-      <stop offset="100%" style="stop-color:#06b6d4"/>
+    <linearGradient id="headGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#818cf8"/>
+      <stop offset="100%" style="stop-color:#6366f1"/>
+    </linearGradient>
+    <linearGradient id="capeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#a78bfa"/>
+      <stop offset="100%" style="stop-color:#7c3aed"/>
     </linearGradient>
   </defs>
-
-  <!-- Background circle -->
-  <circle cx="32" cy="32" r="30" fill="url(#bg)"/>
-
-  <!-- Cape -->
-  <path d="M20 30 L32 54 L44 30 L40 28 L32 46 L24 28 Z" fill="url(#cape)"/>
-
-  <!-- Body -->
-  <rect x="26" y="26" width="12" height="14" rx="2" fill="#1e1b4b"/>
-
-  <!-- Head -->
-  <circle cx="32" cy="18" r="8" fill="#fbbf24"/>
-
-  <!-- Mask -->
-  <path d="M24 16 L32 20 L40 16 L40 18 L32 22 L24 18 Z" fill="#1e1b4b"/>
-
-  <!-- Eyes (glowing cyan) -->
-  <ellipse cx="28" cy="17" rx="2" ry="1.5" fill="#22d3ee"/>
-  <ellipse cx="36" cy="17" rx="2" ry="1.5" fill="#22d3ee"/>
-
-  <!-- Code symbol on chest -->
-  <text x="32" y="37" font-family="monospace" font-size="7" font-weight="bold" fill="#22d3ee" text-anchor="middle">&lt;/&gt;</text>
+  <path d="M25 45 L50 40 L75 45 L85 110 L50 95 L15 110 Z" fill="url(#capeGrad)"/>
+  <rect x="32" y="50" width="36" height="50" rx="8" fill="url(#bodyGrad)"/>
+  <text x="50" y="82" font-family="monospace" font-size="14" font-weight="bold" fill="#22d3ee" text-anchor="middle">&lt;/&gt;</text>
+  <circle cx="50" cy="30" r="22" fill="url(#headGrad)"/>
+  <rect x="35" y="24" width="30" height="12" rx="4" fill="#0f0f23"/>
+  <rect x="38" y="27" width="8" height="6" rx="2" fill="#22d3ee"/>
+  <rect x="54" y="27" width="8" height="6" rx="2" fill="#22d3ee"/>
+  <rect x="20" y="55" width="12" height="30" rx="4" fill="url(#bodyGrad)" transform="rotate(15, 26, 55)"/>
+  <rect x="68" y="55" width="12" height="30" rx="4" fill="url(#bodyGrad)" transform="rotate(-15, 74, 55)"/>
 </svg>

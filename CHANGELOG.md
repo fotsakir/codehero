@@ -5,6 +5,22 @@ All notable changes to CodeHero will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.82.1] - 2026-01-23
+
+### Fixed
+- **Self-parent Prevention** - MCP server now also validates parent_sequence
+  - Detects if a ticket would be its own parent (e.g., `parent_sequence:1` for first ticket)
+  - Returns error and rolls back ALL tickets - no partial commits
+  - Error message: "Skipped self-parent: TICKET cannot be its own parent"
+
+### Improved
+- **Assistant Context Files** - Added comprehensive dependency rules documentation
+  - Clear examples of WRONG vs CORRECT usage for `depends_on` and `parent_sequence`
+  - Explanation that both use 1-indexed array position
+  - Updated: assistant-planner.md, assistant-general.md, assistant-progress.md, CLAUDE.md
+
+---
+
 ## [2.82.0] - 2026-01-23
 
 ### Added
@@ -20,6 +36,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - One-click copy of secure URL with key
   - "New Key" button to regenerate and revoke old access
   - Clear explanation that each project has isolated access
+
+### Fixed
+- **Self-dependency Prevention** - MCP server now validates dependencies
+  - Detects if a ticket would depend on itself (e.g., `depends_on:[1]` for first ticket)
+  - Returns error and rolls back ALL tickets - no partial commits
+  - Clear error message guides assistant to fix the logic
+- **API Authentication** - `login_required` decorator returns JSON for `/api/` routes
+  - Previously returned HTML redirect causing "Unexpected token <" errors
+- **Upgrade Script** - nginx auth detection now handles both old and no-auth configs
+- **MAX_PARALLEL Settings** - Added to upgrade.sh for existing installations
 
 ### Changed
 - Replaced HTTP Basic Auth with session-based authentication

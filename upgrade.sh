@@ -470,6 +470,26 @@ if ! grep -q "^RETRY_COOLDOWN_MINUTES" ${CONFIG_DIR}/system.conf 2>/dev/null; th
     CONFIG_UPDATED=true
 fi
 
+# Add MAX_PARALLEL_PROJECTS if missing (added in v2.82.0)
+if ! grep -q "^MAX_PARALLEL_PROJECTS" ${CONFIG_DIR}/system.conf 2>/dev/null; then
+    echo "" >> ${CONFIG_DIR}/system.conf
+    echo "# Parallel Execution Settings (added in v2.82.0)" >> ${CONFIG_DIR}/system.conf
+    echo "MAX_PARALLEL_PROJECTS=10" >> ${CONFIG_DIR}/system.conf
+    echo "  Added: MAX_PARALLEL_PROJECTS=10"
+    CONFIG_UPDATED=true
+fi
+
+# Add MAX_PARALLEL_TICKETS if missing
+if ! grep -q "^MAX_PARALLEL_TICKETS" ${CONFIG_DIR}/system.conf 2>/dev/null; then
+    if ! grep -q "Parallel Execution Settings" ${CONFIG_DIR}/system.conf 2>/dev/null; then
+        echo "" >> ${CONFIG_DIR}/system.conf
+        echo "# Parallel Execution Settings (added in v2.82.0)" >> ${CONFIG_DIR}/system.conf
+    fi
+    echo "MAX_PARALLEL_TICKETS=5" >> ${CONFIG_DIR}/system.conf
+    echo "  Added: MAX_PARALLEL_TICKETS=5"
+    CONFIG_UPDATED=true
+fi
+
 if [ "$CONFIG_UPDATED" = true ]; then
     log_success "Config updated with new parameters"
 else

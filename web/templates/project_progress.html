@@ -491,8 +491,16 @@
                     <button class="suggestion-btn" onclick="askAssistant('Add ticket supervised')">🔐 Add Supervised</button>
                 </div>
                 <p style="color: var(--text-muted); font-size: 11px; margin-top: 12px;">
-                    <strong>Tip:</strong> When adding tickets, say "autonomous" (full access), "semi-autonomous" (smart sandbox), or "supervised" (asks everything).
-                    For multiple tickets, say "relaxed" (continuous) or "strict" (waits between).
+                    <strong>Execution modes:</strong> "autonomous" (full access), "semi-autonomous" (smart sandbox), or "supervised" (asks everything).
+                    For multiple tickets: "relaxed" (continuous) or "strict" (waits between).
+                </p>
+                <p style="color: var(--text-muted); font-size: 11px; margin-top: 8px;">
+                    <strong>Parallel execution:</strong> Tickets with same <code style="background: var(--bg-secondary); padding: 1px 4px; border-radius: 3px;">sequence_order</code> run in parallel (max 5).
+                    Use different files/folders for parallel tickets to avoid conflicts.
+                </p>
+                <p style="color: var(--text-muted); font-size: 11px; margin-top: 8px;">
+                    <strong>Dependencies:</strong> <code style="background: var(--bg-secondary); padding: 1px 4px; border-radius: 3px;">parent_ticket_id</code> = implicit dependency + context inheritance.
+                    <code style="background: var(--bg-secondary); padding: 1px 4px; border-radius: 3px;">depends_on</code> = explicit dependency (must complete first).
                 </p>
             </div>
         </div>

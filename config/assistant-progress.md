@@ -95,6 +95,23 @@ A ticket is **blocked** if:
 - Its `depends_on` tickets are not yet `done` or `skipped`
 - Its `parent_ticket_id` is not yet `done` or `skipped`
 
+### ⚠️ Dependency Errors (Creation Failures)
+
+If user tried to create tickets but got a dependency error:
+
+**Self-dependency:** Ticket tried to depend on itself
+- `depends_on` uses **1-indexed array position**
+- Position 1 cannot have `depends_on: [1]` (that's itself!)
+- Fix: Remove self-reference, only depend on positions < current position
+
+**Self-parent:** Ticket tried to be its own parent
+- `parent_sequence` uses **1-indexed array position** (like depends_on)
+- `parent_sequence: 1` on first ticket = self-reference (position 1 = itself)
+- Fix: Parent must be a ticket BEFORE this one in the array
+- Example: Position 2 can have `parent_sequence: 1`, but position 1 cannot
+
+**When these errors occur, ALL tickets in the batch are rejected!**
+
 ---
 
 ## ⚡ PARALLEL EXECUTION (IMPORTANT!)

@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="CodeHero">
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png">
+    <link rel="shortcut icon" href="/static/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+    <link rel="manifest" href="/static/manifest.json">
+    <title>Choose Interface - CodeHero</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #07070d;
+            --bg-secondary: #0d0d16;
+            --bg-card: rgba(18, 18, 32, 0.7);
+            --bg-card-hover: rgba(25, 25, 45, 0.8);
+            --border-subtle: rgba(99, 102, 241, 0.15);
+            --border-glow: rgba(99, 102, 241, 0.4);
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-primary: #6366f1;
+            --accent-secondary: #8b5cf6;
+            --accent-cyan: #22d3ee;
+            --accent-green: #10b981;
+            --glow-primary: 0 0 20px rgba(99, 102, 241, 0.3);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            padding-top: max(20px, env(safe-area-inset-top));
+            padding-bottom: max(20px, env(safe-area-inset-bottom));
+        }
+
+        .aurora-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            background: var(--bg-primary);
+            overflow: hidden;
+        }
+
+        .aurora-blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.5;
+            animation: float 20s ease-in-out infinite;
+        }
+
+        .aurora-blob:nth-child(1) {
+            width: 600px; height: 600px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.4) 0%, transparent 70%);
+            top: -200px; left: -100px;
+        }
+
+        .aurora-blob:nth-child(2) {
+            width: 500px; height: 500px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.3) 0%, transparent 70%);
+            top: 50%; right: -150px;
+            animation-delay: -5s; animation-duration: 25s;
+        }
+
+        .aurora-blob:nth-child(3) {
+            width: 400px; height: 400px;
+            background: radial-gradient(circle, rgba(34, 211, 238, 0.25) 0%, transparent 70%);
+            bottom: -100px; left: 30%;
+            animation-delay: -10s; animation-duration: 30s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(50px, -30px) scale(1.05); }
+            50% { transform: translate(-30px, 50px) scale(0.95); }
+            75% { transform: translate(-50px, -20px) scale(1.02); }
+        }
+
+        .choose-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .logo-icon {
+            width: 80px;
+            height: 96px;
+            margin: 0 auto 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .logo-icon svg {
+            width: 80px;
+            height: 96px;
+            filter: drop-shadow(0 0 20px rgba(99, 102, 241, 0.4));
+        }
+
+        .choose-header h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-cyan));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+
+        .choose-header p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        .choose-container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 700px;
+            width: 100%;
+        }
+
+        .choose-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-subtle);
+            border-radius: 16px;
+            padding: 32px 28px;
+            width: 100%;
+            max-width: 320px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: inherit;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .choose-card:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--border-glow);
+            transform: translateY(-4px);
+            box-shadow: var(--glow-primary);
+        }
+
+        .choose-card:active {
+            transform: translateY(-2px);
+        }
+
+        .choose-card-icon {
+            width: 72px;
+            height: 72px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            font-size: 32px;
+        }
+
+        .choose-card.console .choose-card-icon {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.2));
+            border: 1px solid rgba(99, 102, 241, 0.3);
+        }
+
+        .choose-card.chat .choose-card-icon {
+            background: linear-gradient(135deg, rgba(34, 211, 238, 0.2), rgba(16, 185, 129, 0.2));
+            border: 1px solid rgba(34, 211, 238, 0.3);
+        }
+
+        .choose-card h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .choose-card.console h2 {
+            color: var(--accent-primary);
+        }
+
+        .choose-card.chat h2 {
+            color: var(--accent-cyan);
+        }
+
+        .choose-card p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .choose-card .badge {
+            margin-top: 16px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .choose-card.console .badge {
+            background: rgba(99, 102, 241, 0.15);
+            color: var(--accent-primary);
+            border: 1px solid rgba(99, 102, 241, 0.3);
+        }
+
+        .choose-card.chat .badge {
+            background: rgba(34, 211, 238, 0.15);
+            color: var(--accent-cyan);
+            border: 1px solid rgba(34, 211, 238, 0.3);
+        }
+
+        .choose-footer {
+            margin-top: 40px;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        .choose-footer a {
+            color: var(--accent-primary);
+            text-decoration: none;
+        }
+
+        .choose-footer a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 600px) {
+            .choose-container {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .choose-card {
+                max-width: 100%;
+            }
+
+            .choose-header h1 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+    <script>
+        // Auto-redirect based on device
+        (function() {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+                || (window.innerWidth <= 768);
+            if (isMobile) {
+                window.location.replace('/chat');
+            } else {
+                // Desktop goes directly to Console
+                window.location.replace('/dashboard');
+            }
+        })();
+    </script>
+</head>
+<body>
+    <div class="aurora-bg">
+        <div class="aurora-blob"></div>
+        <div class="aurora-blob"></div>
+        <div class="aurora-blob"></div>
+    </div>
+
+    <div class="choose-header">
+        <div class="logo-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 120">
+                <defs>
+                    <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style="stop-color:#6366f1"/>
+                        <stop offset="100%" style="stop-color:#4f46e5"/>
+                    </linearGradient>
+                    <linearGradient id="headGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style="stop-color:#818cf8"/>
+                        <stop offset="100%" style="stop-color:#6366f1"/>
+                    </linearGradient>
+                    <linearGradient id="capeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style="stop-color:#a78bfa"/>
+                        <stop offset="100%" style="stop-color:#7c3aed"/>
+                    </linearGradient>
+                </defs>
+                <path d="M25 45 L50 40 L75 45 L85 110 L50 95 L15 110 Z" fill="url(#capeGrad)"/>
+                <rect x="32" y="50" width="36" height="50" rx="8" fill="url(#bodyGrad)"/>
+                <text x="50" y="82" font-family="monospace" font-size="14" font-weight="bold" fill="#22d3ee" text-anchor="middle">&lt;/&gt;</text>
+                <circle cx="50" cy="30" r="22" fill="url(#headGrad)"/>
+                <rect x="35" y="24" width="30" height="12" rx="4" fill="#0f0f23"/>
+                <rect x="38" y="27" width="8" height="6" rx="2" fill="#22d3ee"/>
+                <rect x="54" y="27" width="8" height="6" rx="2" fill="#22d3ee"/>
+                <rect x="20" y="55" width="12" height="30" rx="4" fill="url(#bodyGrad)" transform="rotate(15, 26, 55)"/>
+                <rect x="68" y="55" width="12" height="30" rx="4" fill="url(#bodyGrad)" transform="rotate(-15, 74, 55)"/>
+            </svg>
+        </div>
+        <h1>Welcome, {{ username }}</h1>
+        <p>Choose your interface</p>
+    </div>
+
+    <div class="choose-container">
+        <a href="/dashboard" class="choose-card console">
+            <div class="choose-card-icon">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-primary)">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                    <line x1="8" y1="21" x2="16" y2="21"></line>
+                    <line x1="12" y1="17" x2="12" y2="21"></line>
+                </svg>
+            </div>
+            <h2>Console</h2>
+            <p>Full dashboard with all features. Best for desktop and detailed project management.</p>
+            <span class="badge">Desktop</span>
+        </a>
+
+        <a href="/chat" class="choose-card chat">
+            <div class="choose-card-icon">
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--accent-cyan)">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+            </div>
+            <h2>Chat</h2>
+            <p>Mobile-friendly chat interface. Quick access to conversations and ticket management.</p>
+            <span class="badge">Mobile</span>
+        </a>
+    </div>
+
+    <div class="choose-footer">
+        <p>Logged in as <strong>{{ username }}</strong> &middot; <a href="/logout">Logout</a></p>
+    </div>
+</body>
+</html>

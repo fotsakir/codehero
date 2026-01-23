@@ -314,6 +314,82 @@ No page should be accessible without authentication!"
 
 ---
 
+## ⚠️ DEPENDENCY RULES (CRITICAL!)
+
+### How `depends_on` Works
+
+`depends_on` uses **1-indexed position in the array**, NOT sequence_order!
+
+```
+tickets: [
+  { title: "Setup DB", sequence_order: 1 },        ← Position 1
+  { title: "Install deps", sequence_order: 1 },    ← Position 2
+  { title: "Create API", depends_on: [1, 2] }      ← Waits for positions 1 AND 2
+]
+```
+
+### ❌ SELF-REFERENCE ERRORS
+
+**The system will REJECT the entire batch if:**
+
+1. **Self-dependency:** A ticket depends on itself
+   ```json
+   ❌ WRONG:
+   tickets: [
+     {"title": "Setup", "depends_on": [1]}  ← Position 1 depends on 1 = ITSELF!
+   ]
+
+   ✅ CORRECT:
+   tickets: [
+     {"title": "Setup"},                           ← Position 1 (no depends_on)
+     {"title": "Build", "depends_on": [1]}         ← Position 2 depends on 1 ✓
+   ]
+   ```
+
+2. **Self-parent:** A ticket is its own parent
+   ```json
+   ❌ WRONG:
+   tickets: [
+     {"title": "Main task", "parent_sequence": 1}  ← Position 1's parent is 1 = ITSELF!
+   ]
+
+   ✅ CORRECT:
+   tickets: [
+     {"title": "Main task"},                       ← Position 1 (parent ticket)
+     {"title": "Sub-task", "parent_sequence": 1}   ← Position 2's parent is 1 ✓
+   ]
+   ```
+
+**When this happens:**
+- **NO tickets are created** (all rolled back)
+- Error message: `"Skipped self-dependency: TICKET cannot depend on itself"`
+- Or: `"Skipped self-parent: TICKET cannot be its own parent"`
+
+### ✅ CORRECT DEPENDENCY EXAMPLES
+
+```
+tickets: [
+  { title: "Setup DB", sequence_order: 1 },                    ← Position 1
+  { title: "Install deps", sequence_order: 1 },                ← Position 2
+  { title: "Create API", sequence_order: 2, depends_on: [1] }, ← Waits for DB (position 1)
+  { title: "Create UI", sequence_order: 2, depends_on: [2] },  ← Waits for deps (position 2)
+  { title: "Integration", sequence_order: 3, depends_on: [3, 4] } ← Waits for API & UI
+]
+```
+
+### Quick Rules:
+
+| Rule | Example |
+|------|---------|
+| Position 1 can depend on: | Nothing (it's first) |
+| Position 2 can depend on: | [1] only |
+| Position 3 can depend on: | [1], [2], or [1, 2] |
+| Position N can depend on: | Any position < N |
+
+**NEVER:** `depends_on: [N]` where N = current position (self-dependency!)
+
+---
+
 ## LANGUAGE
 
 Respond in the same language the user uses (Greek or English).

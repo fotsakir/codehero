@@ -387,6 +387,165 @@
         body.popup-mode .header h1 {
             font-size: 1rem;
         }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            body {
+                padding-top: env(safe-area-inset-top);
+                padding-bottom: env(safe-area-inset-bottom);
+            }
+
+            .header {
+                padding: 10px 12px;
+                flex-direction: column;
+                gap: 10px;
+                align-items: stretch;
+            }
+
+            .header h1 {
+                font-size: 1rem;
+                text-align: center;
+            }
+
+            .header-controls {
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 8px;
+            }
+
+            .header-controls .btn {
+                padding: 10px 12px;
+                font-size: 12px;
+                min-height: 44px;
+            }
+
+            .header-controls .model-select {
+                padding: 10px 8px;
+                font-size: 12px;
+                min-height: 44px;
+            }
+
+            /* Hide less important buttons on mobile */
+            .header-controls .btn-back:not([href="/dashboard"]):not([href="/chat"]) {
+                display: none;
+            }
+
+            .terminal-wrapper {
+                padding: 8px;
+            }
+
+            .terminal-container {
+                border-radius: 8px;
+            }
+
+            .terminal-header {
+                padding: 8px 10px;
+            }
+
+            .terminal-title {
+                font-size: 11px;
+            }
+
+            .dot {
+                width: 10px;
+                height: 10px;
+            }
+
+            .context-bar {
+                padding: 8px 12px;
+            }
+
+            .context-warning {
+                font-size: 11px;
+                padding: 8px 10px;
+            }
+
+            .context-controls {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .context-controls .model-select {
+                flex: 1;
+                min-width: 140px;
+                font-size: 12px;
+            }
+
+            .context-controls .btn {
+                flex: 1;
+                min-height: 44px;
+            }
+
+            .input-area {
+                padding: 10px 12px;
+                padding-bottom: max(10px, env(safe-area-inset-bottom));
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+
+            .input-area input[type="text"] {
+                flex: 1 1 100%;
+                padding: 14px 16px;
+                font-size: 16px; /* Prevent iOS zoom */
+                min-height: 48px;
+                border-radius: 24px;
+            }
+
+            .input-area .voice-btn,
+            .input-area .send-btn {
+                min-width: 48px;
+                min-height: 48px;
+                padding: 12px;
+                border-radius: 50%;
+                font-size: 16px;
+            }
+
+            .input-area .send-btn {
+                border-radius: 24px;
+                padding: 12px 20px;
+            }
+
+            /* Hide voice language select on mobile - use auto */
+            .input-area #voiceLang {
+                display: none;
+            }
+
+            .status-bar {
+                padding: 8px 12px;
+                padding-bottom: max(8px, env(safe-area-inset-bottom));
+                flex-direction: column;
+                gap: 4px;
+                text-align: center;
+                font-size: 11px;
+            }
+
+            .status-indicator {
+                justify-content: center;
+            }
+        }
+
+        /* Extra small screens */
+        @media (max-width: 400px) {
+            .header-controls {
+                gap: 6px;
+            }
+
+            .header-controls .btn {
+                padding: 8px 10px;
+                font-size: 11px;
+            }
+
+            /* Only show Start/Stop and model on very small screens */
+            .header-controls .btn-back[href="/dashboard"],
+            .header-controls .btn-back[href="/chat"] {
+                padding: 8px;
+            }
+
+            .header-controls .btn-back[href="/dashboard"] span,
+            .header-controls .btn-back[href="/chat"] span {
+                display: none;
+            }
+        }
     </style>
 </head>
 <body class="{% if popup %}popup-mode{% endif %}">
@@ -1184,6 +1343,24 @@ Ask the user which project they want to check!`
                 navigator.sendBeacon('/api/claude/chat/stop/' + sessionId);
             }
         });
+
+        // Mobile: Change back button to go to Chat
+        (function() {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+                || (window.innerWidth <= 768);
+            if (isMobile) {
+                const backBtn = document.querySelector('.btn-back[href="/dashboard"]');
+                if (backBtn) {
+                    backBtn.href = '/chat';
+                    backBtn.innerHTML = `
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path d="M19 12H5M12 19l-7-7 7-7"/>
+                        </svg>
+                        Back
+                    `;
+                }
+            }
+        })();
     </script>
 </body>
 </html>

@@ -789,13 +789,16 @@ def handle_create_project(args: Dict[str, Any]) -> Dict[str, Any]:
             db_user = None
             db_password = None
 
+        # Generate secure key for project URL authentication
+        secure_key = secrets.token_urlsafe(24)[:32]
+
         # Insert project
         cursor.execute("""
             INSERT INTO projects (name, description, project_type, tech_stack, web_path, app_path, code, status,
-                                  db_name, db_user, db_password, db_host, ai_model)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, 'active', %s, %s, %s, %s, %s)
+                                  db_name, db_user, db_password, db_host, ai_model, secure_key)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, 'active', %s, %s, %s, %s, %s, %s)
         """, (name, description, project_type, tech_stack, web_path, app_path, code,
-              db_name, db_user, db_password, db_host, ai_model))
+              db_name, db_user, db_password, db_host, ai_model, secure_key))
 
         conn.commit()
         project_id = cursor.lastrowid
@@ -819,6 +822,7 @@ def handle_create_project(args: Dict[str, Any]) -> Dict[str, Any]:
             "db_created": db_created,
             "git_initialized": git_initialized,
             "ai_model": ai_model,
+            "secure_key": secure_key,
             "message": msg
         }
 
@@ -1356,7 +1360,7 @@ def handle_bulk_create_tickets(args: Dict[str, Any]) -> Dict[str, Any]:
                   execution_mode, deps_include_awaiting, ticket_ai_model))
 
             ticket_id = cursor.lastrowid
-            ticket_id_map[sequence_order] = ticket_id
+            ticket_id_map[i + 1] = ticket_id  # Map array position (1-indexed) to ticket_id
 
             created_tickets.append({
                 "ticket_id": ticket_id,
@@ -1374,29 +1378,49 @@ def handle_bulk_create_tickets(args: Dict[str, Any]) -> Dict[str, Any]:
                 """, (ticket_id, description))
 
         # Handle dependencies and parent tickets (second pass)
+        warnings = []
         for i, ticket_data in enumerate(tickets_data):
             if i >= len(created_tickets):
                 continue
             ticket_id = created_tickets[i]['ticket_id']
+            ticket_number = created_tickets[i]['ticket_number']
 
             # Handle dependencies
             depends_on = ticket_data.get('depends_on', [])
             if depends_on:
                 for dep_seq in depends_on:
-                    # dep_seq is a sequence order number
+                    # dep_seq is a sequence order number (1-indexed position in array)
                     if dep_seq in ticket_id_map:
-                        cursor.execute("""
-                            INSERT IGNORE INTO ticket_dependencies (ticket_id, depends_on_ticket_id)
-                            VALUES (%s, %s)
-                        """, (ticket_id, ticket_id_map[dep_seq]))
+                        depends_on_id = ticket_id_map[dep_seq]
+                        # Prevent self-dependency
+                        if depends_on_id == ticket_id:
+                            warnings.append(f"Skipped self-dependency: {ticket_number} cannot depend on itself (depends_on:[{dep_seq}])")
+                        else:
+                            cursor.execute("""
+                                INSERT IGNORE INTO ticket_dependencies (ticket_id, depends_on_ticket_id)
+                                VALUES (%s, %s)
+                            """, (ticket_id, depends_on_id))
 
             # Handle parent ticket
             parent_sequence = ticket_data.get('parent_sequence')
             if parent_sequence and parent_sequence in ticket_id_map:
                 parent_id = ticket_id_map[parent_sequence]
-                cursor.execute("""
-                    UPDATE tickets SET parent_ticket_id = %s WHERE id = %s
-                """, (parent_id, ticket_id))
+                # Prevent self-parent
+                if parent_id == ticket_id:
+                    warnings.append(f"Skipped self-parent: {ticket_number} cannot be its own parent (parent_sequence:{parent_sequence})")
+                else:
+                    cursor.execute("""
+                        UPDATE tickets SET parent_ticket_id = %s WHERE id = %s
+                    """, (parent_id, ticket_id))
+
+        # If there are warnings (e.g., self-dependencies), rollback and return error
+        if warnings:
+            conn.rollback()
+            return {"content": [{"type": "text", "text": json.dumps({
+                "success": False,
+                "errors": warnings,
+                "message": "Dependency errors detected. No tickets were created. Please fix the depends_on values and try again."
+            }, indent=2)}]}
 
         conn.commit()
 

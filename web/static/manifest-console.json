@@ -1,0 +1,51 @@
+{
+  "id": "/dashboard",
+  "name": "CodeHero Console",
+  "short_name": "Console",
+  "description": "CodeHero Dashboard - Full Project Management",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#07070d",
+  "theme_color": "#07070d",
+  "orientation": "landscape",
+  "categories": ["developer", "productivity"],
+  "icons": [
+    {
+      "src": "/static/favicon-32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/static/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/static/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "url": "/dashboard",
+      "icons": [{"src": "/static/icon-192.png", "sizes": "192x192"}]
+    }
+  ]
+}

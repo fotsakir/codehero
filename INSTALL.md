@@ -12,7 +12,7 @@
 
 ```bash
 cd /root
-unzip codehero-2.82.0.zip
+unzip codehero-2.82.1.zip
 cd codehero
 ```
 
@@ -129,8 +129,8 @@ sudo systemctl restart codehero-web codehero-daemon
 ```bash
 # Download and extract new version
 cd /root
-wget https://github.com/fotsakir/codehero/releases/latest/download/codehero-2.82.0.zip
-unzip codehero-2.82.0.zip
+wget https://github.com/fotsakir/codehero/releases/latest/download/codehero-2.82.1.zip
+unzip codehero-2.82.1.zip
 cd codehero
 
 # Preview what will change (recommended)

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=0.5, maximum-scale=1.0, user-scalable=yes">
     <meta name="theme-color" content="#6366f1">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -12,7 +12,7 @@
     <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png">
     <link rel="shortcut icon" href="/static/favicon.ico">
     <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
-    <link rel="manifest" href="/static/manifest.json">
+    <link rel="manifest" href="/static/manifest-console.json">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -278,6 +278,15 @@
         .claude-btn-assistant:hover {
             transform: translateY(-1px);
             box-shadow: var(--glow-primary);
+        }
+        .claude-btn-chat {
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-green));
+            border: none;
+            color: white;
+        }
+        .claude-btn-chat:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--glow-cyan);
         }
         .claude-btn:hover {
             border-color: var(--border-glow);
@@ -1129,6 +1138,12 @@
             <button class="claude-btn claude-btn-settings" onclick="openSettingsModal()" title="Settings">
                 ⚙️
             </button>
+            <a href="/chat" class="claude-btn claude-btn-chat" title="Mobile Chat Interface">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                </svg>
+                Chat
+            </a>
             <a href="/logout" class="nav-link">Logout</a>
         </div>
     </div>
@@ -2633,10 +2648,89 @@
 
         // Register Service Worker for PWA
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/static/sw.js')
-                .then(reg => console.log('SW registered'))
+            navigator.serviceWorker.register('/static/sw-console.js')
+                .then(reg => console.log('SW Console registered'))
                 .catch(err => console.log('SW failed:', err));
         }
+
+        // Mobile Console: Landscape, Fullscreen, Zoom
+        (function() {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+                || (window.innerWidth <= 1024 && 'ontouchstart' in window);
+
+            if (isMobile) {
+                // Apply 50% zoom for mobile to show full dashboard
+                document.body.style.zoom = '0.5';
+                document.body.style.transform = 'scale(0.5)';
+                document.body.style.transformOrigin = 'top left';
+                document.body.style.width = '200%';
+                document.body.style.minHeight = '200vh';
+
+                // Request fullscreen on first touch
+                let fullscreenRequested = false;
+                document.addEventListener('touchstart', function requestFullscreen() {
+                    if (!fullscreenRequested && document.documentElement.requestFullscreen) {
+                        document.documentElement.requestFullscreen().catch(() => {});
+                        fullscreenRequested = true;
+                    }
+                }, { once: true });
+
+                // Lock to landscape if supported
+                if (screen.orientation && screen.orientation.lock) {
+                    screen.orientation.lock('landscape').catch(() => {
+                        // Orientation lock not supported or not allowed
+                        console.log('Landscape lock not available');
+                    });
+                }
+
+                // Show rotation hint if in portrait
+                function checkOrientation() {
+                    const isPortrait = window.innerHeight > window.innerWidth;
+                    let hint = document.getElementById('rotate-hint');
+
+                    if (isPortrait && !hint) {
+                        hint = document.createElement('div');
+                        hint.id = 'rotate-hint';
+                        hint.innerHTML = `
+                            <div style="
+                                position: fixed;
+                                top: 0; left: 0; right: 0; bottom: 0;
+                                background: rgba(7, 7, 13, 0.95);
+                                display: flex;
+                                flex-direction: column;
+                                align-items: center;
+                                justify-content: center;
+                                z-index: 99999;
+                                color: #e2e8f0;
+                                font-family: Inter, sans-serif;
+                                text-align: center;
+                                padding: 20px;
+                            ">
+                                <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#6366f1" stroke-width="2" style="margin-bottom: 20px; animation: rotate-phone 2s infinite;">
+                                    <rect x="4" y="2" width="16" height="20" rx="2"/>
+                                    <line x1="12" y1="18" x2="12" y2="18"/>
+                                </svg>
+                                <div style="font-size: 1.2rem; font-weight: 600; margin-bottom: 8px;">Rotate your device</div>
+                                <div style="color: #94a3b8; font-size: 0.9rem;">Console works best in landscape mode</div>
+                            </div>
+                            <style>
+                                @keyframes rotate-phone {
+                                    0%, 100% { transform: rotate(0deg); }
+                                    50% { transform: rotate(90deg); }
+                                }
+                            </style>
+                        `;
+                        document.body.appendChild(hint);
+                    } else if (!isPortrait && hint) {
+                        hint.remove();
+                    }
+                }
+
+                window.addEventListener('resize', checkOrientation);
+                window.addEventListener('orientationchange', checkOrientation);
+                checkOrientation();
+            }
+        })();
     </script>
 </body>
 </html>

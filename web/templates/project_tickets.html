@@ -173,7 +173,7 @@
 
         .status-dot.in_progress { background: var(--accent-cyan); box-shadow: 0 0 6px var(--accent-cyan); }
         .status-dot.open, .status-dot.new { background: var(--accent-orange); }
-        .status-dot.completed, .status-dot.closed { background: var(--accent-green); }
+        .status-dot.done, .status-dot.completed, .status-dot.closed { background: var(--accent-green); }
         .status-dot.failed { background: var(--accent-red); }
         .status-dot.awaiting_input { background: var(--accent-secondary); animation: pulse 2s infinite; }
 
@@ -458,7 +458,7 @@
                         <option value="open">Open</option>
                         <option value="in_progress">In Progress</option>
                         <option value="awaiting_input">Awaiting</option>
-                        <option value="completed">Completed</option>
+                        <option value="done">Completed</option>
                     </select>
                     <a href="/project/{{ project.id if project else '' }}#new-ticket" class="new-ticket-btn">+ New</a>
                 </div>

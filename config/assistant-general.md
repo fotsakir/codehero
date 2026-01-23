@@ -63,6 +63,31 @@ seq=2: [Homepage, About, Contact]               → ALL run parallel
 
 **Never ask "do you want parallel?"** - Just design for maximum parallelism!
 
+## ⚠️ DEPENDENCY RULES (CRITICAL!)
+
+`depends_on` uses **1-indexed array position** (NOT sequence_order, NOT ticket ID):
+
+```json
+tickets: [
+  {"title": "Setup DB"},                          ← Position 1
+  {"title": "Install deps"},                      ← Position 2
+  {"title": "Build API", "depends_on": [1, 2]}    ← Waits for positions 1 AND 2
+]
+```
+
+**❌ SELF-DEPENDENCY ERROR - ALL TICKETS REJECTED:**
+```json
+❌ WRONG: {"title": "Setup", "depends_on": [1]}  ← Position 1 IS this ticket!
+```
+
+**Quick Rule:** Ticket at position N can ONLY depend on positions < N
+
+**Same applies to `parent_sequence`:**
+```json
+❌ WRONG: {"title": "Main", "parent_sequence": 1}  ← Position 1's parent is 1 = ITSELF!
+✅ CORRECT: Position 1 = parent, Position 2+ can have parent_sequence: 1
+```
+
 ## EXAMPLES OF USING MCP TOOLS:
 
 User: "Show me my projects"

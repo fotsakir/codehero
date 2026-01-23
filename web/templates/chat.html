@@ -1,0 +1,2033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+    <meta name="theme-color" content="#07070d">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="CodeHero">
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png">
+    <link rel="shortcut icon" href="/static/favicon.ico">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png">
+    <link rel="manifest" href="/static/manifest-chat.json">
+    <title>Chat - CodeHero</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="/static/socket.io.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #07070d;
+            --bg-secondary: #0d0d16;
+            --bg-card: rgba(18, 18, 32, 0.85);
+            --bg-card-hover: rgba(25, 25, 45, 0.9);
+            --bg-input: rgba(0, 0, 0, 0.4);
+            --border-subtle: rgba(99, 102, 241, 0.15);
+            --border-glow: rgba(99, 102, 241, 0.4);
+            --text-primary: #e2e8f0;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-primary: #6366f1;
+            --accent-secondary: #8b5cf6;
+            --accent-cyan: #22d3ee;
+            --accent-green: #10b981;
+            --accent-orange: #f59e0b;
+            --accent-red: #ef4444;
+            --glow-primary: 0 0 20px rgba(99, 102, 241, 0.3);
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            touch-action: pan-y;
+        }
+
+        /* Aurora Background */
+        .aurora-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            background: var(--bg-primary);
+            overflow: hidden;
+        }
+
+        .aurora-blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.4;
+            animation: float 25s ease-in-out infinite;
+        }
+
+        .aurora-blob:nth-child(1) {
+            width: 400px; height: 400px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.35) 0%, transparent 70%);
+            top: -150px; left: -100px;
+        }
+
+        .aurora-blob:nth-child(2) {
+            width: 350px; height: 350px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.25) 0%, transparent 70%);
+            top: 40%; right: -100px;
+            animation-delay: -8s;
+        }
+
+        .aurora-blob:nth-child(3) {
+            width: 300px; height: 300px;
+            background: radial-gradient(circle, rgba(34, 211, 238, 0.2) 0%, transparent 70%);
+            bottom: -50px; left: 20%;
+            animation-delay: -15s;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(30px, -20px) scale(1.03); }
+            66% { transform: translate(-20px, 30px) scale(0.97); }
+        }
+
+        /* App Container */
+        .app {
+            height: 100%;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Header */
+        .chat-header {
+            background: rgba(13, 13, 22, 0.95);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-subtle);
+            padding: 12px 16px;
+            padding-top: calc(12px + var(--safe-top));
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-height: 56px;
+            z-index: 100;
+        }
+
+        .header-back {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .header-back:hover {
+            background: var(--bg-card);
+        }
+
+        .header-back:active {
+            transform: scale(0.95);
+        }
+
+        .header-title {
+            flex: 1;
+            font-size: 1.1rem;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+        }
+
+        .header-title small {
+            font-weight: 400;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+
+        .header-btn {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 10px;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .header-btn:hover {
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
+
+        .header-btn.active {
+            background: var(--bg-card);
+            color: var(--accent-primary);
+        }
+
+        .header-btn.assistant {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+        }
+
+        .header-btn.assistant:hover {
+            box-shadow: var(--glow-primary);
+        }
+
+        /* Views Container */
+        .views {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .view {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .view.active {
+            display: flex;
+        }
+
+        /* Search & Filters Bar */
+        .search-filters {
+            padding: 12px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: rgba(13, 13, 22, 0.6);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            background: var(--bg-input);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 0 14px;
+            transition: border-color 0.2s;
+        }
+
+        .search-box:focus-within {
+            border-color: var(--accent-primary);
+        }
+
+        .search-box svg {
+            color: var(--text-muted);
+            flex-shrink: 0;
+        }
+
+        .search-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            padding: 12px 10px;
+            font-size: 16px;
+            color: var(--text-primary);
+            font-family: inherit;
+        }
+
+        .search-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .search-input:focus {
+            outline: none;
+        }
+
+        .filter-chips {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .filter-chip {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .filter-chip:hover {
+            border-color: var(--border-glow);
+            color: var(--text-primary);
+        }
+
+        .filter-chip.active {
+            background: rgba(99, 102, 241, 0.15);
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+
+        /* Scrollable Content */
+        .view-content {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+            padding: 12px 16px;
+            padding-bottom: calc(80px + var(--safe-bottom));
+        }
+
+        /* Project/Ticket Cards */
+        .card-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .card:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--border-glow);
+        }
+
+        .card:active {
+            transform: scale(0.98);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .card-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .card-icon.project {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.2));
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            color: var(--accent-primary);
+        }
+
+        .card-icon.ticket {
+            background: linear-gradient(135deg, rgba(34, 211, 238, 0.2), rgba(16, 185, 129, 0.2));
+            border: 1px solid rgba(34, 211, 238, 0.3);
+            color: var(--accent-cyan);
+        }
+
+        .card-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .card-title {
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .card-meta {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .card-badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .card-description {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .card-url {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 10px;
+            padding: 8px 12px;
+            background: rgba(34, 211, 238, 0.08);
+            border: 1px solid rgba(34, 211, 238, 0.15);
+            border-radius: 8px;
+            font-size: 0.8rem;
+            color: var(--accent-cyan);
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .card-url:hover {
+            background: rgba(34, 211, 238, 0.15);
+        }
+
+        .card-url span {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Status badges */
+        .badge-open, .badge-new, .badge-pending {
+            background: rgba(245, 158, 11, 0.15);
+            color: var(--accent-orange);
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+
+        .badge-in_progress {
+            background: rgba(34, 211, 238, 0.15);
+            color: var(--accent-cyan);
+            border: 1px solid rgba(34, 211, 238, 0.3);
+        }
+
+        .badge-awaiting_input {
+            background: rgba(139, 92, 246, 0.15);
+            color: var(--accent-secondary);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+        }
+
+        .badge-completed, .badge-done {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--accent-green);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .badge-closed, .badge-skipped {
+            background: rgba(100, 116, 139, 0.15);
+            color: var(--text-muted);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+        }
+
+        .badge-active {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--accent-green);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .badge-archived {
+            background: rgba(100, 116, 139, 0.15);
+            color: var(--text-muted);
+            border: 1px solid rgba(100, 116, 139, 0.3);
+        }
+
+        /* Ticket Number Badge */
+        .ticket-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: rgba(99, 102, 241, 0.15);
+            color: var(--accent-primary);
+            white-space: nowrap;
+        }
+
+        /* FAB Button */
+        .fab {
+            position: fixed;
+            bottom: calc(24px + var(--safe-bottom));
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            z-index: 90;
+        }
+
+        .fab:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 28px rgba(99, 102, 241, 0.5);
+        }
+
+        .fab:active {
+            transform: scale(0.95);
+        }
+
+        /* Conversation View */
+        .conversation {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+            border-bottom-right-radius: 6px;
+        }
+
+        .message.assistant {
+            align-self: flex-start;
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-bottom-left-radius: 6px;
+        }
+
+        .message.system {
+            align-self: center;
+            max-width: 90%;
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.2);
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            text-align: center;
+            padding: 10px 16px;
+        }
+
+        .message.tool_use, .message.tool_result {
+            align-self: flex-start;
+            max-width: 90%;
+            background: rgba(34, 211, 238, 0.08);
+            border: 1px solid rgba(34, 211, 238, 0.15);
+            font-size: 0.85rem;
+            padding: 10px 14px;
+            border-radius: 10px;
+        }
+
+        .message .tool-name {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--accent-cyan);
+            margin-bottom: 4px;
+        }
+
+        .message .tool-content {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            max-height: 100px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .message-time {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            margin-top: 6px;
+            opacity: 0.8;
+        }
+
+        .message.user .message-time {
+            color: rgba(255,255,255,0.7);
+        }
+
+        /* Ticket Info Bar */
+        .ticket-info-bar {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border-subtle);
+            padding: 10px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .ticket-info-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .ticket-info-bar .ticket-title {
+            font-weight: 500;
+            font-size: 0.9rem;
+            flex: 1;
+            min-width: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .ticket-info-bar .web-path {
+            font-size: 0.8rem;
+            color: var(--accent-cyan);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            background: rgba(34, 211, 238, 0.1);
+            border-radius: 6px;
+            flex-shrink: 0;
+        }
+
+        .ticket-info-bar .web-path:hover {
+            background: rgba(34, 211, 238, 0.2);
+        }
+
+        /* Input Bar */
+        .input-bar {
+            background: rgba(13, 13, 22, 0.95);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid var(--border-subtle);
+            padding: 12px 16px;
+            padding-bottom: calc(12px + var(--safe-bottom));
+            display: flex;
+            align-items: flex-end;
+            gap: 12px;
+        }
+
+        .input-wrapper {
+            flex: 1;
+            position: relative;
+        }
+
+        .message-input {
+            width: 100%;
+            background: var(--bg-input);
+            border: 1px solid var(--border-subtle);
+            border-radius: 24px;
+            padding: 12px 18px;
+            font-size: 16px;
+            color: var(--text-primary);
+            font-family: inherit;
+            resize: none;
+            max-height: 120px;
+            line-height: 1.4;
+            transition: border-color 0.2s;
+        }
+
+        .message-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .message-input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+
+        .send-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border: none;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .send-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .send-btn:active {
+            transform: scale(0.95);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* New Ticket/Project Form */
+        .form-container {
+            padding: 20px 16px;
+            padding-bottom: calc(20px + var(--safe-bottom));
+            overflow-y: auto;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+        }
+
+        .form-input, .form-textarea, .form-select {
+            width: 100%;
+            background: var(--bg-input);
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 14px 16px;
+            font-size: 16px;
+            color: var(--text-primary);
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        .form-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 20px;
+            padding-right: 44px;
+        }
+
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+            line-height: 1.5;
+        }
+
+        .form-input::placeholder, .form-textarea::placeholder {
+            color: var(--text-muted);
+        }
+
+        .form-input:focus, .form-textarea:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+
+        .form-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        .form-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 14px 20px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+        }
+
+        .btn-primary:hover {
+            box-shadow: var(--glow-primary);
+        }
+
+        .btn-secondary {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-card-hover);
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        /* Divider */
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin: 20px 0;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .divider::before, .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border-subtle);
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 16px;
+            opacity: 0.5;
+        }
+
+        .empty-state h3 {
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .empty-state p {
+            font-size: 0.9rem;
+        }
+
+        /* Loading */
+        .loading {
+            display: flex;
+            justify-content: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--border-subtle);
+            border-top-color: var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: calc(80px + var(--safe-bottom));
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            z-index: 1000;
+            opacity: 0;
+            transition: all 0.3s ease;
+            pointer-events: none;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        .toast.error {
+            border-color: rgba(239, 68, 68, 0.3);
+            background: rgba(239, 68, 68, 0.15);
+        }
+
+        /* Typing indicator */
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 12px 16px;
+            align-items: center;
+            align-self: flex-start;
+            background: var(--bg-card);
+            border-radius: 18px;
+            border-bottom-left-radius: 6px;
+        }
+
+        .typing-indicator span {
+            width: 8px;
+            height: 8px;
+            background: var(--accent-cyan);
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out;
+        }
+
+        .typing-indicator span:nth-child(1) { animation-delay: 0s; }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+            30% { transform: translateY(-6px); opacity: 1; }
+        }
+
+        /* Bottom Sheet Menu */
+        .bottom-sheet {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-secondary);
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            padding: 20px 16px;
+            padding-bottom: calc(20px + var(--safe-bottom));
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+            z-index: 200;
+        }
+
+        .bottom-sheet.show {
+            transform: translateY(0);
+        }
+
+        .bottom-sheet-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 199;
+        }
+
+        .bottom-sheet-overlay.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .bottom-sheet-handle {
+            width: 40px;
+            height: 4px;
+            background: var(--text-muted);
+            border-radius: 2px;
+            margin: 0 auto 16px;
+        }
+
+        .bottom-sheet-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .bottom-sheet-option {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .bottom-sheet-option:hover {
+            background: var(--bg-card);
+        }
+
+        .bottom-sheet-option svg {
+            color: var(--accent-primary);
+        }
+
+        .bottom-sheet-option span {
+            font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="aurora-bg">
+        <div class="aurora-blob"></div>
+        <div class="aurora-blob"></div>
+        <div class="aurora-blob"></div>
+    </div>
+
+    <div class="app">
+        <!-- Header (dynamic) -->
+        <header class="chat-header">
+            <button class="header-back" id="backBtn" style="display: none;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+            </button>
+            <h1 class="header-title" id="headerTitle">Projects</h1>
+            <div class="header-actions">
+                <a href="/claude-assistant" class="header-btn assistant" title="AI Assistant">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                    </svg>
+                </a>
+                <a href="/dashboard" class="header-btn" title="Console">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                        <line x1="8" y1="21" x2="16" y2="21"></line>
+                        <line x1="12" y1="17" x2="12" y2="21"></line>
+                    </svg>
+                </a>
+            </div>
+        </header>
+
+        <!-- Views -->
+        <div class="views">
+            <!-- Projects View -->
+            <div class="view active" id="viewProjects">
+                <div class="search-filters">
+                    <div class="search-box">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                        <input type="text" class="search-input" id="projectSearch" placeholder="Search projects...">
+                    </div>
+                    <div class="filter-chips">
+                        <span class="filter-chip active" data-filter="active">Active</span>
+                        <span class="filter-chip" data-filter="archived">Archived</span>
+                        <span class="filter-chip" data-filter="all">All</span>
+                    </div>
+                </div>
+                <div class="view-content">
+                    <div class="card-list" id="projectsList">
+                        <div class="loading"><div class="spinner"></div></div>
+                    </div>
+                </div>
+                <button class="fab" id="fabNewProject" title="New Project">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Tickets View -->
+            <div class="view" id="viewTickets">
+                <div class="search-filters">
+                    <div class="search-box">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                        <input type="text" class="search-input" id="ticketSearch" placeholder="Search tickets...">
+                    </div>
+                    <div class="filter-chips" id="ticketFilters">
+                        <span class="filter-chip active" data-filter="all">All</span>
+                        <span class="filter-chip" data-filter="open">Open</span>
+                        <span class="filter-chip" data-filter="in_progress">In Progress</span>
+                        <span class="filter-chip" data-filter="awaiting">Awaiting</span>
+                        <span class="filter-chip" data-filter="done">Completed</span>
+                    </div>
+                </div>
+                <div class="view-content">
+                    <div class="card-list" id="ticketsList">
+                        <div class="loading"><div class="spinner"></div></div>
+                    </div>
+                </div>
+                <button class="fab" id="fabNewTicket" title="New Ticket">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Conversation View -->
+            <div class="view" id="viewConversation">
+                <div class="ticket-info-bar" id="ticketInfoBar">
+                    <div class="ticket-info-left">
+                        <span class="card-badge" id="ticketStatusBadge"></span>
+                        <span class="ticket-title" id="ticketTitle"></span>
+                    </div>
+                    <a class="web-path" id="webPathLink" href="#" target="_blank" style="display: none;">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                            <polyline points="15 3 21 3 21 9"></polyline>
+                            <line x1="10" y1="14" x2="21" y2="3"></line>
+                        </svg>
+                        <span id="webPathText"></span>
+                    </a>
+                </div>
+                <div class="conversation" id="conversation">
+                    <div class="loading"><div class="spinner"></div></div>
+                </div>
+                <div class="input-bar">
+                    <div class="input-wrapper">
+                        <textarea class="message-input" id="messageInput" placeholder="Type a message..." rows="1"></textarea>
+                    </div>
+                    <button class="send-btn" id="sendBtn">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- New Ticket View -->
+            <div class="view" id="viewNewTicket">
+                <div class="view-content form-container">
+                    <form id="newTicketForm">
+                        <div class="form-group">
+                            <label class="form-label">Title</label>
+                            <input type="text" class="form-input" id="ticketTitleInput" placeholder="What needs to be done?" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-textarea" id="ticketDescInput" placeholder="Describe the task in detail..."></textarea>
+                        </div>
+                        <div class="form-buttons">
+                            <button type="submit" class="btn btn-primary">Create Ticket</button>
+                        </div>
+                        <div class="divider">or</div>
+                        <button type="button" class="btn btn-secondary" id="planWithAiBtn">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                            </svg>
+                            Plan with AI Assistant
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- New Project View -->
+            <div class="view" id="viewNewProject">
+                <div class="view-content form-container">
+                    <form id="newProjectForm">
+                        <div class="form-group">
+                            <label class="form-label">Project Name</label>
+                            <input type="text" class="form-input" id="projectNameInput" placeholder="My Awesome Project" required>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Type</label>
+                                <select class="form-select" id="projectTypeInput">
+                                    <option value="web">Web</option>
+                                    <option value="app">App</option>
+                                    <option value="api">API</option>
+                                    <option value="cli">CLI</option>
+                                    <option value="library">Library</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Tech Stack</label>
+                                <select class="form-select" id="projectTechInput">
+                                    <option value="php">PHP</option>
+                                    <option value="python">Python</option>
+                                    <option value="node">Node.js</option>
+                                    <option value="dotnet">.NET</option>
+                                    <option value="java">Java</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Description</label>
+                            <textarea class="form-textarea" id="projectDescInput" placeholder="Project description..."></textarea>
+                        </div>
+                        <div class="form-buttons">
+                            <button type="submit" class="btn btn-primary">Create Project</button>
+                        </div>
+                        <div class="divider">or</div>
+                        <button type="button" class="btn btn-secondary" id="planProjectWithAiBtn">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                            </svg>
+                            Plan Project with AI
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Sheet for New Options -->
+    <div class="bottom-sheet-overlay" id="sheetOverlay"></div>
+    <div class="bottom-sheet" id="newOptionsSheet">
+        <div class="bottom-sheet-handle"></div>
+        <div class="bottom-sheet-title">Create New</div>
+        <div class="bottom-sheet-option" id="optManualProject">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+            </svg>
+            <span>New Project (Manual)</span>
+        </div>
+        <div class="bottom-sheet-option" id="optAiProject">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+            <span>Plan Project with AI</span>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // State
+        const state = {
+            currentView: 'projects',
+            currentProject: null,
+            currentTicket: null,
+            projects: [],
+            tickets: [],
+            messages: [],
+            socket: null,
+            hasMoreMessages: false,
+            loadingMessages: false,
+            projectFilter: 'active',
+            ticketFilter: 'all',
+            projectSearch: '',
+            ticketSearch: '',
+            messageIds: new Set() // Track message IDs to prevent duplicates
+        };
+
+        // DOM Elements
+        const els = {
+            backBtn: document.getElementById('backBtn'),
+            headerTitle: document.getElementById('headerTitle'),
+            viewProjects: document.getElementById('viewProjects'),
+            viewTickets: document.getElementById('viewTickets'),
+            viewConversation: document.getElementById('viewConversation'),
+            viewNewTicket: document.getElementById('viewNewTicket'),
+            viewNewProject: document.getElementById('viewNewProject'),
+            projectsList: document.getElementById('projectsList'),
+            ticketsList: document.getElementById('ticketsList'),
+            conversation: document.getElementById('conversation'),
+            ticketTitle: document.getElementById('ticketTitle'),
+            ticketStatusBadge: document.getElementById('ticketStatusBadge'),
+            webPathLink: document.getElementById('webPathLink'),
+            webPathText: document.getElementById('webPathText'),
+            messageInput: document.getElementById('messageInput'),
+            sendBtn: document.getElementById('sendBtn'),
+            newTicketForm: document.getElementById('newTicketForm'),
+            ticketTitleInput: document.getElementById('ticketTitleInput'),
+            ticketDescInput: document.getElementById('ticketDescInput'),
+            newProjectForm: document.getElementById('newProjectForm'),
+            projectNameInput: document.getElementById('projectNameInput'),
+            projectTypeInput: document.getElementById('projectTypeInput'),
+            projectTechInput: document.getElementById('projectTechInput'),
+            projectDescInput: document.getElementById('projectDescInput'),
+            fabNewTicket: document.getElementById('fabNewTicket'),
+            fabNewProject: document.getElementById('fabNewProject'),
+            planWithAiBtn: document.getElementById('planWithAiBtn'),
+            planProjectWithAiBtn: document.getElementById('planProjectWithAiBtn'),
+            toast: document.getElementById('toast'),
+            projectSearch: document.getElementById('projectSearch'),
+            ticketSearch: document.getElementById('ticketSearch'),
+            sheetOverlay: document.getElementById('sheetOverlay'),
+            newOptionsSheet: document.getElementById('newOptionsSheet')
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            initSocket();
+            loadProjects();
+            setupEventListeners();
+            handleRoute();
+        });
+
+        // WebSocket
+        function initSocket() {
+            state.socket = io({
+                transports: ['websocket', 'polling']
+            });
+
+            state.socket.on('connect', () => {
+                console.log('Socket connected');
+                if (state.currentTicket) {
+                    state.socket.emit('join_ticket', { ticket_id: state.currentTicket.id });
+                }
+            });
+
+            state.socket.on('new_message', (data) => {
+                if (state.currentTicket && data.ticket_id === state.currentTicket.id) {
+                    // Prevent duplicate messages
+                    if (data.id && state.messageIds.has(data.id)) return;
+                    if (data.id) state.messageIds.add(data.id);
+                    appendMessage(data);
+                    scrollToBottom();
+                }
+            });
+
+            state.socket.on('ticket_status', (data) => {
+                if (state.currentTicket && data.ticket_id === state.currentTicket.id) {
+                    state.currentTicket.status = data.status;
+                    updateTicketInfoBar();
+                }
+                if (state.currentView === 'tickets' && state.currentProject) {
+                    loadTickets(state.currentProject.id);
+                }
+            });
+        }
+
+        // URL Routing
+        function handleRoute() {
+            const path = window.location.pathname;
+            const match = path.match(/^\/chat(?:\/(\w+)\/(\d+))?$/);
+
+            if (match) {
+                const type = match[1];
+                const id = match[2];
+
+                if (type === 'project' && id) {
+                    fetch(`/api/project/${id}`)
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.success !== false && !data.error) {
+                                navigateToTickets(data);
+                            }
+                        });
+                } else if (type === 'ticket' && id) {
+                    fetch(`/api/ticket/${id}`)
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.success !== false && data.ticket) {
+                                fetch(`/api/project/${data.ticket.project_id}`)
+                                    .then(r => r.json())
+                                    .then(proj => {
+                                        state.currentProject = proj;
+                                        navigateToConversation(data.ticket);
+                                    });
+                            }
+                        });
+                } else if (type === 'new' && id) {
+                    fetch(`/api/project/${id}`)
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.success !== false && !data.error) {
+                                state.currentProject = data;
+                                navigateToNewTicket();
+                            }
+                        });
+                }
+            }
+        }
+
+        // Event Listeners
+        function setupEventListeners() {
+            els.backBtn.addEventListener('click', navigateBack);
+            els.fabNewTicket.addEventListener('click', () => navigateToNewTicket());
+            els.fabNewProject.addEventListener('click', showNewProjectSheet);
+            els.sendBtn.addEventListener('click', sendMessage);
+            els.messageInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+            els.messageInput.addEventListener('input', autoResizeTextarea);
+            els.newTicketForm.addEventListener('submit', createTicket);
+            els.newProjectForm.addEventListener('submit', createProject);
+            els.planWithAiBtn.addEventListener('click', () => {
+                if (state.currentProject) {
+                    window.location.href = `/claude-assistant?project_id=${state.currentProject.id}`;
+                }
+            });
+            els.planProjectWithAiBtn.addEventListener('click', () => {
+                window.location.href = '/claude-assistant';
+            });
+
+            // Search
+            els.projectSearch.addEventListener('input', (e) => {
+                state.projectSearch = e.target.value.toLowerCase();
+                renderProjects();
+            });
+            els.ticketSearch.addEventListener('input', (e) => {
+                state.ticketSearch = e.target.value.toLowerCase();
+                renderTickets();
+            });
+
+            // Project Filters
+            document.querySelectorAll('#viewProjects .filter-chip').forEach(chip => {
+                chip.addEventListener('click', () => {
+                    document.querySelectorAll('#viewProjects .filter-chip').forEach(c => c.classList.remove('active'));
+                    chip.classList.add('active');
+                    state.projectFilter = chip.dataset.filter;
+                    renderProjects();
+                });
+            });
+
+            // Ticket Filters
+            document.querySelectorAll('#ticketFilters .filter-chip').forEach(chip => {
+                chip.addEventListener('click', () => {
+                    document.querySelectorAll('#ticketFilters .filter-chip').forEach(c => c.classList.remove('active'));
+                    chip.classList.add('active');
+                    state.ticketFilter = chip.dataset.filter;
+                    renderTickets();
+                });
+            });
+
+            // Bottom Sheet
+            els.sheetOverlay.addEventListener('click', hideNewProjectSheet);
+            document.getElementById('optManualProject').addEventListener('click', () => {
+                hideNewProjectSheet();
+                navigateToNewProject();
+            });
+            document.getElementById('optAiProject').addEventListener('click', () => {
+                hideNewProjectSheet();
+                window.location.href = '/claude-assistant';
+            });
+
+            window.addEventListener('popstate', handleRoute);
+        }
+
+        function showNewProjectSheet() {
+            els.sheetOverlay.classList.add('show');
+            els.newOptionsSheet.classList.add('show');
+        }
+
+        function hideNewProjectSheet() {
+            els.sheetOverlay.classList.remove('show');
+            els.newOptionsSheet.classList.remove('show');
+        }
+
+        // Navigation
+        function navigateBack() {
+            switch (state.currentView) {
+                case 'tickets':
+                    showView('projects');
+                    history.pushState({}, '', '/chat');
+                    break;
+                case 'conversation':
+                case 'newTicket':
+                    if (state.currentProject) {
+                        showView('tickets');
+                        history.pushState({}, '', `/chat/project/${state.currentProject.id}`);
+                    } else {
+                        showView('projects');
+                        history.pushState({}, '', '/chat');
+                    }
+                    break;
+                case 'newProject':
+                    showView('projects');
+                    history.pushState({}, '', '/chat');
+                    break;
+            }
+        }
+
+        function navigateToTickets(project) {
+            state.currentProject = project;
+            loadTickets(project.id);
+            showView('tickets');
+            history.pushState({}, '', `/chat/project/${project.id}`);
+        }
+
+        function navigateToConversation(ticket) {
+            state.currentTicket = ticket;
+            state.messageIds.clear(); // Clear tracked IDs
+            loadConversation(ticket.id);
+            showView('conversation');
+            history.pushState({}, '', `/chat/ticket/${ticket.id}`);
+
+            if (state.socket) {
+                state.socket.emit('join_ticket', { ticket_id: ticket.id });
+            }
+        }
+
+        function navigateToNewTicket() {
+            showView('newTicket');
+            els.ticketTitleInput.value = '';
+            els.ticketDescInput.value = '';
+            els.ticketTitleInput.focus();
+            if (state.currentProject) {
+                history.pushState({}, '', `/chat/new/${state.currentProject.id}`);
+            }
+        }
+
+        function navigateToNewProject() {
+            showView('newProject');
+            els.projectNameInput.value = '';
+            els.projectDescInput.value = '';
+            els.projectNameInput.focus();
+        }
+
+        function showView(view) {
+            state.currentView = view;
+
+            // Hide all views
+            els.viewProjects.classList.remove('active');
+            els.viewTickets.classList.remove('active');
+            els.viewConversation.classList.remove('active');
+            els.viewNewTicket.classList.remove('active');
+            els.viewNewProject.classList.remove('active');
+
+            // Show target view
+            switch (view) {
+                case 'projects':
+                    els.viewProjects.classList.add('active');
+                    els.headerTitle.textContent = 'Projects';
+                    els.backBtn.style.display = 'none';
+                    break;
+                case 'tickets':
+                    els.viewTickets.classList.add('active');
+                    els.headerTitle.innerHTML = state.currentProject ?
+                        `${escapeHtml(state.currentProject.name)} <small>${state.currentProject.code}</small>` : 'Tickets';
+                    els.backBtn.style.display = 'flex';
+                    break;
+                case 'conversation':
+                    els.viewConversation.classList.add('active');
+                    els.headerTitle.textContent = state.currentTicket ? state.currentTicket.ticket_number : 'Conversation';
+                    els.backBtn.style.display = 'flex';
+                    updateTicketInfoBar();
+                    break;
+                case 'newTicket':
+                    els.viewNewTicket.classList.add('active');
+                    els.headerTitle.textContent = 'New Ticket';
+                    els.backBtn.style.display = 'flex';
+                    break;
+                case 'newProject':
+                    els.viewNewProject.classList.add('active');
+                    els.headerTitle.textContent = 'New Project';
+                    els.backBtn.style.display = 'flex';
+                    break;
+            }
+        }
+
+        // Data Loading
+        async function loadProjects() {
+            try {
+                const response = await fetch('/api/projects');
+                const data = await response.json();
+                state.projects = Array.isArray(data) ? data : (data.projects || []);
+                renderProjects();
+            } catch (err) {
+                showToast('Failed to load projects', true);
+                els.projectsList.innerHTML = '<div class="empty-state"><h3>Error</h3><p>Failed to load projects</p></div>';
+            }
+        }
+
+        async function loadTickets(projectId) {
+            els.ticketsList.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            try {
+                const response = await fetch(`/api/tickets?project_id=${projectId}`);
+                const data = await response.json();
+                state.tickets = Array.isArray(data) ? data : (data.tickets || []);
+                renderTickets();
+            } catch (err) {
+                showToast('Failed to load tickets', true);
+                els.ticketsList.innerHTML = '<div class="empty-state"><h3>Error</h3><p>Failed to load tickets</p></div>';
+            }
+        }
+
+        async function loadConversation(ticketId) {
+            els.conversation.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            try {
+                const response = await fetch(`/api/ticket/${ticketId}/messages?limit=100`);
+                const data = await response.json();
+                state.messages = data.messages || [];
+                // Track all message IDs
+                state.messages.forEach(m => {
+                    if (m.id) state.messageIds.add(m.id);
+                });
+                state.hasMoreMessages = data.has_more || false;
+                renderConversation();
+                scrollToBottom();
+            } catch (err) {
+                showToast('Failed to load messages', true);
+                els.conversation.innerHTML = '<div class="empty-state"><h3>Error</h3><p>Failed to load messages</p></div>';
+            }
+        }
+
+        // Rendering
+        function renderProjects() {
+            let filtered = state.projects;
+
+            // Filter by status
+            if (state.projectFilter === 'active') {
+                filtered = filtered.filter(p => p.status === 'active');
+            } else if (state.projectFilter === 'archived') {
+                filtered = filtered.filter(p => p.status === 'archived');
+            }
+
+            // Filter by search
+            if (state.projectSearch) {
+                filtered = filtered.filter(p =>
+                    p.name.toLowerCase().includes(state.projectSearch) ||
+                    p.code.toLowerCase().includes(state.projectSearch) ||
+                    (p.description && p.description.toLowerCase().includes(state.projectSearch))
+                );
+            }
+
+            if (filtered.length === 0) {
+                els.projectsList.innerHTML = `
+                    <div class="empty-state">
+                        <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                        </svg>
+                        <h3>No Projects</h3>
+                        <p>${state.projectSearch ? 'No matching projects found' : 'Tap + to create your first project'}</p>
+                    </div>
+                `;
+                return;
+            }
+
+            els.projectsList.innerHTML = filtered.map(p => {
+                // Construct correct URL: https://hostname:9867/project_folder
+                let webUrl = '';
+                if (p.preview_url) {
+                    webUrl = p.preview_url;
+                } else if (p.web_path) {
+                    const folderName = p.web_path.split('/').filter(x => x).pop();
+                    webUrl = `https://${window.location.hostname}:9867/${folderName}`;
+                }
+                return `
+                <div class="card" onclick="navigateToTickets(${JSON.stringify(p).replace(/"/g, '&quot;')})">
+                    <div class="card-header">
+                        <div class="card-icon project">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+                            </svg>
+                        </div>
+                        <div class="card-info">
+                            <div class="card-title">${escapeHtml(p.name)}</div>
+                            <div class="card-meta">
+                                <span class="ticket-number">${p.code}</span>
+                                <span>${p.ticket_count || 0} tickets</span>
+                                <span class="card-badge badge-${p.status}">${p.status}</span>
+                            </div>
+                        </div>
+                    </div>
+                    ${p.description ? `<div class="card-description">${escapeHtml(p.description)}</div>` : ''}
+                    ${webUrl ? `<a class="card-url" href="${webUrl}" target="_blank" onclick="event.stopPropagation()">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="2" y1="12" x2="22" y2="12"></line>
+                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                        </svg>
+                        <span>${webUrl}</span>
+                    </a>` : ''}
+                </div>
+            `}).join('');
+        }
+
+        function renderTickets() {
+            let filtered = state.tickets;
+
+            // Filter by status
+            if (state.ticketFilter === 'open') {
+                filtered = filtered.filter(t => ['new', 'open', 'pending'].includes(t.status));
+            } else if (state.ticketFilter === 'in_progress') {
+                filtered = filtered.filter(t => t.status === 'in_progress');
+            } else if (state.ticketFilter === 'awaiting') {
+                filtered = filtered.filter(t => t.status === 'awaiting_input');
+            } else if (state.ticketFilter === 'done') {
+                filtered = filtered.filter(t => ['done', 'completed', 'closed', 'skipped'].includes(t.status));
+            }
+
+            // Filter by search
+            if (state.ticketSearch) {
+                filtered = filtered.filter(t =>
+                    t.title.toLowerCase().includes(state.ticketSearch) ||
+                    t.ticket_number.toLowerCase().includes(state.ticketSearch) ||
+                    (t.description && t.description.toLowerCase().includes(state.ticketSearch))
+                );
+            }
+
+            if (filtered.length === 0) {
+                els.ticketsList.innerHTML = `
+                    <div class="empty-state">
+                        <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+                        </svg>
+                        <h3>No Tickets</h3>
+                        <p>${state.ticketSearch || state.ticketFilter !== 'all' ? 'No matching tickets found' : 'Tap + to create your first ticket'}</p>
+                    </div>
+                `;
+                return;
+            }
+
+            els.ticketsList.innerHTML = filtered.map(t => `
+                <div class="card" onclick="navigateToConversation(${JSON.stringify(t).replace(/"/g, '&quot;')})">
+                    <div class="card-header">
+                        <div class="card-icon ticket">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"></path>
+                            </svg>
+                        </div>
+                        <div class="card-info">
+                            <div class="card-title">${escapeHtml(t.title)}</div>
+                            <div class="card-meta">
+                                <span class="ticket-number">${t.ticket_number}</span>
+                                <span class="card-badge badge-${t.status}">${formatStatus(t.status)}</span>
+                            </div>
+                        </div>
+                    </div>
+                    ${t.description ? `<div class="card-description">${escapeHtml(t.description)}</div>` : ''}
+                </div>
+            `).join('');
+        }
+
+        function renderConversation() {
+            if (state.messages.length === 0) {
+                els.conversation.innerHTML = `
+                    <div class="empty-state">
+                        <svg class="empty-state-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"></path>
+                        </svg>
+                        <h3>No Messages Yet</h3>
+                        <p>Send a message to start the conversation</p>
+                    </div>
+                `;
+                return;
+            }
+
+            els.conversation.innerHTML = state.messages.map(m => renderMessage(m)).join('');
+        }
+
+        function renderMessage(m) {
+            const role = m.role || 'system';
+            const time = m.created_at ? formatTime(m.created_at) : '';
+
+            if (role === 'tool_use') {
+                const toolName = m.tool_name || m.name || 'Tool';
+                let toolContent = '';
+                if (m.tool_input) {
+                    try {
+                        const input = typeof m.tool_input === 'string' ? JSON.parse(m.tool_input) : m.tool_input;
+                        toolContent = JSON.stringify(input, null, 2).substring(0, 200);
+                    } catch { toolContent = String(m.tool_input).substring(0, 200); }
+                }
+                return `<div class="message tool_use">
+                    <div class="tool-name">${escapeHtml(toolName)}</div>
+                    ${toolContent ? `<div class="tool-content">${escapeHtml(toolContent)}...</div>` : ''}
+                </div>`;
+            }
+
+            if (role === 'tool_result') {
+                const content = m.content || m.result || '';
+                const preview = String(content).substring(0, 150);
+                return `<div class="message tool_result">
+                    <div class="tool-name">Result</div>
+                    <div class="tool-content">${escapeHtml(preview)}${content.length > 150 ? '...' : ''}</div>
+                </div>`;
+            }
+
+            const content = m.content || m.message || '';
+            if (!content.trim()) return '';
+
+            return `
+                <div class="message ${role}">
+                    <div class="message-content">${formatMessageContent(content)}</div>
+                    ${time ? `<div class="message-time">${time}</div>` : ''}
+                </div>
+            `;
+        }
+
+        function updateTicketInfoBar() {
+            if (!state.currentTicket) return;
+
+            els.ticketTitle.textContent = state.currentTicket.title;
+            els.ticketStatusBadge.textContent = formatStatus(state.currentTicket.status);
+            els.ticketStatusBadge.className = `card-badge badge-${state.currentTicket.status}`;
+
+            if (state.currentProject && (state.currentProject.preview_url || state.currentProject.web_path)) {
+                let url = '';
+                if (state.currentProject.preview_url) {
+                    url = state.currentProject.preview_url;
+                } else if (state.currentProject.web_path) {
+                    const folderName = state.currentProject.web_path.split('/').filter(x => x).pop();
+                    url = `https://${window.location.hostname}:9867/${folderName}`;
+                }
+                els.webPathLink.href = url;
+                els.webPathText.textContent = url;
+                els.webPathLink.style.display = 'flex';
+            } else {
+                els.webPathLink.style.display = 'none';
+            }
+        }
+
+        function appendMessage(msg) {
+            const existing = els.conversation.querySelector('.empty-state');
+            if (existing) existing.remove();
+
+            const html = renderMessage(msg);
+            if (html) {
+                els.conversation.insertAdjacentHTML('beforeend', html);
+            }
+        }
+
+        // Actions
+        async function sendMessage() {
+            const message = els.messageInput.value.trim();
+            if (!message || !state.currentTicket) return;
+
+            els.messageInput.value = '';
+            els.messageInput.style.height = 'auto';
+
+            // Create temp ID to track this message
+            const tempId = 'temp-' + Date.now();
+            state.messageIds.add(tempId);
+
+            // Optimistic UI
+            appendMessage({
+                id: tempId,
+                role: 'user',
+                content: message,
+                created_at: new Date().toISOString()
+            });
+            scrollToBottom();
+
+            try {
+                const response = await fetch(`/api/ticket/${state.currentTicket.id}/send`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message })
+                });
+                const data = await response.json();
+                if (!data.success) {
+                    showToast(data.message || 'Failed to send', true);
+                }
+            } catch (err) {
+                showToast('Failed to send message', true);
+            }
+        }
+
+        async function createTicket(e) {
+            e.preventDefault();
+
+            const title = els.ticketTitleInput.value.trim();
+            const description = els.ticketDescInput.value.trim();
+
+            if (!title || !state.currentProject) return;
+
+            try {
+                const response = await fetch('/api/tickets', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        project_id: state.currentProject.id,
+                        title,
+                        description
+                    })
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast('Ticket created!');
+                    // Fetch the created ticket and navigate
+                    const ticketRes = await fetch(`/api/ticket/${data.ticket_id}`);
+                    const ticketData = await ticketRes.json();
+                    if (ticketData.ticket) {
+                        navigateToConversation(ticketData.ticket);
+                    } else {
+                        navigateBack();
+                    }
+                } else {
+                    showToast(data.message || 'Failed to create ticket', true);
+                }
+            } catch (err) {
+                showToast('Failed to create ticket', true);
+            }
+        }
+
+        async function createProject(e) {
+            e.preventDefault();
+
+            const name = els.projectNameInput.value.trim();
+            const projectType = els.projectTypeInput.value;
+            const techStack = els.projectTechInput.value;
+            const description = els.projectDescInput.value.trim();
+
+            if (!name) return;
+
+            // Generate code from name
+            const code = name.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 8) || 'PROJ';
+
+            // Determine path based on type
+            const basePath = projectType === 'web' ? '/var/www/projects' : '/opt/apps';
+            const safeName = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+
+            try {
+                const body = {
+                    name,
+                    code,
+                    description,
+                    project_type: projectType,
+                    tech_stack: techStack
+                };
+
+                if (projectType === 'web') {
+                    body.web_path = `${basePath}/${safeName}`;
+                } else {
+                    body.app_path = `${basePath}/${safeName}`;
+                }
+
+                const response = await fetch('/api/projects', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    showToast('Project created!');
+                    await loadProjects();
+                    // Navigate to new project
+                    const proj = state.projects.find(p => p.id === data.project_id);
+                    if (proj) {
+                        navigateToTickets(proj);
+                    } else {
+                        showView('projects');
+                    }
+                } else {
+                    showToast(data.message || 'Failed to create project', true);
+                }
+            } catch (err) {
+                showToast('Failed to create project', true);
+            }
+        }
+
+        // Helpers
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/[&<>"']/g, m => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[m]));
+        }
+
+        function formatStatus(status) {
+            const map = {
+                'new': 'New',
+                'open': 'Open',
+                'pending': 'Pending',
+                'in_progress': 'In Progress',
+                'awaiting_input': 'Awaiting',
+                'completed': 'Completed',
+                'done': 'Done',
+                'closed': 'Closed',
+                'skipped': 'Skipped'
+            };
+            return map[status] || status;
+        }
+
+        function formatTime(isoString) {
+            const date = new Date(isoString);
+            const now = new Date();
+            const diff = now - date;
+
+            if (diff < 60000) return 'Just now';
+            if (diff < 3600000) return `${Math.floor(diff/60000)}m ago`;
+            if (diff < 86400000) return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+        }
+
+        function formatMessageContent(content) {
+            if (!content) return '';
+            return escapeHtml(content);
+        }
+
+        function scrollToBottom() {
+            setTimeout(() => {
+                els.conversation.scrollTop = els.conversation.scrollHeight;
+            }, 50);
+        }
+
+        function autoResizeTextarea() {
+            els.messageInput.style.height = 'auto';
+            els.messageInput.style.height = Math.min(els.messageInput.scrollHeight, 120) + 'px';
+        }
+
+        function showToast(message, isError = false) {
+            els.toast.textContent = message;
+            els.toast.className = 'toast' + (isError ? ' error' : '');
+            els.toast.classList.add('show');
+            setTimeout(() => els.toast.classList.remove('show'), 3000);
+        }
+    </script>
+
+    <!-- Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw-chat.js', { scope: '/' })
+                    .then((reg) => {
+                        console.log('Service Worker registered:', reg.scope);
+                        // Check for updates
+                        reg.addEventListener('updatefound', () => {
+                            const newWorker = reg.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    showToast('Update available! Refresh to update.');
+                                }
+                            });
+                        });
+                    })
+                    .catch((err) => console.log('SW registration failed:', err));
+            });
+        }
+    </script>
+</body>
+</html>
