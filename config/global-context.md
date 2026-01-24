@@ -4,6 +4,103 @@
 
 ---
 
+## 🖥️ SERVER ENVIRONMENT
+
+- **Operating System**: Ubuntu 24.04 LTS
+- **Web Server**: Nginx
+- **PHP Version**: PHP 8.3 (default)
+- **Node.js**: v22.x
+- **Python**: 3.12
+- **MySQL**: 8.0
+
+## 🔌 PORTS
+
+| Service | Port | Protocol |
+|---------|------|----------|
+| Admin Panel | 9453 | HTTPS |
+| Web Projects | 9867 | HTTPS |
+| MySQL | 3306 | TCP (localhost only) |
+| SSH | 22 | TCP |
+
+## 📁 FILE LOCATIONS
+
+- **PHP/Web Projects**: `/var/www/projects/{project}/`
+- **App Projects**: `/opt/apps/{project}/`
+- **PHP Binary**: `/usr/bin/php`
+- **Node Binary**: `/usr/bin/node`
+
+## 🛠️ INSTALLED TOOLS
+
+### System
+- Git, curl, wget, OpenSSL
+
+### Databases
+- MySQL 8.0 (server and client)
+
+### PHP
+- PHP 8.3 with extensions: mysql, curl, intl, opcache, gd, mbstring, xml, zip
+
+### JavaScript
+- Node.js 22.x with npm
+
+### Python
+- Python 3.12 with pip
+- Flask, Flask-SocketIO, Flask-CORS
+- mysql-connector-python, bcrypt, eventlet
+- **Playwright** (with Chromium browser)
+- Pillow, opencv-python-headless, pytesseract
+
+### Multimedia
+- ffmpeg, imagemagick, tesseract-ocr, poppler-utils
+
+## ⚠️ IMPORTANT RULES
+
+1. **Check before installing**: Most tools are already installed. Verify with `which [tool]` or `[tool] --version` before attempting installation
+2. **Do NOT run `apt-get install`** for packages that are already installed
+3. **PHP version**: Default is 8.3
+4. **Project isolation**: Each project has its own directory and optionally its own MySQL database
+5. **SSL certificates**: Managed by system - do not modify SSL config
+
+### 📦 Libraries: Download Locally (NO CDN!)
+
+**ALWAYS download libraries locally. NEVER use CDN links.**
+
+```bash
+# ✅ GOOD - Install locally
+npm install primevue chart.js alpinejs
+composer require phpmailer/phpmailer
+
+# ❌ BAD - CDN links (FORBIDDEN!)
+<script src="https://cdn.jsdelivr.net/npm/..."></script>
+<link href="https://unpkg.com/..." rel="stylesheet">
+```
+
+**Why local:**
+- Works offline
+- Faster (no external requests)
+- More secure (no third-party CDN)
+- Reliable (CDN might go down)
+
+**Exceptions (cannot download):**
+- Google Maps API
+- Google Fonts (or download fonts manually)
+- Other APIs that require remote loading
+
+## ✅ QUICK CHECKS
+
+```bash
+# Check versions
+node --version && php --version | head -1 && python3 --version && mysql --version
+
+# Check Playwright
+python3 -c "from playwright.sync_api import sync_playwright; print('Playwright OK')"
+
+# Check services
+systemctl is-active nginx mysql php8.3-fpm
+```
+
+---
+
 ## ⚡ QUICK REFERENCE (Read This First!)
 
 ### ✅ ALWAYS DO:
@@ -61,6 +158,362 @@ python /opt/codehero/scripts/verify_ui.py https://127.0.0.1:9867/myproject/
 
 # Check server logs
 sudo tail -20 /var/log/nginx/codehero-projects-error.log
+```
+
+### 👁️ VISUAL VERIFICATION WITH PLAYWRIGHT
+
+You have **Playwright with Chromium** available for visual testing. **USE IT** when:
+1. User says something "doesn't look right" or "isn't displaying correctly"
+2. User mentions layout, styling, or visual issues
+3. You need to verify your changes visually
+4. User explicitly asks you to "see" or "check" the page
+
+**How to use Playwright for screenshots + error checking:**
+```python
+from playwright.sync_api import sync_playwright
+
+console_errors = []
+failed_requests = []
+
+with sync_playwright() as p:
+    browser = p.chromium.launch(headless=True)
+    context = browser.new_context(ignore_https_errors=True)
+    page = context.new_page()
+
+    # Capture console errors
+    page.on("console", lambda msg: console_errors.append(msg.text) if msg.type == "error" else None)
+
+    # Capture failed requests (404, CORS, network errors)
+    page.on("requestfailed", lambda req: failed_requests.append(f"{req.url} - {req.failure}"))
+
+    page.set_viewport_size({"width": 1920, "height": 1080})
+    page.goto('https://127.0.0.1:9867/myproject/')
+    page.wait_for_load_state("networkidle")
+    page.screenshot(path='/tmp/screenshot.png', full_page=True)
+    browser.close()
+
+# Report all errors
+if console_errors:
+    print("JS Console Errors:", console_errors)
+if failed_requests:
+    print("Failed Requests:", failed_requests)
+if not console_errors and not failed_requests:
+    print("No errors found!")
+```
+
+**After taking screenshot, ALWAYS check server logs for errors:**
+```bash
+# PHP errors
+sudo tail -20 /var/log/nginx/codehero-projects-error.log
+
+# Nginx errors
+sudo tail -20 /var/log/nginx/error.log
+
+# MySQL errors
+sudo tail -20 /var/log/mysql/error.log
+
+# Python/App errors (check project-specific logs)
+sudo tail -20 /var/log/syslog | grep -i error
+
+# Java errors (if applicable)
+sudo tail -20 /var/log/syslog | grep -i java
+```
+
+**Fix ALL errors before marking task complete!**
+
+**When User Says "It Doesn't Look Right":**
+1. **Take a screenshot first** with Playwright
+2. Analyze the visual issue
+3. Fix and take another screenshot to verify
+4. Don't ask the user to describe what's wrong - see it yourself
+
+### 📐 ALIGNMENT & SYMMETRY
+
+**ALWAYS verify visual alignment after changes:**
+
+1. **Horizontal alignment** - Elements in same row must align
+   - Use `items-center` for vertical centering in flex rows
+   - Use `justify-between` or `justify-center` for horizontal distribution
+
+2. **Vertical alignment** - Elements in same column must align
+   - Use consistent widths (`w-full`, `w-1/2`, etc.)
+   - Use `text-left`, `text-center`, `text-right` consistently
+
+3. **Symmetry** - Equal spacing on both sides
+   - Use `mx-auto` for centering blocks
+   - Use equal padding (`px-4` not `pl-2 pr-6`)
+   - Cards in grid should have same height (`h-full`)
+
+4. **Visual balance**
+   - Check with Playwright screenshot
+   - Compare left vs right side
+   - Compare top vs bottom
+
+5. **Color check** - Verify in screenshot:
+   - Text readable on background (contrast!)
+   - Dark backgrounds → light text (`bg-gray-800 text-white`)
+   - Light backgrounds → dark text (`bg-white text-gray-900`)
+   - No pure black (#000) or pure white (#fff)
+   - 60-30-10 color rule (60% neutral, 30% secondary, 10% accent)
+   - Buttons visible and distinct from background
+
+6. **Typography check** - Fonts must be:
+   - Readable size (min 14px body, 12px captions)
+   - Clear font family (no broken/missing fonts)
+   - Proper contrast with background
+   - Consistent hierarchy (H1 > H2 > H3 > body)
+   - Line height for readability (`leading-relaxed` for body text)
+
+7. **Interactive elements** - Test dropdowns, selects, modals:
+   - Click select boxes and verify they open correctly
+   - Check dropdown menus appear in correct position
+   - Verify modals/dialogs display centered
+   - Test hover states on buttons/links
+
+8. **Consistency** - Overall uniformity:
+   - Same font family throughout
+   - Same color palette throughout
+   - Same button styles throughout
+   - Same spacing patterns throughout
+   - Same border radius on similar elements
+
+9. **Performance** - Check load/execution time:
+   ```python
+   import time
+   start = time.time()
+   page.goto('https://...')
+   page.wait_for_load_state("networkidle")
+   load_time = time.time() - start
+   print(f"Page load: {load_time:.2f}s")  # Should be < 3s
+   ```
+
+10. **Full page inspection** - See ENTIRE page:
+    ```python
+    # Full page screenshot captures everything (vertical scroll)
+    page.screenshot(path='/tmp/full.png', full_page=True)
+
+    # For horizontal overflow, check page width
+    width = page.evaluate("document.documentElement.scrollWidth")
+    if width > 1920:
+        print(f"WARNING: Horizontal overflow! Width: {width}px")
+
+    # Scroll and inspect specific sections
+    page.evaluate("window.scrollTo(0, document.body.scrollHeight)")  # Bottom
+    page.screenshot(path='/tmp/bottom.png')
+
+    page.evaluate("window.scrollTo(0, 0)")  # Back to top
+
+    # Check footer visibility
+    footer = page.query_selector("footer")
+    if footer:
+        footer.scroll_into_view_if_needed()
+        page.screenshot(path='/tmp/footer.png')
+    ```
+
+    - **Always use `full_page=True`** to capture entire vertical content
+    - **Check for horizontal overflow** (shouldn't exist on responsive sites)
+    - **Scroll to footer** and verify it looks correct
+    - **Take multiple screenshots** if page has different sections
+
+11. **Accessibility**
+    - All images have `alt` text
+    - Form inputs have `<label>` elements
+    - Buttons have descriptive text or `aria-label`
+    - Color contrast ratio (text vs background)
+    - Keyboard navigation works (Tab through elements)
+
+12. **Forms validation**
+    - Required fields show error when empty
+    - Email fields validate format
+    - Error messages are clear and visible
+    - Success messages appear after submit
+    - Form doesn't submit with invalid data
+
+13. **Links check**
+    - All internal links work (no 404)
+    - External links open in new tab (`target="_blank"`)
+    - No broken anchor links (#section)
+
+14. **Images**
+    - All images load (no broken images)
+    - Images have appropriate size (not too large)
+    - Lazy loading for below-fold images
+    - Alt text describes the image
+
+15. **Responsive - Tablet view** (768px)
+    ```python
+    page.set_viewport_size({"width": 768, "height": 1024})
+    page.screenshot(path='/tmp/tablet.png', full_page=True)
+    ```
+
+16. **Empty states**
+    - What shows when no data exists
+    - Helpful message, not blank page
+    - Call-to-action to add data
+
+17. **Error states**
+    - What shows when API fails
+    - User-friendly error message
+    - Retry option if applicable
+
+18. **Favicon**
+    ```python
+    favicon = page.query_selector("link[rel*='icon']")
+    if not favicon:
+        print("WARNING: No favicon!")
+    ```
+
+19. **Loading states**
+    - Spinners or skeletons during load
+    - No blank/frozen screen while loading
+
+### 🔄 FULL SITE TEST (End-to-End)
+
+**WHEN to run full site test:**
+- When ticket title/description contains: "final", "τελικό", "complete", "ολοκλήρωση", "deploy", "launch", "release"
+- When ticket says: "test everything", "full test", "έλεγξε όλα"
+- When you finished building a complete feature (e.g., auth system, checkout flow)
+- When ticket is the LAST ticket in project sequence
+- **Always ask yourself: "Is this a good stopping point to verify everything works?"**
+
+**Run full site test:**
+
+```python
+from playwright.sync_api import sync_playwright
+
+def full_site_test(base_url, login_credentials=None):
+    """
+    Complete site test:
+    1. Start from homepage
+    2. Login if needed
+    3. Visit every link
+    4. Test every interactive element
+    """
+    tested_urls = set()
+    errors = []
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context(ignore_https_errors=True)
+        page = context.new_page()
+
+        # Capture all errors
+        page.on("console", lambda msg: errors.append(f"Console: {msg.text}") if msg.type == "error" else None)
+        page.on("requestfailed", lambda req: errors.append(f"Request failed: {req.url}"))
+
+        # 1. Go to homepage
+        page.goto(base_url)
+        page.wait_for_load_state("networkidle")
+        page.screenshot(path='/tmp/test_home.png', full_page=True)
+
+        # 2. Login if credentials provided
+        if login_credentials:
+            login_form = page.query_selector("form[action*='login'], #login-form, .login-form")
+            if login_form:
+                page.fill("input[type='email'], input[name='email'], input[name='username']", login_credentials['user'])
+                page.fill("input[type='password']", login_credentials['password'])
+                page.click("button[type='submit'], input[type='submit']")
+                page.wait_for_load_state("networkidle")
+                print("Logged in successfully")
+
+        # 3. Collect all links
+        links = page.query_selector_all("a[href]")
+        urls_to_test = []
+        for link in links:
+            href = link.get_attribute("href")
+            if href and not href.startswith("#") and not href.startswith("javascript:"):
+                if href.startswith("/"):
+                    href = base_url.rstrip("/") + href
+                if base_url in href and href not in tested_urls:
+                    urls_to_test.append(href)
+
+        # 4. Visit each page
+        for url in urls_to_test:
+            if url in tested_urls:
+                continue
+            tested_urls.add(url)
+            try:
+                page.goto(url)
+                page.wait_for_load_state("networkidle")
+                print(f"✓ {url}")
+
+                # Test interactive elements on each page
+                # Click all buttons (except submit/delete)
+                buttons = page.query_selector_all("button:not([type='submit']):not(.delete):not(.danger)")
+                for btn in buttons[:3]:  # Test first 3 buttons
+                    try:
+                        btn.click()
+                        page.wait_for_timeout(500)
+                    except:
+                        pass
+
+                # Test dropdowns/selects
+                selects = page.query_selector_all("select")
+                for select in selects:
+                    try:
+                        options = select.query_selector_all("option")
+                        if len(options) > 1:
+                            select.select_option(index=1)
+                    except:
+                        pass
+
+            except Exception as e:
+                errors.append(f"Failed to load {url}: {e}")
+                print(f"✗ {url}: {e}")
+
+        browser.close()
+
+    # Report
+    print(f"\n{'='*50}")
+    print(f"Tested {len(tested_urls)} pages")
+    if errors:
+        print(f"ERRORS ({len(errors)}):")
+        for e in errors:
+            print(f"  - {e}")
+    else:
+        print("All tests passed!")
+    print('='*50)
+
+    return len(errors) == 0
+
+# Usage:
+# full_site_test("https://127.0.0.1:9867/myproject/")
+# full_site_test("https://127.0.0.1:9867/myproject/", {"user": "admin@test.com", "password": "test123"})
+```
+
+**What this tests:**
+- Every page loads without errors
+- All links work
+- Login functionality
+- Buttons respond to clicks
+- Dropdowns/selects work
+- Console errors on any page
+- Failed requests on any page
+
+**Run this at the END of every project!**
+
+**After any UI change, take screenshot and verify ALL above!**
+
+**More Playwright examples:**
+```python
+# Click element
+page.click("button.submit")
+
+# Fill form
+page.fill("input[name='email']", "test@example.com")
+
+# Wait for element
+page.wait_for_selector(".result")
+
+# Get text content
+text = page.text_content(".result")
+
+# Check if element exists
+if page.query_selector(".error"):
+    print("Error found!")
+
+# Mobile viewport
+page.set_viewport_size({"width": 375, "height": 667})
 ```
 
 ### 📁 WORKSPACE:
@@ -860,6 +1313,785 @@ try {
     jsonError('An error occurred', 'SERVER_ERROR', 500);
 }
 ```
+
+---
+
+## 🧠 PROGRAMMING PHILOSOPHY
+
+### No Minify, No Obfuscate - CLEAN CODE ONLY
+
+**NEVER minify or obfuscate code. Always keep it readable.**
+
+```javascript
+// ❌ FORBIDDEN - Minified/obfuscated
+const a=b=>b.map(c=>c*2).filter(d=>d>5);
+
+// ✅ REQUIRED - Clean and readable
+const doubleAndFilter = (numbers) => {
+    // Double each number
+    const doubled = numbers.map(num => num * 2);
+    // Keep only numbers greater than 5
+    const filtered = doubled.filter(num => num > 5);
+    return filtered;
+};
+```
+
+**Rules:**
+- Code must be readable by a **junior developer**
+- Comments explain the **WHY**, not just the what
+- Variable names are **descriptive** (not `a`, `b`, `x`)
+- Functions are **small** and do **one thing**
+- No clever tricks - **simple is better**
+
+### Bottom-Up Development
+
+**Always build from the BOTTOM UP:**
+
+```
+                    ┌─────────────────┐
+                    │   FULL APP      │  ← Build LAST
+                    └────────┬────────┘
+                             │
+              ┌──────────────┼──────────────┐
+              │              │              │
+        ┌─────┴─────┐  ┌─────┴─────┐  ┌─────┴─────┐
+        │  Feature  │  │  Feature  │  │  Feature  │  ← Build after base works
+        │     A     │  │     B     │  │     C     │
+        └─────┬─────┘  └─────┬─────┘  └─────┬─────┘
+              │              │              │
+        ┌─────┴─────────────┴──────────────┴─────┐
+        │           BASE COMPONENTS              │  ← Build FIRST
+        │   (DB connection, Auth, Utilities)     │
+        └────────────────────────────────────────┘
+```
+
+**Process:**
+
+1. **Break the problem into pieces**
+   - Identify all components needed
+   - Find dependencies between them
+   - Order from least dependent to most
+
+2. **Start from the BASE**
+   - Database connection
+   - Configuration
+   - Utility functions
+   - Authentication
+
+3. **Build UP, one layer at a time**
+   - Each layer uses only the layers BELOW it
+   - Test each layer BEFORE building the next
+   - Never build on something untested
+
+4. **Always build on WORKING code**
+   - Run tests after each component
+   - Fix bugs immediately, don't continue
+   - If it doesn't work, don't build on it
+
+**Example - Building an E-commerce Site:**
+
+```
+Step 1: Database + Config     ← Test it works
+Step 2: User model            ← Test CRUD works
+Step 3: Auth system           ← Test login/logout works
+Step 4: Product model         ← Test CRUD works
+Step 5: Cart functionality    ← Test add/remove works
+Step 6: Checkout flow         ← Test payment works
+Step 7: Full integration      ← Test everything together
+```
+
+**NEVER:**
+- Build checkout before cart works
+- Build cart before products work
+- Build features before auth works
+- Build anything before database works
+
+### Comments Everywhere
+
+```php
+<?php
+/**
+ * Calculate the total price including tax and discounts.
+ *
+ * Why: Tax calculation is complex because different regions have
+ * different rates, and discounts can be percentage or fixed amount.
+ */
+function calculateTotal(array $items, float $taxRate, ?Discount $discount): float
+{
+    // Step 1: Sum up all item prices
+    // We use array_reduce for cleaner code than a foreach loop
+    $subtotal = array_reduce($items, function($sum, $item) {
+        return $sum + ($item['price'] * $item['quantity']);
+    }, 0);
+
+    // Step 2: Apply discount if exists
+    // Discount can be percentage (e.g., 10%) or fixed (e.g., $5 off)
+    if ($discount !== null) {
+        if ($discount->type === 'percentage') {
+            // Percentage discount: subtract percentage of subtotal
+            $subtotal -= $subtotal * ($discount->value / 100);
+        } else {
+            // Fixed discount: subtract fixed amount
+            $subtotal -= $discount->value;
+        }
+    }
+
+    // Step 3: Add tax
+    // Tax is calculated on the discounted subtotal
+    $tax = $subtotal * $taxRate;
+
+    // Step 4: Return final total (ensure not negative)
+    return max(0, $subtotal + $tax);
+}
+```
+
+**Comment Rules:**
+- **File header**: What this file does, how to use it
+- **Function header**: Purpose, parameters, return value
+- **Complex logic**: Explain WHY, not just what
+- **Business rules**: Document the business reason
+- **TODO/FIXME**: Mark incomplete or problematic code
+
+### 📝 Project Documentation Files (MANDATORY)
+
+**Every project MUST have these files:**
+
+#### 1. `technologies.md` - Technology Stack Notes
+
+```markdown
+# Technologies Used
+
+## Backend
+- **PHP 8.3** - Main language
+  - PDO for database
+  - Sessions for auth
+
+## Database
+- **MySQL 8.0**
+  - utf8mb4 charset
+  - InnoDB engine
+
+## Frontend
+- **Tailwind CSS 3.4** - Styling
+  - Custom config in tailwind.config.js
+  - Dark mode enabled
+
+## Libraries
+- **PHPMailer 6.8** - Email sending
+  - SMTP config in .env
+  - Usage: see `src/EmailService.php`
+
+- **Chart.js 4.4** - Charts
+  - Installed in: assets/lib/chart.js/
+  - Quick reference: see `docs/chartjs-notes.md`
+
+## APIs
+- **Stripe** - Payments
+  - API version: 2023-10-16
+  - Keys in .env
+```
+
+#### 2. `map.md` - Application Structure Map
+
+```markdown
+# Application Map
+
+## Directory Structure
+```
+project/
+├── index.php           # Entry point, routes to pages
+├── config/
+│   ├── database.php    # DB connection (PDO)
+│   └── constants.php   # App constants
+├── src/
+│   ├── Auth.php        # Login/logout/register
+│   ├── UserService.php # User CRUD
+│   └── ProductService.php
+├── pages/
+│   ├── home.php        # Homepage
+│   ├── login.php       # Login form
+│   └── dashboard.php   # Protected - requires auth
+├── api/
+│   ├── users.php       # REST /api/users
+│   └── products.php    # REST /api/products
+├── assets/
+│   ├── css/
+│   ├── js/
+│   └── lib/            # Downloaded libraries
+└── tests/
+```
+
+## Page Flow
+```
+index.php → login.php → dashboard.php
+                ↓
+          [Auth.php checks session]
+                ↓
+          [UserService.php loads data]
+```
+
+## Database Tables
+- `users` - id, email, password_hash, name, role
+- `products` - id, name, price, category_id
+- `orders` - id, user_id, total, status, created_at
+
+## API Endpoints
+- `GET /api/users` - List users (admin only)
+- `POST /api/users` - Create user
+- `GET /api/products` - List products
+- `POST /api/orders` - Create order
+```
+
+#### 3. `docs/` - Library Quick References
+
+**For large libraries, create quick reference notes:**
+
+```
+docs/
+├── chartjs-notes.md      # Chart.js quick reference
+├── primevue-notes.md     # PrimeVue components we use
+├── stripe-notes.md       # Stripe API quick reference
+└── phpmailer-notes.md    # PHPMailer usage
+```
+
+**Example: `docs/chartjs-notes.md`**
+
+```markdown
+# Chart.js Quick Reference
+
+## Installation
+Located in: `assets/lib/chart.js/chart.min.js`
+
+## Basic Usage
+```javascript
+const ctx = document.getElementById('myChart');
+new Chart(ctx, {
+    type: 'bar',  // bar, line, pie, doughnut
+    data: {
+        labels: ['Jan', 'Feb', 'Mar'],
+        datasets: [{
+            label: 'Sales',
+            data: [10, 20, 30],
+            backgroundColor: 'rgba(59, 130, 246, 0.5)'
+        }]
+    }
+});
+```
+
+## Common Options
+- `responsive: true` - Auto resize
+- `maintainAspectRatio: false` - Custom height
+- `plugins.legend.position: 'bottom'` - Legend position
+
+## Our Custom Colors
+```javascript
+const colors = {
+    primary: 'rgba(59, 130, 246, 0.5)',   // blue
+    success: 'rgba(34, 197, 94, 0.5)',    // green
+    danger: 'rgba(239, 68, 68, 0.5)'      // red
+};
+```
+
+## Examples in Project
+- `pages/dashboard.php` - Sales chart
+- `pages/reports.php` - Monthly comparison
+```
+
+### Why Keep These Notes?
+
+| Problem | Solution |
+|---------|----------|
+| "What version of X are we using?" | Check `technologies.md` |
+| "Where is the auth logic?" | Check `map.md` |
+| "How do I use Chart.js?" | Check `docs/chartjs-notes.md` |
+| "What API endpoints exist?" | Check `map.md` |
+
+**RULE: Update these files whenever you:**
+- Add a new technology
+- Add a new file/folder
+- Install a new library
+- Create a new API endpoint
+
+**Benefits:**
+- No searching through huge library docs
+- Quick onboarding for new developers
+- Instant answers to "how do I...?"
+- Reduces repeated questions to AI
+
+### 🏷️ CODE TAGS for Fast Navigation & Testing
+
+**Add tags EVERYWHERE for:**
+1. Fast code navigation (search by tag)
+2. 100% Playwright testing (select by data-testid)
+
+#### HTML Elements - data-testid
+
+```html
+<!-- EVERY interactive element MUST have data-testid -->
+
+<!-- Forms -->
+<form data-testid="login-form">
+    <input data-testid="login-email" type="email" name="email">
+    <input data-testid="login-password" type="password" name="password">
+    <button data-testid="login-submit" type="submit">Login</button>
+</form>
+
+<!-- Navigation -->
+<nav data-testid="main-nav">
+    <a data-testid="nav-home" href="/">Home</a>
+    <a data-testid="nav-products" href="/products">Products</a>
+    <a data-testid="nav-cart" href="/cart">Cart</a>
+</nav>
+
+<!-- Buttons -->
+<button data-testid="btn-add-to-cart">Add to Cart</button>
+<button data-testid="btn-checkout">Checkout</button>
+<button data-testid="btn-delete-item">Delete</button>
+
+<!-- Data displays -->
+<div data-testid="product-list">...</div>
+<div data-testid="cart-total">$99.00</div>
+<div data-testid="user-profile">...</div>
+
+<!-- Modals/Dialogs -->
+<div data-testid="modal-confirm-delete">...</div>
+<div data-testid="modal-success">...</div>
+
+<!-- Messages -->
+<div data-testid="alert-success">Saved!</div>
+<div data-testid="alert-error">Error occurred</div>
+```
+
+#### Naming Convention for data-testid
+
+```
+Format: [component]-[element]-[action/type]
+
+Examples:
+- login-form
+- login-email
+- login-submit
+- nav-home
+- nav-products
+- btn-add-to-cart
+- btn-delete-item
+- modal-confirm
+- alert-success
+- product-list
+- product-card-{id}
+- cart-item-{id}
+- cart-total
+```
+
+#### PHP/Python Code Tags
+
+```php
+<?php
+// #TAG:AUTH - Authentication functions
+// #TAG:AUTH:LOGIN
+function login($email, $password) {
+    // ...
+}
+
+// #TAG:AUTH:LOGOUT
+function logout() {
+    // ...
+}
+
+// #TAG:AUTH:REGISTER
+function register($data) {
+    // ...
+}
+
+// #TAG:PRODUCTS - Product management
+// #TAG:PRODUCTS:LIST
+function getProducts() {
+    // ...
+}
+
+// #TAG:PRODUCTS:CREATE
+function createProduct($data) {
+    // ...
+}
+
+// #TAG:CART - Shopping cart
+// #TAG:CART:ADD
+function addToCart($productId, $quantity) {
+    // ...
+}
+```
+
+```python
+# #TAG:API - API endpoints
+# #TAG:API:USERS
+@app.route('/api/users')
+def get_users():
+    pass
+
+# #TAG:API:PRODUCTS
+@app.route('/api/products')
+def get_products():
+    pass
+
+# #TAG:DB - Database operations
+# #TAG:DB:QUERY
+def execute_query(sql, params):
+    pass
+```
+
+#### Search Tags Quickly
+
+```bash
+# Find all auth-related code
+grep -r "#TAG:AUTH" src/
+
+# Find all API endpoints
+grep -r "#TAG:API" src/
+
+# Find specific function
+grep -r "#TAG:CART:ADD" src/
+```
+
+#### 100% Playwright Testing with Tags
+
+```python
+from playwright.sync_api import sync_playwright
+
+def test_full_application(base_url):
+    """
+    100% automated testing using data-testid tags.
+    Tests EVERY tagged element in the application.
+    """
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context(ignore_https_errors=True)
+        page = context.new_page()
+
+        errors = []
+        tested = []
+
+        # ========== LOGIN FLOW ==========
+        page.goto(f"{base_url}/login")
+
+        # Test login form exists
+        assert page.locator('[data-testid="login-form"]').is_visible(), "Login form not found"
+        tested.append("login-form")
+
+        # Test login inputs
+        page.locator('[data-testid="login-email"]').fill("test@example.com")
+        tested.append("login-email")
+
+        page.locator('[data-testid="login-password"]').fill("password123")
+        tested.append("login-password")
+
+        # Test login submit
+        page.locator('[data-testid="login-submit"]').click()
+        tested.append("login-submit")
+
+        page.wait_for_load_state("networkidle")
+
+        # ========== NAVIGATION ==========
+        # Test all nav links
+        nav_links = ['nav-home', 'nav-products', 'nav-cart']
+        for link in nav_links:
+            element = page.locator(f'[data-testid="{link}"]')
+            if element.is_visible():
+                element.click()
+                page.wait_for_load_state("networkidle")
+                tested.append(link)
+            else:
+                errors.append(f"Nav link not found: {link}")
+
+        # ========== PRODUCTS ==========
+        page.goto(f"{base_url}/products")
+
+        # Test product list exists
+        assert page.locator('[data-testid="product-list"]').is_visible()
+        tested.append("product-list")
+
+        # Test add to cart button
+        add_btn = page.locator('[data-testid="btn-add-to-cart"]').first
+        if add_btn.is_visible():
+            add_btn.click()
+            tested.append("btn-add-to-cart")
+
+        # ========== CART ==========
+        page.goto(f"{base_url}/cart")
+
+        # Test cart total displays
+        cart_total = page.locator('[data-testid="cart-total"]')
+        if cart_total.is_visible():
+            tested.append("cart-total")
+
+        # ========== COLLECT ALL TESTIDS ==========
+        # Find ALL data-testid elements on current page
+        all_testids = page.evaluate('''() => {
+            return Array.from(document.querySelectorAll('[data-testid]'))
+                .map(el => el.getAttribute('data-testid'));
+        }''')
+
+        print(f"Found {len(all_testids)} testable elements")
+
+        # ========== REPORT ==========
+        browser.close()
+
+        print(f"\n{'='*50}")
+        print(f"TESTED: {len(tested)} elements")
+        for t in tested:
+            print(f"  ✓ {t}")
+
+        if errors:
+            print(f"\nERRORS: {len(errors)}")
+            for e in errors:
+                print(f"  ✗ {e}")
+
+        print(f"\nALL DATA-TESTIDS FOUND:")
+        for tid in all_testids:
+            status = "✓" if tid in tested else "○"
+            print(f"  {status} {tid}")
+
+        coverage = len(tested) / len(all_testids) * 100 if all_testids else 0
+        print(f"\nCOVERAGE: {coverage:.1f}%")
+        print('='*50)
+
+        return errors == []
+
+# Usage
+test_full_application("https://127.0.0.1:9867/myproject")
+```
+
+#### Tag Checklist
+
+| Element Type | Tag Format | Example |
+|--------------|------------|---------|
+| Form | `{name}-form` | `login-form`, `register-form` |
+| Input | `{form}-{field}` | `login-email`, `register-name` |
+| Button | `btn-{action}` | `btn-submit`, `btn-delete` |
+| Link/Nav | `nav-{page}` | `nav-home`, `nav-settings` |
+| List | `{item}-list` | `product-list`, `user-list` |
+| Card | `{item}-card` | `product-card`, `order-card` |
+| Modal | `modal-{name}` | `modal-confirm`, `modal-edit` |
+| Alert | `alert-{type}` | `alert-success`, `alert-error` |
+| Section | `section-{name}` | `section-hero`, `section-features` |
+
+**RULE: No element without a tag = No testing possible!**
+
+---
+
+## 📦 SCRIPT ARCHITECTURE: "CLOSED BOX" PRINCIPLE
+
+**Every script/class/module MUST be a self-contained "closed box":**
+
+1. **Single Responsibility** - Does ONE thing well
+2. **Has Documentation** - Explains what it does without reading code
+3. **Has Test File** - Can be tested independently
+4. **Clear Interface** - Input/output documented
+
+### PHP Script Template
+
+```php
+<?php
+/**
+ * @file: UserService.php
+ * @description: Handles user CRUD operations
+ * @author: AI Assistant
+ * @created: 2024-01-01
+ *
+ * @usage:
+ *   $service = new UserService($pdo);
+ *   $user = $service->create(['email' => 'test@example.com', 'name' => 'John']);
+ *   $user = $service->getById(1);
+ *   $service->update(1, ['name' => 'Jane']);
+ *   $service->delete(1);
+ *
+ * @test: php tests/UserServiceTest.php
+ */
+
+class UserService {
+    private PDO $db;
+
+    public function __construct(PDO $db) {
+        $this->db = $db;
+    }
+
+    /**
+     * Create a new user
+     * @param array $data ['email' => string, 'name' => string, 'password' => string]
+     * @return array Created user with id
+     * @throws Exception If email already exists
+     */
+    public function create(array $data): array {
+        // Implementation...
+    }
+}
+```
+
+**Test file: `tests/UserServiceTest.php`**
+```php
+<?php
+require_once __DIR__ . '/../src/UserService.php';
+
+// Test create
+$service = new UserService($pdo);
+$user = $service->create(['email' => 'test@example.com', 'name' => 'Test']);
+assert($user['id'] > 0, 'User should have ID');
+assert($user['email'] === 'test@example.com', 'Email should match');
+
+// Test getById
+$found = $service->getById($user['id']);
+assert($found['name'] === 'Test', 'Name should match');
+
+echo "All tests passed!\n";
+```
+
+### Python Script Template
+
+```python
+#!/usr/bin/env python3
+"""
+@file: user_service.py
+@description: Handles user CRUD operations
+@author: AI Assistant
+@created: 2024-01-01
+
+@usage:
+    from user_service import UserService
+
+    service = UserService(db_connection)
+    user = service.create(email='test@example.com', name='John')
+    user = service.get_by_id(1)
+    service.update(1, name='Jane')
+    service.delete(1)
+
+@test: pytest tests/test_user_service.py -v
+"""
+
+class UserService:
+    """
+    User CRUD operations.
+
+    Attributes:
+        db: Database connection
+
+    Methods:
+        create(email, name, password) -> dict: Create new user
+        get_by_id(user_id) -> dict: Get user by ID
+        update(user_id, **kwargs) -> dict: Update user
+        delete(user_id) -> bool: Delete user
+    """
+
+    def __init__(self, db):
+        self.db = db
+
+    def create(self, email: str, name: str, password: str = None) -> dict:
+        """
+        Create a new user.
+
+        Args:
+            email: User's email (must be unique)
+            name: User's display name
+            password: Optional password (will be hashed)
+
+        Returns:
+            dict: Created user with 'id', 'email', 'name'
+
+        Raises:
+            ValueError: If email already exists
+        """
+        # Implementation...
+        pass
+```
+
+**Test file: `tests/test_user_service.py`**
+```python
+import pytest
+from user_service import UserService
+
+class TestUserService:
+    def test_create_user(self, db):
+        service = UserService(db)
+        user = service.create(email='test@example.com', name='Test')
+        assert user['id'] > 0
+        assert user['email'] == 'test@example.com'
+
+    def test_get_by_id(self, db):
+        service = UserService(db)
+        user = service.create(email='test2@example.com', name='Test2')
+        found = service.get_by_id(user['id'])
+        assert found['name'] == 'Test2'
+
+# Run: pytest tests/test_user_service.py -v
+```
+
+### Java Class Template
+
+```java
+/**
+ * @file: UserService.java
+ * @description: Handles user CRUD operations
+ * @author: AI Assistant
+ * @created: 2024-01-01
+ *
+ * @usage:
+ *   UserService service = new UserService(userRepository);
+ *   User user = service.create(new CreateUserDTO("test@example.com", "John"));
+ *   User user = service.getById(1L);
+ *   service.update(1L, new UpdateUserDTO("Jane"));
+ *   service.delete(1L);
+ *
+ * @test: mvn test -Dtest=UserServiceTest
+ */
+@Service
+public class UserService {
+
+    private final UserRepository repository;
+
+    /**
+     * Create a new user.
+     *
+     * @param dto User data (email, name, password)
+     * @return Created user entity
+     * @throws ValidationException if email already exists
+     */
+    public User create(CreateUserDTO dto) {
+        // Implementation...
+    }
+}
+```
+
+### MANDATORY for EVERY Script:
+
+| Requirement | Description |
+|-------------|-------------|
+| **Header comment** | @file, @description, @usage, @test |
+| **Method docs** | @param, @return, @throws for each method |
+| **Test file** | `tests/` folder with matching test |
+| **Single purpose** | One class = one responsibility |
+| **No side effects** | Methods should be predictable |
+
+### File Structure:
+
+```
+project/
+├── src/
+│   ├── UserService.php      # Has header docs
+│   ├── ProductService.php   # Has header docs
+│   └── OrderService.php     # Has header docs
+├── tests/
+│   ├── UserServiceTest.php      # Tests UserService
+│   ├── ProductServiceTest.php   # Tests ProductService
+│   └── OrderServiceTest.php     # Tests OrderService
+└── README.md                    # Project overview
+```
+
+### Why "Closed Box"?
+
+- **Read docs, not code** - Understand what it does from header
+- **Run test, verify works** - Don't need to trace through code
+- **Replace easily** - Clear interface means easy to swap implementations
+- **Debug faster** - Test file isolates the problem
+
+**RULE: Never create a script without its test file!**
 
 ---
 

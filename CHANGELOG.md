@@ -5,6 +5,57 @@ All notable changes to CodeHero will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.82.3] - 2026-01-24
+
+### Added
+- **Enhanced Global Context** - Comprehensive AI development guidelines
+  - Server Environment section (OS, PHP, Node, Python, MySQL versions)
+  - Ports & File Locations reference
+  - Installed Tools list (system, databases, PHP, JS, Python, multimedia)
+  - Libraries: Download Locally (NO CDN!) rule
+  - Quick Checks bash commands
+
+- **Visual Verification with Playwright** - Complete UI testing
+  - Full page screenshots (desktop 1920x1080 + mobile 375x667 + tablet 768x1024)
+  - Console errors capture
+  - Failed requests capture (404, CORS, network errors)
+  - Server logs check (PHP, Nginx, MySQL, Python, Java)
+  - Alignment & Symmetry verification
+  - Color & contrast checking
+  - Typography verification
+  - Interactive elements testing (dropdowns, modals, buttons)
+  - Consistency checks
+  - Performance/load time measurement
+  - Full page scroll inspection
+
+- **Full Site Test (End-to-End)** - Automated complete testing
+  - Homepage to all links traversal
+  - Login functionality testing
+  - Every interactive element testing
+  - Coverage percentage reporting
+
+- **Programming Philosophy** - Development principles
+  - No Minify/Obfuscate - Clean code only
+  - Bottom-Up Development approach
+  - Comments everywhere (WHY, not just what)
+
+- **Project Documentation Files (Mandatory)**
+  - `technologies.md` - Technology stack notes
+  - `map.md` - Application structure map
+  - `docs/` folder - Library quick references
+
+- **Code Tags System** - For navigation & testing
+  - HTML `data-testid` attributes on every element
+  - PHP/Python `#TAG:` comments for code search
+  - 100% Playwright testing using tags
+  - Tag naming convention guide
+
+- **Script Architecture: "Closed Box" Principle**
+  - Every script has test file
+  - Every script has documentation header
+  - Templates for PHP, Python, Java
+  - Single responsibility rule
+
 ## [2.82.2] - 2026-01-23
 
 ### Added
