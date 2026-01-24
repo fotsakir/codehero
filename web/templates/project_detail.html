@@ -1294,6 +1294,7 @@
                     <a href="/project/{{ project.id }}/phpmyadmin" target="_blank" class="btn btn-cyan" style="text-align:center;">phpMyAdmin</a>
                     {% endif %}
                     <button onclick="exportProject()" class="btn btn-cyan">Export Project</button>
+                    <button onclick="openContextSettings()" class="btn btn-secondary" title="Edit AI context for this project">⚙️ Context Settings</button>
                     {% if project.status == 'archived' %}
                     <button onclick="reopenProject()" class="btn btn-green">Reopen Project</button>
                     {% else %}
@@ -1318,6 +1319,73 @@
                 <div class="stat-box tickets">
                     <div class="value" id="proj-tickets">0</div>
                     <div class="label">Tickets Worked</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Context Settings Section -->
+        <div class="panel">
+            <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="toggleContextSettings()">
+                <h3>Context Settings</h3>
+                <span id="contextToggleIcon" style="color:var(--text-muted);font-size:20px">▼</span>
+            </div>
+            <div id="contextSettingsContent" style="display:none;margin-top:16px">
+                <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px">
+                    Customize the AI context for this project. The global context contains universal rules, while the project context contains language-specific patterns.
+                </p>
+
+                <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px">
+                    <label style="color:var(--text-secondary);font-size:13px;white-space:nowrap">Context Type:</label>
+                    <select id="contextTypeSelect" onchange="loadContextDefaults()" style="padding:8px 12px;background:var(--bg-secondary);border:1px solid var(--border-subtle);border-radius:8px;color:var(--text-primary);font-size:14px;min-width:150px">
+                        <option value="php" {% if project.tech_stack == 'php' %}selected{% endif %}>PHP</option>
+                        <option value="python" {% if project.tech_stack == 'python' %}selected{% endif %}>Python</option>
+                        <option value="node" {% if project.tech_stack == 'node' %}selected{% endif %}>Node.js</option>
+                        <option value="html" {% if project.tech_stack == 'html' or (not project.tech_stack and project.project_type == 'web') %}selected{% endif %}>HTML/CSS/JS</option>
+                        <option value="java" {% if project.tech_stack == 'java' %}selected{% endif %}>Java/Spring</option>
+                        <option value="dotnet" {% if project.tech_stack == 'dotnet' or project.project_type == 'dotnet' %}selected{% endif %}>C#/.NET</option>
+                        <option value="go" {% if project.tech_stack == 'go' %}selected{% endif %}>Go</option>
+                        <option value="react" {% if project.tech_stack == 'react' or project.project_type == 'react_native' %}selected{% endif %}>React/React Native</option>
+                        <option value="capacitor" {% if project.project_type == 'capacitor' %}selected{% endif %}>Capacitor/Ionic</option>
+                        <option value="flutter" {% if project.tech_stack == 'flutter' or project.project_type == 'flutter' %}selected{% endif %}>Flutter/Dart</option>
+                        <option value="kotlin" {% if project.tech_stack == 'kotlin' or project.project_type == 'native_android' %}selected{% endif %}>Kotlin/Android</option>
+                        <option value="swift" {% if project.tech_stack == 'swift' %}selected{% endif %}>Swift/iOS</option>
+                        <option value="custom">Custom</option>
+                    </select>
+                    <button onclick="loadContextDefaults()" class="btn btn-secondary btn-small">Load Defaults</button>
+                    <button onclick="saveContextSettings()" class="btn btn-primary btn-small">Save Context</button>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+                    <div class="form-group" style="margin:0">
+                        <label style="display:flex;justify-content:space-between;align-items:center">
+                            <span>Global Context</span>
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <span style="font-size:11px;color:var(--text-muted)" id="globalContextLines">0 lines</span>
+                                <button type="button" onclick="openContextEditor('globalContextArea', 'Global Context')"
+                                    class="btn btn-secondary btn-small" style="padding:2px 8px;font-size:11px" title="Expand">⛶</button>
+                            </div>
+                        </label>
+                        <textarea id="globalContextArea" rows="12" placeholder="Universal context for all projects..."
+                            style="font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.5"
+                            oninput="updateContextLineCount()">{{ project.global_context or '' }}</textarea>
+                    </div>
+                    <div class="form-group" style="margin:0">
+                        <label style="display:flex;justify-content:space-between;align-items:center">
+                            <span>Project Context</span>
+                            <div style="display:flex;align-items:center;gap:8px">
+                                <span style="font-size:11px;color:var(--text-muted)" id="projectContextLines">0 lines</span>
+                                <button type="button" onclick="openContextEditor('projectContextArea', 'Project Context')"
+                                    class="btn btn-secondary btn-small" style="padding:2px 8px;font-size:11px" title="Expand">⛶</button>
+                            </div>
+                        </label>
+                        <textarea id="projectContextArea" rows="12" placeholder="Language-specific context for this project..."
+                            style="font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.5"
+                            oninput="updateContextLineCount()">{{ project.project_context or '' }}</textarea>
+                    </div>
+                </div>
+
+                <div style="margin-top:12px;padding:12px;background:rgba(99,102,241,0.1);border-radius:8px;font-size:12px;color:var(--text-secondary)">
+                    <strong>Tip:</strong> The global context (~180 lines) contains server environment and security basics. The project context (~300-350 lines) contains language-specific patterns and examples. Total context sent to AI: global + project = ~500 lines.
                 </div>
             </div>
         </div>
@@ -2802,6 +2870,156 @@
                 resetVoiceSilenceTimeout();
             }
         }
+
+        // === CONTEXT SETTINGS ===
+        let contextExpanded = false;
+
+        function openContextSettings() {
+            // Expand the context settings panel if collapsed
+            if (!contextExpanded) {
+                toggleContextSettings();
+            }
+            // Scroll to the context settings section
+            const contextPanel = document.getElementById('contextSettingsContent').parentElement;
+            contextPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function toggleContextSettings() {
+            contextExpanded = !contextExpanded;
+            const content = document.getElementById('contextSettingsContent');
+            const icon = document.getElementById('contextToggleIcon');
+
+            content.style.display = contextExpanded ? 'block' : 'none';
+            icon.textContent = contextExpanded ? '▲' : '▼';
+
+            if (contextExpanded) {
+                updateContextLineCount();
+            }
+        }
+
+        function updateContextLineCount() {
+            const globalArea = document.getElementById('globalContextArea');
+            const projectArea = document.getElementById('projectContextArea');
+            const globalLines = document.getElementById('globalContextLines');
+            const projectLines = document.getElementById('projectContextLines');
+
+            if (globalArea && globalLines) {
+                const count = globalArea.value ? globalArea.value.split('\n').length : 0;
+                globalLines.textContent = count + ' lines';
+            }
+            if (projectArea && projectLines) {
+                const count = projectArea.value ? projectArea.value.split('\n').length : 0;
+                projectLines.textContent = count + ' lines';
+            }
+        }
+
+        async function loadContextDefaults() {
+            const contextType = document.getElementById('contextTypeSelect').value;
+
+            if (contextType === 'custom') {
+                // Custom mode - clear both textareas
+                if (confirm('Switch to custom mode? This will clear current context. You can write your own.')) {
+                    document.getElementById('globalContextArea').value = '';
+                    document.getElementById('projectContextArea').value = '';
+                    updateContextLineCount();
+                }
+                return;
+            }
+
+            if (!confirm(`Load default ${contextType.toUpperCase()} context? This will replace current content.`)) {
+                return;
+            }
+
+            try {
+                const resp = await fetch(`/api/context-defaults/${contextType}`);
+                const result = await resp.json();
+
+                if (result.success) {
+                    document.getElementById('globalContextArea').value = result.global || '';
+                    document.getElementById('projectContextArea').value = result.specific || '';
+                    updateContextLineCount();
+                } else {
+                    alert('Error loading defaults: ' + result.message);
+                }
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        async function saveContextSettings() {
+            const globalContext = document.getElementById('globalContextArea').value;
+            const projectContext = document.getElementById('projectContextArea').value;
+
+            try {
+                const resp = await fetch(`/api/project/${projectId}`, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        global_context: globalContext,
+                        project_context: projectContext
+                    })
+                });
+                const result = await resp.json();
+
+                if (result.success) {
+                    alert('Context settings saved!');
+                } else {
+                    alert('Error: ' + result.message);
+                }
+            } catch (err) {
+                alert('Error saving: ' + err.message);
+            }
+        }
+
+        // Initialize context line counts on page load
+        updateContextLineCount();
     </script>
+<!-- Context Editor Modal -->
+<div class="modal" id="contextEditorModal" style="z-index:2000">
+    <div class="modal-content" style="width:90%;max-width:1200px;height:85vh;display:flex;flex-direction:column;background:#1e1e2e;color:#cdd6f4">
+        <div class="modal-header" style="flex-shrink:0;background:#1e1e2e;border-bottom:1px solid #45475a">
+            <h3 id="contextEditorTitle" style="color:#cdd6f4">Edit Context</h3>
+            <button class="modal-close" onclick="closeContextEditor()" style="color:#cdd6f4">&times;</button>
+        </div>
+        <div class="modal-body" style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding:16px;background:#1e1e2e">
+            <textarea id="contextEditorArea" style="flex:1;width:100%;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.6;resize:none;padding:12px;border-radius:8px;border:1px solid #45475a;background:#313244;color:#cdd6f4"></textarea>
+        </div>
+        <div class="modal-footer" style="flex-shrink:0;display:flex;justify-content:flex-end;gap:12px;padding:16px;border-top:1px solid #45475a;background:#1e1e2e">
+            <button type="button" class="btn btn-secondary" onclick="closeContextEditor()">Cancel</button>
+            <button type="button" class="btn btn-primary" onclick="saveContextEditor()">Apply</button>
+        </div>
+    </div>
+</div>
+<script>
+// Context Editor Modal functions
+let currentContextTextareaId = null;
+
+function openContextEditor(textareaId, title) {
+    currentContextTextareaId = textareaId;
+    const sourceTextarea = document.getElementById(textareaId);
+    const editorArea = document.getElementById('contextEditorArea');
+    const editorTitle = document.getElementById('contextEditorTitle');
+
+    editorTitle.textContent = 'Edit ' + title;
+    editorArea.value = sourceTextarea.value;
+    document.getElementById('contextEditorModal').classList.add('active');
+    editorArea.focus();
+}
+
+function closeContextEditor() {
+    document.getElementById('contextEditorModal').classList.remove('active');
+    currentContextTextareaId = null;
+}
+
+function saveContextEditor() {
+    if (currentContextTextareaId) {
+        const sourceTextarea = document.getElementById(currentContextTextareaId);
+        const editorArea = document.getElementById('contextEditorArea');
+        sourceTextarea.value = editorArea.value;
+        updateContextLineCount();
+    }
+    closeContextEditor();
+}
+</script>
 </body>
 </html>

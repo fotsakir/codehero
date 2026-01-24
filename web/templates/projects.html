@@ -854,15 +854,76 @@
                 </div>
 
                 <div class="form-section">
-                    <h4>Project Context</h4>
+                    <h4>AI Context Settings</h4>
+                    <p style="color:var(--text-muted);font-size:12px;margin-bottom:12px">
+                        Context provides Claude with environment info, coding patterns, and security guidelines.
+                    </p>
+
+                    <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">
+                        <label style="color:var(--text-secondary);font-size:13px;white-space:nowrap">Context Type:</label>
+                        <select id="createContextType" onchange="onCreateContextTypeChange()" style="padding:8px 12px;background:var(--bg-secondary);border:1px solid var(--border-subtle);border-radius:8px;color:var(--text-primary);font-size:13px;min-width:140px">
+                            <option value="php">PHP</option>
+                            <option value="python">Python</option>
+                            <option value="node">Node.js</option>
+                            <option value="html">HTML/CSS/JS</option>
+                            <option value="java">Java/Spring</option>
+                            <option value="dotnet">C#/.NET</option>
+                            <option value="go">Go</option>
+                            <option value="react">React/React Native</option>
+                            <option value="capacitor">Capacitor/Ionic</option>
+                            <option value="flutter">Flutter/Dart</option>
+                            <option value="kotlin">Kotlin/Android</option>
+                            <option value="swift">Swift/iOS</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                        <button type="button" onclick="loadCreateContextDefaults()" class="btn btn-secondary btn-small">Load Defaults</button>
+                        <span id="createContextStatus" style="font-size:11px;color:var(--accent-green);display:none">Loaded!</span>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                        <div class="form-group" style="margin:0">
+                            <label style="display:flex;justify-content:space-between;font-size:12px;align-items:center">
+                                <span>Global Context</span>
+                                <span style="display:flex;align-items:center;gap:8px">
+                                    <span style="color:var(--text-muted)" id="createGlobalLines">0 lines</span>
+                                    <button type="button" onclick="openContextEditor('createGlobalContext', 'Global Context')"
+                                        style="padding:2px 6px;font-size:10px;background:var(--bg-secondary);border:1px solid var(--border-subtle);border-radius:4px;cursor:pointer;color:var(--text-secondary)" title="Expand">⛶</button>
+                                </span>
+                            </label>
+                            <textarea name="global_context" id="createGlobalContext" rows="8"
+                                style="font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.4;resize:vertical"
+                                oninput="updateCreateContextLines()"
+                                placeholder="Server environment, security rules..."></textarea>
+                        </div>
+                        <div class="form-group" style="margin:0">
+                            <label style="display:flex;justify-content:space-between;font-size:12px;align-items:center">
+                                <span>Project Context</span>
+                                <span style="display:flex;align-items:center;gap:8px">
+                                    <span style="color:var(--text-muted)" id="createProjectLines">0 lines</span>
+                                    <button type="button" onclick="openContextEditor('createProjectContext', 'Project Context')"
+                                        style="padding:2px 6px;font-size:10px;background:var(--bg-secondary);border:1px solid var(--border-subtle);border-radius:4px;cursor:pointer;color:var(--text-secondary)" title="Expand">⛶</button>
+                                </span>
+                            </label>
+                            <textarea name="project_context" id="createProjectContext" rows="8"
+                                style="font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.4;resize:vertical"
+                                oninput="updateCreateContextLines()"
+                                placeholder="Language-specific patterns..."></textarea>
+                        </div>
+                    </div>
+                    <small style="color:var(--text-muted);margin-top:8px;display:block">
+                        Global: server environment, security basics (~180 lines). Project: language-specific patterns (~300 lines).
+                    </small>
+                </div>
+
+                <div class="form-section">
+                    <h4>Additional Context</h4>
                     <div class="form-group">
-                        <label>Context for Claude</label>
-                        <textarea name="context" class="large" placeholder="Example:
+                        <label>Custom Project Notes</label>
+                        <textarea name="context" rows="3" placeholder="Example:
 - Uses Stripe API for payments (keys in .env)
 - Redis cache on localhost:6379
-- Email via SendGrid
 - Admin users have role='admin' in users table"></textarea>
-                        <small>Important info Claude should know: APIs, services, conventions, gotchas. DB credentials added automatically.</small>
+                        <small>Extra info for Claude: APIs, services, conventions. Added to the context above.</small>
                     </div>
                 </div>
 
@@ -1036,10 +1097,73 @@
                 </div>
 
                 <div class="form-section">
-                    <h4>Project Context</h4>
+                    <h4>AI Context Settings</h4>
+                    <p style="color:var(--text-muted);font-size:12px;margin-bottom:12px">
+                        Context provides Claude with environment info, coding patterns, and security guidelines.
+                    </p>
+
+                    <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px">
+                        <label style="color:var(--text-secondary);font-size:13px;white-space:nowrap">Context Type:</label>
+                        <select id="editContextType" onchange="onEditContextTypeChange()" style="padding:8px 12px;background:var(--bg-secondary);border:1px solid var(--border-subtle);border-radius:8px;color:var(--text-primary);font-size:13px;min-width:140px">
+                            <option value="php">PHP</option>
+                            <option value="python">Python</option>
+                            <option value="node">Node.js</option>
+                            <option value="html">HTML/CSS/JS</option>
+                            <option value="java">Java/Spring</option>
+                            <option value="dotnet">C#/.NET</option>
+                            <option value="go">Go</option>
+                            <option value="react">React/React Native</option>
+                            <option value="capacitor">Capacitor/Ionic</option>
+                            <option value="flutter">Flutter/Dart</option>
+                            <option value="kotlin">Kotlin/Android</option>
+                            <option value="swift">Swift/iOS</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                        <button type="button" onclick="loadEditContextDefaults()" class="btn btn-secondary btn-small">Load Defaults</button>
+                        <span id="editContextStatus" style="font-size:11px;color:var(--accent-green);display:none">Loaded!</span>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                        <div class="form-group" style="margin:0">
+                            <label style="display:flex;justify-content:space-between;font-size:12px;align-items:center">
+                                <span>Global Context</span>
+                                <span style="display:flex;align-items:center;gap:8px">
+                                    <span style="color:var(--text-muted)" id="editGlobalLines">0 lines</span>
+                                    <button type="button" onclick="openContextEditor('edit_global_context', 'Global Context')"
+                                        style="padding:2px 6px;font-size:10px;background:var(--bg-secondary);border:1px solid var(--border-subtle);border-radius:4px;cursor:pointer;color:var(--text-secondary)" title="Expand">⛶</button>
+                                </span>
+                            </label>
+                            <textarea name="global_context" id="edit_global_context" rows="8"
+                                style="font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.4;resize:vertical"
+                                oninput="updateEditContextLines()"
+                                placeholder="Server environment, security rules..."></textarea>
+                        </div>
+                        <div class="form-group" style="margin:0">
+                            <label style="display:flex;justify-content:space-between;font-size:12px;align-items:center">
+                                <span>Project Context</span>
+                                <span style="display:flex;align-items:center;gap:8px">
+                                    <span style="color:var(--text-muted)" id="editProjectLines">0 lines</span>
+                                    <button type="button" onclick="openContextEditor('edit_project_context', 'Project Context')"
+                                        style="padding:2px 6px;font-size:10px;background:var(--bg-secondary);border:1px solid var(--border-subtle);border-radius:4px;cursor:pointer;color:var(--text-secondary)" title="Expand">⛶</button>
+                                </span>
+                            </label>
+                            <textarea name="project_context" id="edit_project_context" rows="8"
+                                style="font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.4;resize:vertical"
+                                oninput="updateEditContextLines()"
+                                placeholder="Language-specific patterns..."></textarea>
+                        </div>
+                    </div>
+                    <small style="color:var(--text-muted);margin-top:8px;display:block">
+                        Global: server environment, security basics (~180 lines). Project: language-specific patterns (~300 lines).
+                    </small>
+                </div>
+
+                <div class="form-section">
+                    <h4>Additional Context</h4>
                     <div class="form-group">
-                        <label>Context for Claude</label>
-                        <textarea name="context" id="edit_context" class="large"></textarea>
+                        <label>Custom Project Notes</label>
+                        <textarea name="context" id="edit_context" rows="3" placeholder="Extra info: APIs, services, conventions..."></textarea>
+                        <small>Extra info for Claude: APIs, services, conventions. Added to the context above.</small>
                     </div>
                 </div>
 
@@ -1213,9 +1337,139 @@
     </style>
 
     <script>
-        function openModal() { document.getElementById('modal').classList.add('active'); }
+        function openModal() {
+            document.getElementById('modal').classList.add('active');
+            // Auto-detect context type from tech_stack input
+            setTimeout(() => {
+                const techStack = document.querySelector('#projectForm input[name="tech_stack"]').value.toLowerCase();
+                if (techStack.includes('php')) document.getElementById('createContextType').value = 'php';
+                else if (techStack.includes('python')) document.getElementById('createContextType').value = 'python';
+                else if (techStack.includes('node')) document.getElementById('createContextType').value = 'node';
+                loadCreateContextDefaults();
+            }, 100);
+        }
         function closeModal() { document.getElementById('modal').classList.remove('active'); }
         function closeEditModal() { document.getElementById('editModal').classList.remove('active'); }
+
+        // === CONTEXT SETTINGS FOR CREATE FORM ===
+        function updateCreateContextLines() {
+            const globalArea = document.getElementById('createGlobalContext');
+            const projectArea = document.getElementById('createProjectContext');
+            const globalLines = document.getElementById('createGlobalLines');
+            const projectLines = document.getElementById('createProjectLines');
+
+            if (globalArea && globalLines) {
+                const count = globalArea.value ? globalArea.value.split('\n').length : 0;
+                globalLines.textContent = count + ' lines';
+            }
+            if (projectArea && projectLines) {
+                const count = projectArea.value ? projectArea.value.split('\n').length : 0;
+                projectLines.textContent = count + ' lines';
+            }
+        }
+
+        function onCreateContextTypeChange() {
+            const contextType = document.getElementById('createContextType').value;
+            if (contextType === 'custom') {
+                // Clear textareas for custom
+                document.getElementById('createGlobalContext').value = '';
+                document.getElementById('createProjectContext').value = '';
+                updateCreateContextLines();
+            }
+        }
+
+        async function loadCreateContextDefaults() {
+            const contextType = document.getElementById('createContextType').value;
+            if (contextType === 'custom') return;
+
+            try {
+                const resp = await fetch(`/api/context-defaults/${contextType}`);
+                const result = await resp.json();
+
+                if (result.success) {
+                    document.getElementById('createGlobalContext').value = result.global || '';
+                    document.getElementById('createProjectContext').value = result.specific || '';
+                    updateCreateContextLines();
+
+                    // Show loaded indicator
+                    const status = document.getElementById('createContextStatus');
+                    status.style.display = 'inline';
+                    setTimeout(() => status.style.display = 'none', 2000);
+                }
+            } catch (err) {
+                console.error('Error loading context defaults:', err);
+            }
+        }
+
+        // Auto-sync context type with tech_stack changes
+        document.addEventListener('DOMContentLoaded', function() {
+            const techStackInput = document.querySelector('#projectForm input[name="tech_stack"]');
+            if (techStackInput) {
+                techStackInput.addEventListener('change', function() {
+                    const val = this.value.toLowerCase();
+                    const contextSelect = document.getElementById('createContextType');
+                    if (val.includes('php')) contextSelect.value = 'php';
+                    else if (val.includes('python') || val.includes('flask') || val.includes('django')) contextSelect.value = 'python';
+                    else if (val.includes('node') || val.includes('express') || val.includes('react') || val.includes('vue')) contextSelect.value = 'node';
+                    else if (val.includes('html') || val.includes('static')) contextSelect.value = 'html';
+                });
+            }
+        });
+
+        // === CONTEXT SETTINGS FOR EDIT FORM ===
+        function updateEditContextLines() {
+            const globalArea = document.getElementById('edit_global_context');
+            const projectArea = document.getElementById('edit_project_context');
+            const globalLines = document.getElementById('editGlobalLines');
+            const projectLines = document.getElementById('editProjectLines');
+
+            if (globalArea && globalLines) {
+                const count = globalArea.value ? globalArea.value.split('\n').length : 0;
+                globalLines.textContent = count + ' lines';
+            }
+            if (projectArea && projectLines) {
+                const count = projectArea.value ? projectArea.value.split('\n').length : 0;
+                projectLines.textContent = count + ' lines';
+            }
+        }
+
+        function onEditContextTypeChange() {
+            const contextType = document.getElementById('editContextType').value;
+            if (contextType === 'custom') {
+                if (confirm('Switch to custom mode? This will clear current context.')) {
+                    document.getElementById('edit_global_context').value = '';
+                    document.getElementById('edit_project_context').value = '';
+                    updateEditContextLines();
+                }
+            }
+        }
+
+        async function loadEditContextDefaults() {
+            const contextType = document.getElementById('editContextType').value;
+            if (contextType === 'custom') return;
+
+            if (!confirm(`Load ${contextType.toUpperCase()} defaults? This will replace current content.`)) return;
+
+            try {
+                const resp = await fetch(`/api/context-defaults/${contextType}`);
+                const result = await resp.json();
+
+                if (result.success) {
+                    document.getElementById('edit_global_context').value = result.global || '';
+                    document.getElementById('edit_project_context').value = result.specific || '';
+                    updateEditContextLines();
+
+                    const status = document.getElementById('editContextStatus');
+                    status.style.display = 'inline';
+                    setTimeout(() => status.style.display = 'none', 2000);
+                } else {
+                    alert('Error loading defaults: ' + result.message);
+                }
+            } catch (err) {
+                console.error('Error loading context defaults:', err);
+                alert('Error loading defaults');
+            }
+        }
 
         // Android/mobile project types
         const mobileProjectTypes = ['capacitor', 'react_native', 'flutter', 'native_android'];
@@ -1305,6 +1559,8 @@
                 app_path: form.app_path.value,
                 preview_url: form.preview_url.value,
                 context: form.context.value,
+                global_context: form.global_context.value,
+                project_context: form.project_context.value,
                 ai_model: form.ai_model.value,
                 default_execution_mode: form.default_execution_mode.value,
                 skip_database: form.skip_database.checked,
@@ -1349,6 +1605,23 @@
                 document.getElementById('edit_db_user').value = p.db_user || '';
                 document.getElementById('edit_db_password').value = p.db_password || '';
                 document.getElementById('edit_context').value = p.context || '';
+                document.getElementById('edit_global_context').value = p.global_context || '';
+                document.getElementById('edit_project_context').value = p.project_context || '';
+
+                // Set context type based on tech_stack or project_type
+                const contextTypeMap = {
+                    'php': 'php', 'python': 'python', 'node': 'node', 'html': 'html',
+                    'java': 'java', 'dotnet': 'dotnet', 'go': 'go',
+                    'react': 'react', 'flutter': 'flutter', 'kotlin': 'kotlin', 'swift': 'swift'
+                };
+                const projectTypeMap = {
+                    'capacitor': 'capacitor', 'react_native': 'react', 'flutter': 'flutter',
+                    'native_android': 'kotlin', 'dotnet': 'dotnet'
+                };
+                let contextType = contextTypeMap[p.tech_stack] || projectTypeMap[p.project_type] || 'php';
+                document.getElementById('editContextType').value = contextType;
+                updateEditContextLines();
+
                 document.getElementById('edit_ai_model').value = p.ai_model || 'sonnet';
                 document.getElementById('edit_default_test_command').value = p.default_test_command || '';
                 document.getElementById('edit_default_execution_mode').value = p.default_execution_mode || 'autonomous';
@@ -1389,6 +1662,8 @@
                 db_user: form.db_user.value,
                 db_password: form.db_password.value,
                 context: form.context.value,
+                global_context: document.getElementById('edit_global_context').value,
+                project_context: document.getElementById('edit_project_context').value,
                 ai_model: form.ai_model.value,
                 default_test_command: form.default_test_command.value || null,
                 default_execution_mode: form.default_execution_mode.value || 'autonomous',
@@ -1771,6 +2046,82 @@
                                  'var(--accent-primary)';
             status.textContent = message;
         }
+
+        // === CONTEXT EDITOR MODAL ===
+        let contextEditorSourceId = null;
+
+        function openContextEditor(textareaId, title) {
+            contextEditorSourceId = textareaId;
+            const sourceTextarea = document.getElementById(textareaId);
+            const editorTextarea = document.getElementById('contextEditorTextarea');
+            const editorTitle = document.getElementById('contextEditorTitle');
+
+            editorTitle.textContent = title;
+            editorTextarea.value = sourceTextarea.value;
+            document.getElementById('contextEditorModal').classList.add('active');
+            editorTextarea.focus();
+            updateContextEditorLines();
+        }
+
+        function closeContextEditor() {
+            document.getElementById('contextEditorModal').classList.remove('active');
+            contextEditorSourceId = null;
+        }
+
+        function saveContextEditor() {
+            if (contextEditorSourceId) {
+                const sourceTextarea = document.getElementById(contextEditorSourceId);
+                const editorTextarea = document.getElementById('contextEditorTextarea');
+                sourceTextarea.value = editorTextarea.value;
+                // Trigger line count update
+                if (contextEditorSourceId.includes('Global')) updateCreateContextLines();
+                else if (contextEditorSourceId.includes('Project')) updateCreateContextLines();
+            }
+            closeContextEditor();
+        }
+
+        function updateContextEditorLines() {
+            const textarea = document.getElementById('contextEditorTextarea');
+            const counter = document.getElementById('contextEditorLines');
+            const count = textarea.value ? textarea.value.split('\n').length : 0;
+            counter.textContent = count + ' lines';
+        }
+
+        // Close on outside click
+        document.getElementById('contextEditorModal')?.addEventListener('click', function(e) {
+            if (e.target === this) closeContextEditor();
+        });
+
+        // Close on Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && document.getElementById('contextEditorModal').classList.contains('active')) {
+                closeContextEditor();
+            }
+        });
     </script>
+
+    <!-- Context Editor Modal -->
+    <div class="modal" id="contextEditorModal" style="z-index:2000">
+        <div class="modal-content" style="width:90%;max-width:1200px;height:85vh;display:flex;flex-direction:column;background:#1e1e2e;color:#cdd6f4">
+            <div class="modal-header" style="flex-shrink:0;background:#1e1e2e;border-bottom:1px solid #45475a">
+                <h3 id="contextEditorTitle" style="color:#cdd6f4">Edit Context</h3>
+                <button class="modal-close" onclick="closeContextEditor()" style="color:#cdd6f4">&times;</button>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;padding:16px;overflow:hidden;background:#1e1e2e">
+                <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+                    <span id="contextEditorLines" style="color:#a6adc8;font-size:12px">0 lines</span>
+                    <span style="color:#a6adc8;font-size:11px">Tip: Ctrl+S to save, Escape to cancel</span>
+                </div>
+                <textarea id="contextEditorTextarea"
+                    style="flex:1;width:100%;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.5;padding:12px;background:#313244;border:1px solid #45475a;border-radius:8px;color:#cdd6f4;resize:none"
+                    oninput="updateContextEditorLines()"
+                    onkeydown="if(event.ctrlKey && event.key === 's') { event.preventDefault(); saveContextEditor(); }"></textarea>
+            </div>
+            <div style="display:flex;justify-content:flex-end;gap:12px;padding:16px;border-top:1px solid #45475a;background:#1e1e2e">
+                <button type="button" class="btn btn-secondary" onclick="closeContextEditor()">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="saveContextEditor()">Save & Close</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

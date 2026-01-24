@@ -37,6 +37,7 @@ open → in_progress → done
 - **codehero_list_projects** - List all projects
 - **codehero_get_project** - Get project details and stats
 - **codehero_get_project_progress** - Get detailed progress stats
+- **codehero_get_context_defaults** - Load context files (for troubleshooting context issues)
 
 ### TICKET MANAGEMENT:
 - **codehero_list_tickets** - List tickets (filter by status: open, in_progress, completed, closed, all)
@@ -230,6 +231,42 @@ Phase 3/3 waiting ⏳ (1 ticket)
 ---
 
 **Note:** The full Global Context (coding standards, security rules, design standards) is loaded automatically below.
+
+---
+
+## PROJECT CONTEXT SYSTEM
+
+Each project has customizable AI context:
+
+| Field | Content | Size |
+|-------|---------|------|
+| **global_context** | Server environment, security rules | ~180 lines |
+| **project_context** | Language-specific patterns (PHP, Python, etc.) | ~300 lines |
+| **context** (Additional) | Custom notes: APIs, services, conventions | Variable |
+
+### Available Context Types
+
+`php`, `python`, `node`, `html`, `java`, `dotnet`, `go`, `react`, `capacitor`, `flutter`, `kotlin`, `swift`
+
+### Viewing/Editing Context
+
+To check a project's context:
+1. Open project in web UI
+2. Click **"⚙️ Context Settings"** button
+3. View/edit the Global Context and Project Context
+
+**To check default context files:**
+```
+codehero_get_context_defaults(context_type="php")
+```
+Returns both global_context and project_context defaults for comparison.
+
+### When Context Matters for Troubleshooting
+
+If a ticket fails due to:
+- Wrong database syntax → Check project_context matches actual DB
+- Wrong framework patterns → Check project_context has correct patterns
+- Security violations → Check global_context rules
 
 ---
 

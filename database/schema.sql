@@ -238,6 +238,8 @@ CREATE TABLE `projects` (
   `app_path` varchar(500) DEFAULT NULL,
   `reference_path` varchar(500) DEFAULT NULL COMMENT 'Path to imported reference project (for template mode)',
   `context` text,
+  `global_context` text COMMENT 'Customized global context for this project',
+  `project_context` text COMMENT 'Language-specific context for this project',
   `status` enum('active','archived','paused') DEFAULT 'active',
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

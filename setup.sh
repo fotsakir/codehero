@@ -508,6 +508,33 @@ if [ "$MYSQL_CONNECTED" = true ]; then
         fi
     fi
     echo -e "${GREEN}Database configured${NC}"
+
+    # Configure MySQL performance settings
+    echo "  Configuring MySQL performance settings..."
+    $MYSQL_CMD -e "SET GLOBAL wait_timeout=300;" 2>/dev/null || true
+    $MYSQL_CMD -e "SET GLOBAL interactive_timeout=600;" 2>/dev/null || true
+
+    # Persist MySQL settings
+    MYSQL_CONF="/etc/mysql/mysql.conf.d/mysqld.cnf"
+    if [ -f "$MYSQL_CONF" ]; then
+        # Ensure [mysqld] section exists (required for MySQL 8.0+)
+        if ! grep -q "^\[mysqld\]" "$MYSQL_CONF"; then
+            # Add [mysqld] before first non-comment option
+            sed -i '/^user[[:space:]]*=/i [mysqld]' "$MYSQL_CONF" 2>/dev/null || true
+            echo "  Added missing [mysqld] section header"
+        fi
+        # Remove old settings if they exist
+        sed -i '/^wait_timeout=/d' "$MYSQL_CONF" 2>/dev/null || true
+        sed -i '/^interactive_timeout=/d' "$MYSQL_CONF" 2>/dev/null || true
+        # Add new settings
+        if ! grep -q "wait_timeout" "$MYSQL_CONF"; then
+            echo "" >> "$MYSQL_CONF"
+            echo "# CodeHero performance settings" >> "$MYSQL_CONF"
+            echo "wait_timeout=300" >> "$MYSQL_CONF"
+            echo "interactive_timeout=600" >> "$MYSQL_CONF"
+        fi
+    fi
+    echo "  MySQL timeouts configured (wait=300s, interactive=600s)"
 else
     echo -e "${RED}WARNING: Could not configure MySQL automatically${NC}"
 fi

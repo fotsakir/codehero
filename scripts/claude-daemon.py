@@ -1636,6 +1636,13 @@ Complete this task. When finished, say "TASK COMPLETED" with a summary."""
                         key, value = line.split('=', 1)
                         claude_env[key] = value
 
+        # Set max output tokens to handle large context
+        claude_env['CLAUDE_CODE_MAX_OUTPUT_TOKENS'] = '64000'
+
+        # Maximum thinking budget for better reasoning (reduces errors)
+        claude_env['MAX_THINKING_TOKENS'] = '31999'
+        self.log(f"Extended thinking enabled: 31,999 tokens")
+
         # Execution mode handling:
         # - autonomous: skip all permission prompts
         # - semi-autonomous: use hooks to auto-approve safe operations, ask for risky ones
@@ -1963,11 +1970,30 @@ Complete this task. When finished, say "TASK COMPLETED" with a summary."""
             conn = self.get_db()
             cursor = conn.cursor(dictionary=True)
 
-            # First, get the lowest available sequence_order
+            # First, get the lowest sequence_order that has ANY unfinished tickets
+            # This ensures we complete all tickets in seq=N before moving to seq=N+1
             cursor.execute("""
                 SELECT MIN(t.sequence_order) as min_seq
                 FROM tickets t
                 WHERE t.project_id = %s
+                  AND t.sequence_order IS NOT NULL
+                  AND t.status NOT IN ('done', 'skipped')
+            """, (self.project_id,))
+            result = cursor.fetchone()
+            min_seq = result['min_seq'] if result else None
+
+            if min_seq is None:
+                cursor.close()
+                conn.close()
+                return []
+
+            # Now get READY tickets from that sequence_order
+            # (tickets that are open/pending with satisfied deps and no retry cooldown)
+            cursor.execute("""
+                SELECT MIN(t.sequence_order) as min_seq
+                FROM tickets t
+                WHERE t.project_id = %s
+                  AND t.sequence_order = %s
                   AND t.status IN ('open', 'new', 'pending')
                   AND (t.retry_after IS NULL OR t.retry_after <= NOW())
                   AND NOT EXISTS (
@@ -1984,7 +2010,7 @@ Complete this task. When finished, say "TASK COMPLETED" with a summary."""
                             AND pt.status IN ('done', 'skipped')
                       )
                   )
-            """, (self.project_id,))
+            """, (self.project_id, min_seq))
             result = cursor.fetchone()
             min_seq = result['min_seq'] if result else None
 
@@ -2720,11 +2746,40 @@ Reply with ONLY one word: COMPLETED, QUESTION, or ERROR"""
             database=self.config.get('DB_NAME', 'claude_knowledge'),
             pool_name='daemon_pool',
             pool_size=30,
-            pool_reset_session=True
+            pool_reset_session=True,
+            autocommit=True,
+            connection_timeout=30
         )
-    
+
     def get_db(self):
-        return self.db_pool.get_connection()
+        """Get database connection with auto-reconnect on stale connections"""
+        max_retries = 3
+        last_error = None
+
+        for attempt in range(max_retries):
+            try:
+                conn = self.db_pool.get_connection()
+                # Ping to check if connection is alive (handles wait_timeout disconnections)
+                conn.ping(reconnect=True, attempts=3, delay=1)
+                return conn
+            except mysql.connector.Error as e:
+                last_error = e
+                error_code = e.errno if hasattr(e, 'errno') else None
+                # Common error codes for dead connections:
+                # 2006: MySQL server has gone away
+                # 2013: Lost connection to MySQL server during query
+                # 2055: Lost connection to MySQL server
+                # 2003: Can't connect to MySQL server
+                if error_code in (2006, 2013, 2055, 2003) or 'not available' in str(e).lower():
+                    self.log(f"Database connection lost (attempt {attempt + 1}/{max_retries}): {e}", "WARNING")
+                    time.sleep(1)
+                    continue
+                else:
+                    raise
+
+        # All retries failed - log and raise
+        self.log(f"Database connection failed after {max_retries} attempts: {last_error}", "ERROR")
+        raise last_error
     
     def log(self, message, level="INFO"):
         timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -3020,13 +3075,14 @@ Answer briefly:"""
             cursor = conn.cursor(dictionary=True)
             cursor.execute("""
                 SELECT DISTINCT p.id, p.name, p.code, COALESCE(p.web_path, p.app_path) as work_path,
+                       p.global_context, p.project_context,
                        (SELECT COUNT(*) FROM tickets WHERE project_id = p.id AND status IN ('open', 'new', 'pending')) as open_count
                 FROM projects p
                 JOIN tickets t ON t.project_id = p.id
                 WHERE t.status IN ('open', 'new', 'pending')
                 AND p.status = 'active'
-                ORDER BY 
-                    (SELECT MIN(CASE priority WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4 END) 
+                ORDER BY
+                    (SELECT MIN(CASE priority WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'medium' THEN 3 ELSE 4 END)
                      FROM tickets WHERE project_id = p.id AND status IN ('open', 'new', 'pending')) ASC
             """)
             projects = cursor.fetchall()
@@ -3205,12 +3261,26 @@ Answer briefly:"""
                     
                     with self.workers_lock:
                         if project['id'] not in self.workers or not self.workers[project['id']].is_alive():
+                            # Build combined context: project-specific if available, else default
+                            combined_context = ""
+                            if project.get('global_context') or project.get('project_context'):
+                                # Use project's custom contexts
+                                if project.get('global_context'):
+                                    combined_context += project['global_context']
+                                if project.get('project_context'):
+                                    if combined_context:
+                                        combined_context += "\n\n---\n\n"
+                                    combined_context += project['project_context']
+                            else:
+                                # Fall back to default global context
+                                combined_context = self.global_context
+
                             worker = ProjectWorker(
                                 self,
                                 project['id'],
                                 project['name'],
                                 project['work_path'],
-                                self.global_context,
+                                combined_context,
                                 self.context_manager  # Pass Smart Context Manager
                             )
                             worker.start()

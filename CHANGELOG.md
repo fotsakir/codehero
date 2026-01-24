@@ -5,6 +5,19 @@ All notable changes to CodeHero will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.83.0] - 2026-01-24
+
+### Added
+- **Extended Thinking for All Models** - Better reasoning, fewer errors
+  - MAX_THINKING_TOKENS=31,999 for haiku, sonnet, and opus
+  - Consistent thinking budget across all AI models
+  - Reduces retries by enabling deeper analysis before responses
+
+- **Context System Refactoring** - Per-project customizable AI context
+  - `global_context` column for project-specific universal rules
+  - `project_context` column for language-specific patterns
+  - Context defaults loader for different tech stacks (php, python, node, etc.)
+
 ## [2.82.3] - 2026-01-24
 
 ### Added

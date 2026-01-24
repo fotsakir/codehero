@@ -34,15 +34,24 @@ A **ticket** is a task assigned to an AI agent (Claude):
 
 ## YOUR MCP TOOLS:
 
+### codehero_get_context_defaults
+**Load default context files for customization:**
+- context_type: "php", "python", "node", "html", "java", "dotnet", "go", "react", "capacitor", "flutter", "kotlin", "swift"
+- Returns: { global_context: "...", project_context: "..." }
+
+**Use this to read context, modify it, then pass to create_project!**
+
 ### codehero_create_project
 Create new project:
 - name: Project name (required)
 - description: Project description
 - project_type: "web" for PHP/HTML, "app" for Node/Python/API
-- tech_stack: "php", "node", "python", etc.
+- tech_stack: "php", "node", "python", "java", "dotnet", "go", "react", "flutter", "kotlin", "swift", etc.
 - web_path: "/var/www/projects/{project_name}" (for web projects)
 - app_path: "/opt/apps/{project_name}" (for app projects)
 - ai_model: "opus", "sonnet", or "haiku" (default for tickets)
+- **global_context**: Custom global context (server environment, security rules)
+- **project_context**: Custom language-specific context (patterns, examples)
 
 ### codehero_bulk_create_tickets
 Create multiple tickets at once:
@@ -419,6 +428,94 @@ tickets: [
 | Position N can depend on: | Any position < N |
 
 **NEVER:** `depends_on: [N]` where N = current position (self-dependency!)
+
+---
+
+## PROJECT CONTEXT SYSTEM
+
+### Available Context Types
+
+| Context Type | Tech Stack | Description |
+|--------------|------------|-------------|
+| `php` | PHP | PHP/MySQL security patterns, PDO |
+| `python` | Python | FastAPI, async, type hints |
+| `node` | Node.js | Express, SQL injection prevention |
+| `html` | HTML/CSS | Semantic HTML, accessibility |
+| `java` | Java | Spring Boot, JPA, security |
+| `dotnet` | C#/.NET | ASP.NET, Entity Framework |
+| `go` | Go | Gin/Echo, goroutines |
+| `react` | React/React Native | Hooks, state management |
+| `capacitor` | Capacitor/Ionic | Native plugins, security |
+| `flutter` | Flutter/Dart | BLoC, clean architecture |
+| `kotlin` | Kotlin/Android | MVVM, Jetpack Compose |
+| `swift` | Swift/iOS | SwiftUI, async/await |
+
+### How Context Works
+
+When you create a project:
+1. **global_context** = Server environment, security rules (~180 lines)
+2. **project_context** = Language-specific patterns (~300 lines)
+
+If you DON'T provide contexts, the system auto-loads defaults based on `tech_stack`.
+
+### Customizing Context
+
+**Option 1: Let system auto-load (DEFAULT)**
+```
+codehero_create_project(
+    name="MyProject",
+    tech_stack="php"
+    # global_context and project_context will be loaded automatically
+)
+```
+
+**Option 2: Provide custom context**
+
+When user has specific requirements (e.g., "use PostgreSQL instead of MySQL"):
+
+1. Start with the default context for that tech_stack
+2. Modify it based on user's requirements
+3. Pass the modified version to create_project:
+
+```
+codehero_create_project(
+    name="MyProject",
+    tech_stack="php",
+    global_context="... modified global rules ...",
+    project_context="... modified PHP patterns with PostgreSQL instead of MySQL ..."
+)
+```
+
+### When to Customize Context
+
+| Situation | Action |
+|-----------|--------|
+| Standard project | Don't pass context (use defaults) |
+| Custom database (PostgreSQL, MongoDB) | Modify project_context |
+| Specific framework version | Modify project_context |
+| Custom security requirements | Modify global_context |
+| Different server environment | Modify global_context |
+
+### Example: Custom PostgreSQL Project
+
+User says: "Create PHP project but use PostgreSQL"
+
+**Step 1: Load the default PHP context:**
+```
+codehero_get_context_defaults(context_type="php")
+```
+Returns: { global_context: "...", project_context: "# PHP Development Context..." }
+
+**Step 2: Modify the project_context** (change MySQL references to PostgreSQL)
+
+**Step 3: Create project with modified context:**
+```
+codehero_create_project(
+    name="MyProject",
+    tech_stack="php",
+    project_context="# PHP Development Context\n\n## Database: PostgreSQL\n\n```php\n$pdo = new PDO('pgsql:host=...');\n```\n..."
+)
+```
 
 ---
 

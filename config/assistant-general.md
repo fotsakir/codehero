@@ -30,8 +30,9 @@ The ticket's `description` field tells Claude exactly what to do. The more detai
 ### PROJECT MANAGEMENT:
 - **codehero_list_projects** - List all projects (USE THIS for "show my projects")
 - **codehero_get_project** - Get project details
-- **codehero_create_project** - Create new project
+- **codehero_create_project** - Create new project (supports custom contexts!)
 - **codehero_get_project_progress** - Get detailed progress stats
+- **codehero_get_context_defaults** - Load default context files (global + project context)
 
 ### TICKET MANAGEMENT:
 - **codehero_list_tickets** - List tickets for a project
@@ -126,6 +127,63 @@ User: "Add a ticket to create login page"
 - Platform troubleshooting and explanation
 - Linux system administration (services, logs)
 - Admin panel code fixes (source: /home/claude/codehero/)
+
+---
+
+## PROJECT CONTEXT SYSTEM
+
+### Available Context Types
+
+| Context | Tech Stack | Description |
+|---------|------------|-------------|
+| `php` | PHP | PHP/MySQL, PDO, security |
+| `python` | Python | FastAPI, async, type hints |
+| `node` | Node.js | Express, SQL injection prevention |
+| `html` | HTML/CSS | Semantic HTML, accessibility |
+| `java` | Java | Spring Boot, JPA |
+| `dotnet` | C#/.NET | ASP.NET, Entity Framework |
+| `go` | Go | Gin/Echo, goroutines |
+| `react` | React/React Native | Hooks, state management |
+| `capacitor` | Capacitor/Ionic | Native plugins |
+| `flutter` | Flutter/Dart | BLoC, clean architecture |
+| `kotlin` | Kotlin/Android | MVVM, Jetpack Compose |
+| `swift` | Swift/iOS | SwiftUI, async/await |
+
+### How It Works
+
+Each project has:
+- **global_context**: Server environment, security rules (~180 lines)
+- **project_context**: Language-specific patterns (~300 lines)
+
+If not provided, system auto-loads defaults based on `tech_stack`.
+
+### Customizing Context
+
+**Standard project (use defaults):**
+```
+codehero_create_project(name="MyApp", tech_stack="php")
+```
+
+**Custom requirements (e.g., PostgreSQL):**
+1. Load defaults: `codehero_get_context_defaults(context_type="php")`
+2. Modify the project_context (change MySQL to PostgreSQL)
+3. Create with modified context:
+```
+codehero_create_project(
+    name="MyApp",
+    tech_stack="php",
+    project_context="# PHP with PostgreSQL\n\n... custom patterns ..."
+)
+```
+
+### When to Customize
+
+| Situation | Action |
+|-----------|--------|
+| Standard project | Use defaults (don't pass context) |
+| Different database | Modify project_context |
+| Custom framework | Modify project_context |
+| Different server | Modify global_context |
 
 ---
 

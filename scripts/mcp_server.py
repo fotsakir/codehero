@@ -147,6 +147,14 @@ TOOLS = [
                     "type": "string",
                     "description": "Default AI model for tickets: opus (Master Developer), sonnet (Senior Developer), haiku (Junior Developer). Default: sonnet",
                     "enum": ["opus", "sonnet", "haiku"]
+                },
+                "global_context": {
+                    "type": "string",
+                    "description": "Custom global context for this project (universal rules). If not provided, defaults will be loaded from system."
+                },
+                "project_context": {
+                    "type": "string",
+                    "description": "Custom project-specific context (language-specific patterns). If not provided, defaults based on tech_stack will be loaded."
                 }
             },
             "required": ["name"]
@@ -556,8 +564,64 @@ TOOLS = [
             },
             "required": ["project_id"]
         }
+    },
+    {
+        "name": "codehero_get_context_defaults",
+        "description": "Get default context content for a specific tech stack. Returns both global_context and project_context that can be customized before passing to create_project.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "context_type": {
+                    "type": "string",
+                    "description": "The context type to load: php, python, node, html, java, dotnet, go, react, capacitor, flutter, kotlin, swift",
+                    "enum": ["php", "python", "node", "html", "java", "dotnet", "go", "react", "capacitor", "flutter", "kotlin", "swift"]
+                }
+            },
+            "required": ["context_type"]
+        }
     }
 ]
+
+def handle_get_context_defaults(args: Dict[str, Any]) -> Dict[str, Any]:
+    """Get default context content for a specific tech stack."""
+    context_type = args.get('context_type', 'php')
+
+    codehero_path = '/opt/codehero'
+    result = {
+        "context_type": context_type,
+        "global_context": None,
+        "project_context": None
+    }
+
+    # Load global context
+    global_path = os.path.join(codehero_path, 'config', 'global-context.md')
+    if os.path.exists(global_path):
+        try:
+            with open(global_path, 'r', encoding='utf-8') as f:
+                result["global_context"] = f.read()
+        except Exception as e:
+            result["global_context_error"] = str(e)
+
+    # Load project context based on type
+    context_file = f"{context_type}.md"
+    project_path = os.path.join(codehero_path, 'config', 'contexts', context_file)
+    if os.path.exists(project_path):
+        try:
+            with open(project_path, 'r', encoding='utf-8') as f:
+                result["project_context"] = f.read()
+        except Exception as e:
+            result["project_context_error"] = str(e)
+    else:
+        result["project_context_error"] = f"Context file not found: {project_path}"
+
+    return {
+        "content": [
+            {
+                "type": "text",
+                "text": json.dumps(result, indent=2)
+            }
+        ]
+    }
 
 def handle_reload(args: Dict[str, Any]) -> Dict[str, Any]:
     """Reload the MCP server by restarting the process."""
@@ -688,10 +752,46 @@ def handle_create_project(args: Dict[str, Any]) -> Dict[str, Any]:
     web_path = args.get('web_path', '')
     app_path = args.get('app_path', '')
     ai_model = args.get('ai_model', 'sonnet')
+    global_context = args.get('global_context', None)
+    project_context = args.get('project_context', None)
 
     # Validate ai_model
     if ai_model not in ('opus', 'sonnet', 'haiku'):
         ai_model = 'sonnet'
+
+    # Load default contexts if not provided
+    if global_context is None or project_context is None:
+        codehero_path = '/opt/codehero'
+        if global_context is None:
+            global_path = os.path.join(codehero_path, 'config', 'global-context.md')
+            if os.path.exists(global_path):
+                try:
+                    with open(global_path, 'r', encoding='utf-8') as f:
+                        global_context = f.read()
+                except:
+                    pass
+        if project_context is None:
+            # Map tech_stack to context file
+            context_map = {
+                'php': 'php', 'python': 'python', 'node': 'node', 'html': 'html',
+                'java': 'java', 'dotnet': 'dotnet', 'go': 'go',
+                'react': 'react', 'react_native': 'react', 'flutter': 'flutter',
+                'kotlin': 'kotlin', 'swift': 'swift'
+            }
+            # Also map project_type for mobile projects
+            project_type_map = {
+                'capacitor': 'capacitor', 'react_native': 'react',
+                'flutter': 'flutter', 'native_android': 'kotlin',
+                'dotnet': 'dotnet'
+            }
+            context_file = context_map.get(tech_stack) or project_type_map.get(project_type, 'php')
+            specific_path = os.path.join(codehero_path, 'config', 'contexts', f'{context_file}.md')
+            if os.path.exists(specific_path):
+                try:
+                    with open(specific_path, 'r', encoding='utf-8') as f:
+                        project_context = f.read()
+                except:
+                    pass
 
     # Generate code from name (up to 8 characters)
     original_code = ''.join(c.upper() for c in name if c.isalnum())[:8]
@@ -795,10 +895,10 @@ def handle_create_project(args: Dict[str, Any]) -> Dict[str, Any]:
         # Insert project
         cursor.execute("""
             INSERT INTO projects (name, description, project_type, tech_stack, web_path, app_path, code, status,
-                                  db_name, db_user, db_password, db_host, ai_model, secure_key)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, 'active', %s, %s, %s, %s, %s, %s)
+                                  db_name, db_user, db_password, db_host, ai_model, secure_key, global_context, project_context)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, 'active', %s, %s, %s, %s, %s, %s, %s, %s)
         """, (name, description, project_type, tech_stack, web_path, app_path, code,
-              db_name, db_user, db_password, db_host, ai_model, secure_key))
+              db_name, db_user, db_password, db_host, ai_model, secure_key, global_context, project_context))
 
         conn.commit()
         project_id = cursor.lastrowid
@@ -2277,6 +2377,7 @@ TOOL_HANDLERS = {
     "codehero_analyze_project": handle_analyze_project,
     "codehero_import_from_backup": handle_import_from_backup,
     "codehero_export_for_migration": handle_export_for_migration,
+    "codehero_get_context_defaults": handle_get_context_defaults,
 }
 
 def handle_request(request: Dict[str, Any]) -> Dict[str, Any]:

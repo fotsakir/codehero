@@ -3745,6 +3745,43 @@ def api_projects():
         app_path = data.get('app_path', '').strip()
         preview_url = data.get('preview_url', '').strip()
         context = data.get('context', '').strip()
+        global_context = data.get('global_context', '').strip() or None
+        project_context = data.get('project_context', '').strip() or None
+
+        # Load default contexts if not provided (same logic as MCP server)
+        if global_context is None or project_context is None:
+            codehero_path = '/opt/codehero'
+            if global_context is None:
+                global_path = os.path.join(codehero_path, 'config', 'global-context.md')
+                if os.path.exists(global_path):
+                    try:
+                        with open(global_path, 'r', encoding='utf-8') as f:
+                            global_context = f.read()
+                    except:
+                        pass
+            if project_context is None:
+                # Map tech_stack to context file
+                context_map = {
+                    'php': 'php', 'python': 'python', 'node': 'node', 'html': 'html',
+                    'java': 'java', 'dotnet': 'dotnet', 'go': 'go',
+                    'react': 'react', 'react_native': 'react', 'flutter': 'flutter',
+                    'kotlin': 'kotlin', 'swift': 'swift'
+                }
+                # Also map project_type for mobile projects
+                project_type_map = {
+                    'capacitor': 'capacitor', 'react_native': 'react',
+                    'flutter': 'flutter', 'native_android': 'kotlin',
+                    'dotnet': 'dotnet'
+                }
+                context_file = context_map.get(tech_stack) or project_type_map.get(project_type, 'php')
+                specific_path = os.path.join(codehero_path, 'config', 'contexts', f'{context_file}.md')
+                if os.path.exists(specific_path):
+                    try:
+                        with open(specific_path, 'r', encoding='utf-8') as f:
+                            project_context = f.read()
+                    except:
+                        pass
+
         ai_model = data.get('ai_model', 'sonnet')
         default_execution_mode = data.get('default_execution_mode', 'autonomous')
         skip_database = data.get('skip_database', False)
@@ -3809,12 +3846,14 @@ def api_projects():
         try:
             cursor.execute("""
                 INSERT INTO projects (name, code, description, project_type, tech_stack,
-                    web_path, app_path, preview_url, secure_key, context, db_name, db_user, db_password, db_host,
+                    web_path, app_path, preview_url, secure_key, context, global_context, project_context,
+                    db_name, db_user, db_password, db_host,
                     ai_model, default_execution_mode, android_device_type, android_remote_host, android_remote_port, android_screen_size,
                     dotnet_port, status, created_at, updated_at)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'localhost', %s, %s, %s, %s, %s, %s, %s, 'active', NOW(), NOW())
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, 'localhost', %s, %s, %s, %s, %s, %s, %s, 'active', NOW(), NOW())
             """, (name, code, description, project_type, tech_stack or None,
                   web_path or None, app_path or None, preview_url or None, secure_key, context or None,
+                  global_context, project_context,
                   db_name, db_user, db_password, ai_model, default_execution_mode,
                   android_device_type, android_remote_host, android_remote_port, android_screen_size,
                   dotnet_port))
@@ -3937,6 +3976,12 @@ def api_project_detail(project_id):
     if 'context' in data:
         updates.append("context = %s")
         params.append(data['context'].strip() or None)
+    if 'global_context' in data:
+        updates.append("global_context = %s")
+        params.append(data['global_context'].strip() if data['global_context'] else None)
+    if 'project_context' in data:
+        updates.append("project_context = %s")
+        params.append(data['project_context'].strip() if data['project_context'] else None)
     if 'db_host' in data:
         updates.append("db_host = %s")
         params.append(data['db_host'].strip() or 'localhost')
@@ -4027,6 +4072,44 @@ def refresh_project_key(project_id):
         return jsonify({'success': True, 'secure_key': new_key, 'message': 'Key refreshed'})
     except Exception as e:
         return jsonify({'success': False, 'message': sanitize_error(e)})
+
+
+@app.route('/api/context-defaults/<context_type>')
+@login_required
+def get_context_defaults(context_type):
+    """Get default context files for a given type"""
+    import os
+
+    valid_types = ['php', 'python', 'node', 'html', 'java', 'dotnet', 'go', 'react', 'capacitor', 'flutter', 'kotlin', 'swift']
+    if context_type not in valid_types:
+        return jsonify({'success': False, 'message': f'Invalid context type. Valid types: {", ".join(valid_types)}'}), 400
+
+    codehero_path = '/opt/codehero'
+    global_path = os.path.join(codehero_path, 'config', 'global-context.md')
+    specific_path = os.path.join(codehero_path, 'config', 'contexts', f'{context_type}.md')
+
+    global_content = ''
+    specific_content = ''
+
+    try:
+        if os.path.exists(global_path):
+            with open(global_path, 'r', encoding='utf-8') as f:
+                global_content = f.read()
+    except Exception as e:
+        pass
+
+    try:
+        if os.path.exists(specific_path):
+            with open(specific_path, 'r', encoding='utf-8') as f:
+                specific_content = f.read()
+    except Exception as e:
+        pass
+
+    return jsonify({
+        'success': True,
+        'global': global_content,
+        'specific': specific_content
+    })
 
 
 # ============ TICKETS ============
@@ -6877,6 +6960,7 @@ class ClaudeChatSession:
             env.update({
                 'HOME': self.user_home, 'USER': username, 'LOGNAME': username,
                 'TERM': 'xterm-256color', 'SHELL': '/bin/bash',
+                'CLAUDE_CODE_MAX_OUTPUT_TOKENS': '64000',
             })
             # Load API key from .env if exists
             env_file = os.path.join(self.user_home, ".claude/.env")
