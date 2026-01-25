@@ -345,10 +345,10 @@ sudo su
 cd /root
 
 # Download the latest release
-wget https://github.com/fotsakir/codehero/releases/latest/download/codehero-2.83.1.zip
+wget https://github.com/fotsakir/codehero/releases/latest/download/codehero-2.83.2.zip
 
 # Extract
-unzip codehero-2.83.1.zip
+unzip codehero-2.83.2.zip
 
 # Enter the folder
 cd codehero

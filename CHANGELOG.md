@@ -5,6 +5,23 @@ All notable changes to CodeHero will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.83.2] - 2026-01-25
+
+### Fixed
+- **Watchdog Stuck Detection for Parallel Tickets** - Fixed thread-local bug
+  - Changed from single `current_process` to `ticket_processes` dictionary
+  - Processes now tracked per `ticket_id` instead of per-thread
+  - Watchdog can now correctly kill stuck tickets in parallel execution
+  - Less aggressive stuck detection prompt (tool calls without output = normal)
+
+### Improved
+- **Global Context v4.1** - Mandatory UI Testing Rules
+  - Color contrast check: Elements must be visible without hover
+  - Interactive elements: Must open/test all dropdowns and selectors
+  - Login testing: Must test authenticated views if login exists
+  - Test IDs (`data-testid`): Mandatory for all interactive elements
+  - Full Playwright test template with complete automation
+
 ## [2.83.1] - 2026-01-25
 
 ### Security
