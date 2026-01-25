@@ -646,27 +646,30 @@ PROJECT_SESSION_MAX_AGE = 86400 * 7
 
 def generate_project_session_token(project_folder, secure_key):
     """Generate a signed session token for a project folder.
-    Includes secure_key hash so changing the key invalidates all sessions."""
-    import hashlib
+    Includes secure_key hash so changing the key invalidates all sessions.
+    Uses folder hash instead of raw folder name to satisfy static analysis."""
     import hmac
     timestamp = int(time.time())
+    # Use hash of folder name instead of raw folder (avoids user input in cookie value)
+    folder_hash = hashlib.sha256(project_folder.encode()).hexdigest()[:16]
     key_hash = hashlib.sha256(secure_key.encode()).hexdigest()[:8]
-    message = f"{project_folder}:{timestamp}:{key_hash}"
+    message = f"{folder_hash}:{timestamp}:{key_hash}"
     signature = hmac.new(PROJECT_AUTH_SECRET.encode(), message.encode(), hashlib.sha256).hexdigest()[:32]
-    return f"{project_folder}:{timestamp}:{key_hash}:{signature}"
+    return f"{folder_hash}:{timestamp}:{key_hash}:{signature}"
 
 def validate_project_session_token(token, project_folder, secure_key, max_age=PROJECT_SESSION_MAX_AGE):
     """Validate a session token. Returns True if valid, False otherwise.
-    Checks that the key_hash matches current secure_key - changing key invalidates sessions."""
-    import hashlib
+    Checks that the key_hash matches current secure_key - changing key invalidates sessions.
+    Uses folder hash instead of raw folder name to match generate function."""
     import hmac
     try:
         parts = token.split(':')
         if len(parts) != 4:
             return False
-        token_folder, timestamp_str, key_hash, signature = parts
-        # Check folder matches
-        if token_folder != project_folder:
+        token_folder_hash, timestamp_str, key_hash, signature = parts
+        # Check folder hash matches
+        expected_folder_hash = hashlib.sha256(project_folder.encode()).hexdigest()[:16]
+        if not hmac.compare_digest(token_folder_hash, expected_folder_hash):
             return False
         # Check key_hash matches current key
         current_key_hash = hashlib.sha256(secure_key.encode()).hexdigest()[:8]
@@ -677,7 +680,7 @@ def validate_project_session_token(token, project_folder, secure_key, max_age=PR
         if time.time() - timestamp > max_age:
             return False
         # Verify signature
-        message = f"{token_folder}:{timestamp_str}:{key_hash}"
+        message = f"{token_folder_hash}:{timestamp_str}:{key_hash}"
         expected_sig = hmac.new(PROJECT_AUTH_SECRET.encode(), message.encode(), hashlib.sha256).hexdigest()[:32]
         return hmac.compare_digest(signature, expected_sig)
     except:
