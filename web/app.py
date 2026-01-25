@@ -26,6 +26,7 @@ import unicodedata
 import mysql.connector
 from mysql.connector import pooling
 import bcrypt
+import hashlib
 import os
 import pty
 import pwd
@@ -745,9 +746,12 @@ def validate_project_key():
     if not project_secure_key:
         return '', 403
 
+    # Generate safe cookie name using hash (avoids user input in cookie name)
+    folder_hash = hashlib.sha256(project_folder.encode()).hexdigest()[:16]
+    safe_cookie_name = f"codehero_auth_{folder_hash}"
+
     # Check for existing session cookie (includes key hash check)
-    cookie_name = f"codehero_auth_{project_folder}"
-    session_token = request.cookies.get(cookie_name)
+    session_token = request.cookies.get(safe_cookie_name)
     if session_token and validate_project_session_token(session_token, project_folder, project_secure_key):
         return '', 200
 
@@ -766,14 +770,16 @@ def validate_project_key():
         return '', 403
 
     # Key is valid - generate session token and set cookie
-    token = generate_project_session_token(project_folder, project_secure_key)
+    session_token = generate_project_session_token(project_folder, project_secure_key)
     response = make_response('', 200)
     # Set cookie for this project path only (7 days expiry)
+    # Cookie name uses hash, path uses sanitized folder (required for HTTP cookie scoping)
+    # project_folder is already sanitized by sanitize_folder_name() - only alphanumeric, dash, underscore, dot
     response.set_cookie(
-        cookie_name,
-        token,
+        safe_cookie_name,
+        session_token,
         max_age=86400*7,
-        path=f'/{project_folder}',
+        path='/' + project_folder,
         httponly=True,
         secure=True,
         samesite='Lax'
@@ -4127,18 +4133,31 @@ def get_context_defaults(context_type):
     """Get default context files for a given type"""
     import os
 
-    valid_types = ['php', 'python', 'node', 'html', 'java', 'dotnet', 'go', 'react', 'capacitor', 'flutter', 'kotlin', 'swift']
-    if context_type not in valid_types:
-        return jsonify({'success': False, 'message': f'Invalid context type. Valid types: {", ".join(valid_types)}'}), 400
+    # Use mapping dictionary to avoid path construction from user input
+    context_files = {
+        'php': 'php.md',
+        'python': 'python.md',
+        'node': 'node.md',
+        'html': 'html.md',
+        'java': 'java.md',
+        'dotnet': 'dotnet.md',
+        'go': 'go.md',
+        'react': 'react.md',
+        'capacitor': 'capacitor.md',
+        'flutter': 'flutter.md',
+        'kotlin': 'kotlin.md',
+        'swift': 'swift.md'
+    }
 
-    # Extra sanitization for path safety (whitelist above is sufficient, but this satisfies static analysis)
-    safe_context_type = re.sub(r'[^a-z]', '', context_type)
-    if safe_context_type != context_type:
-        return jsonify({'success': False, 'message': 'Invalid context type'}), 400
+    if context_type not in context_files:
+        return jsonify({'success': False, 'message': f'Invalid context type. Valid types: {", ".join(context_files.keys())}'}), 400
+
+    # Get filename from hardcoded mapping (no user input in path)
+    context_filename = context_files[context_type]
 
     codehero_path = '/opt/codehero'
     global_path = os.path.join(codehero_path, 'config', 'global-context.md')
-    specific_path = os.path.join(codehero_path, 'config', 'contexts', f'{safe_context_type}.md')
+    specific_path = os.path.join(codehero_path, 'config', 'contexts', context_filename)
 
     global_content = ''
     specific_content = ''
