@@ -215,9 +215,10 @@ class ProjectWorker(threading.Thread):
         # These are initialized per-thread in reset_token_tracking()
         # Permission denials (supervised mode) - also thread-local
         # Last task summary - also thread-local
-        # Current running Claude process (for watchdog to kill if stuck)
-        self.current_process = None
-        self.current_process_lock = threading.Lock()
+        # Running Claude processes per ticket (for watchdog to kill if stuck)
+        # Maps ticket_id -> process object
+        self.ticket_processes = {}
+        self.ticket_processes_lock = threading.Lock()
 
     # Thread-local properties for parallel execution safety
     @property
@@ -306,20 +307,23 @@ class ProjectWorker(threading.Thread):
     def log(self, message, level="INFO"):
         self.daemon_ref.log(f"[{self.project_name}] {message}", level)
 
-    def kill_process(self):
-        """Kill the current Claude process (called by watchdog)"""
-        with self.current_process_lock:
-            if self.current_process and self.current_process.poll() is None:
-                self.log("Killing Claude process (watchdog)", "WARNING")
-                try:
-                    self.current_process.terminate()
-                    self.current_process.wait(timeout=5)
-                except:
+    def kill_process(self, ticket_id=None):
+        """Kill a Claude process by ticket_id (called by watchdog)"""
+        with self.ticket_processes_lock:
+            if ticket_id and ticket_id in self.ticket_processes:
+                process = self.ticket_processes[ticket_id]
+                if process and process.poll() is None:
+                    self.log(f"Killing Claude process for ticket {ticket_id} (watchdog)", "WARNING")
                     try:
-                        self.current_process.kill()
+                        process.terminate()
+                        process.wait(timeout=5)
                     except:
-                        pass
-                return True
+                        try:
+                            process.kill()
+                        except:
+                            pass
+                    del self.ticket_processes[ticket_id]
+                    return True
         return False
 
     def get_db(self):
@@ -1676,8 +1680,8 @@ Complete this task. When finished, say "TASK COMPLETED" with a summary."""
             )
 
             # Store process reference for watchdog to kill if needed
-            with self.current_process_lock:
-                self.current_process = process
+            with self.ticket_processes_lock:
+                self.ticket_processes[ticket['id']] = process
 
             # Write PID file for instant kill switch
             pid_file = f"/var/run/codehero/claude_{ticket['id']}.pid"
@@ -1727,8 +1731,8 @@ Complete this task. When finished, say "TASK COMPLETED" with a summary."""
                         self.daemon_ref.send_email(f"Stuck on {ticket['ticket_number']}",
                                        f"Ticket: {ticket['title']}\nNo activity for {STUCK_TIMEOUT_MINUTES} minutes.")
                         process.terminate()
-                        with self.current_process_lock:
-                            self.current_process = None
+                        with self.ticket_processes_lock:
+                            self.ticket_processes.pop(ticket['id'], None)
                         return 'stuck'
             
             # Check for permission denials in supervised or semi-autonomous mode
@@ -1745,8 +1749,8 @@ Complete this task. When finished, say "TASK COMPLETED" with a summary."""
                 self.save_pending_permission_to_db(ticket['id'], pending)
                 self.save_log('warning', f"🛡️ Permission required: {pending['tool']}")
                 self.save_message('system', f"🛡️ Permission required for {pending['tool']}. Waiting for approval.")
-                with self.current_process_lock:
-                    self.current_process = None
+                with self.ticket_processes_lock:
+                    self.ticket_processes.pop(ticket['id'], None)
                 return 'permission_needed'
 
             # Drain any remaining output from the buffer after process ends
@@ -1774,8 +1778,8 @@ Complete this task. When finished, say "TASK COMPLETED" with a summary."""
                 pass
 
             # Clear process reference
-            with self.current_process_lock:
-                self.current_process = None
+            with self.ticket_processes_lock:
+                self.ticket_processes.pop(ticket['id'], None)
 
             return final_result
 
@@ -1791,8 +1795,8 @@ Complete this task. When finished, say "TASK COMPLETED" with a summary."""
             except:
                 pass
             # Clear process reference
-            with self.current_process_lock:
-                self.current_process = None
+            with self.ticket_processes_lock:
+                self.ticket_processes.pop(ticket['id'], None)
             return 'failed'
     
     def ensure_ancestor_summaries(self, ticket):
@@ -2197,7 +2201,7 @@ class Watchdog(threading.Thread):
             conversation_text = "\n".join(conversation)
 
             # Call Haiku for analysis
-            prompt = f"""Analyze this AI assistant conversation and determine if it's stuck in an unproductive loop.
+            prompt = f"""Analyze this AI assistant conversation and determine if it's TRULY stuck in an unproductive loop.
 
 TICKET: {ticket['ticket_number']} - {ticket['title']}
 PROJECT: {ticket['project_name']}
@@ -2207,17 +2211,25 @@ TOKENS USED: {ticket.get('running_tokens', 0) or 0}
 RECENT CONVERSATION:
 {conversation_text}
 
-SIGNS OF BEING STUCK:
-1. Same error appearing repeatedly without resolution
-2. AI trying the same fix multiple times
-3. Tests failing repeatedly with same errors
-4. Circular behavior (edit → test → fail → same edit)
-5. AI expressing uncertainty or asking for help repeatedly
-6. No meaningful progress in last several messages
+SIGNS OF BEING STUCK (must see MULTIPLE of these):
+1. Same EXACT error appearing 3+ times without any code changes
+2. AI explicitly saying it's stuck or asking for human help
+3. Same fix attempted 3+ times with identical results
+4. AI stating it cannot proceed or needs user intervention
+
+NOT STUCK (normal behavior - respond CONTINUE):
+- Many tool calls in sequence (reading files, writing code) = NORMAL
+- AI working quietly without explanations = NORMAL (autonomous mode)
+- File exploration and code writing = NORMAL progress
+- No visible output but tools being used = NORMAL
+- Creating multiple files = NORMAL
+- Testing and fixing = NORMAL development cycle
+
+IMPORTANT: Err on the side of CONTINUE. Only say STUCK if you see CLEAR evidence of a loop with NO progress. Tool use without explanations is NORMAL in autonomous mode.
 
 RESPOND WITH EXACTLY ONE LINE:
-- "CONTINUE" if the AI is making progress
-- "STUCK: <brief reason>" if the AI appears stuck
+- "CONTINUE" if the AI might be making progress (default choice)
+- "STUCK: <brief reason>" ONLY if clearly stuck with same error 3+ times
 
 Your response:"""
 
@@ -2248,13 +2260,12 @@ Your response:"""
         """Mark a ticket as stuck and notify"""
         self.log(f"STUCK DETECTED: {ticket['ticket_number']} - {reason}", "WARNING")
 
-        # Kill the running Claude process for this ticket
+        # Kill the running Claude process for this ticket (by ticket_id)
         project_id = ticket.get('project_id')
         if project_id and project_id in self.daemon_ref.workers:
             worker = self.daemon_ref.workers[project_id]
-            if worker.current_ticket_id == ticket['id']:
-                if worker.kill_process():
-                    self.log(f"Killed Claude process for ticket {ticket['ticket_number']}", "WARNING")
+            if worker.kill_process(ticket['id']):
+                self.log(f"Killed Claude process for ticket {ticket['ticket_number']}", "WARNING")
 
         try:
             conn = self.get_db()
