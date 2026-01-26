@@ -814,7 +814,7 @@ def chat(project_id=None, ticket_id=None):
 @login_required
 def dashboard():
     stats = {'projects': 0, 'open_tickets': 0, 'in_progress': 0, 'awaiting_input': 0,
-             'completed_today': 0, 'daemon_status': 'stopped', 'active_workers': [], 'max_workers': 3}
+             'completed_today': 0, 'daemon_status': 'stopped', 'active_workers': [], 'max_workers': 10}
     projects = []
     recent_tickets = []
 
@@ -854,7 +854,7 @@ def dashboard():
             ORDER BY t.updated_at DESC
         """)
         stats['active_workers'] = cursor.fetchall()
-        stats['max_workers'] = int(config.get('MAX_PARALLEL_PROJECTS', '3'))
+        stats['max_workers'] = int(config.get('MAX_PARALLEL_PROJECTS', '10'))
 
         cursor.execute("SELECT * FROM projects WHERE status = 'active' ORDER BY updated_at DESC LIMIT 10")
         projects = cursor.fetchall()
@@ -2240,12 +2240,14 @@ def import_project_from_backup(backup_path, new_project_name=None, web_path=None
                     name, code, description, project_type, tech_stack,
                     web_path, app_path, reference_path, context, status,
                     db_name, db_user, db_password, db_host,
-                    default_test_command, ai_model, git_enabled, default_execution_mode
+                    default_test_command, ai_model, git_enabled, default_execution_mode,
+                    global_context, project_context
                 ) VALUES (
                     %s, %s, %s, %s, %s,
                     %s, %s, %s, %s, %s,
                     %s, %s, %s, %s,
-                    %s, %s, %s, %s
+                    %s, %s, %s, %s,
+                    %s, %s
                 )
             """, (
                 project_name, new_code,
@@ -2264,7 +2266,9 @@ def import_project_from_backup(backup_path, new_project_name=None, web_path=None
                 project_data.get('default_test_command'),
                 project_data.get('ai_model', 'sonnet'),
                 project_data.get('git_enabled', 1),
-                project_data.get('default_execution_mode', 'autonomous')
+                project_data.get('default_execution_mode', 'autonomous'),
+                project_data.get('global_context'),
+                project_data.get('project_context')
             ))
             new_project_id = cursor.lastrowid
             conn.commit()
@@ -4365,6 +4369,14 @@ def api_tickets():
                             INSERT IGNORE INTO ticket_dependencies (ticket_id, depends_on_ticket_id)
                             VALUES (%s, %s)
                         """, (ticket_id, dep_id))
+                conn.commit()
+
+            # Add initial message if description provided (same as MCP)
+            if description:
+                cursor.execute("""
+                    INSERT INTO conversation_messages (ticket_id, role, content)
+                    VALUES (%s, 'user', %s)
+                """, (ticket_id, description))
                 conn.commit()
 
             cursor.close(); conn.close()

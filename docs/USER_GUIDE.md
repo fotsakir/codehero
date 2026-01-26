@@ -557,8 +557,8 @@ Fix:
 
 ```bash
 cd /root
-wget https://github.com/fotsakir/codehero/releases/latest/download/codehero-2.83.2.zip
-unzip codehero-2.83.2.zip
+wget https://github.com/fotsakir/codehero/releases/latest/download/codehero-2.83.3.zip
+unzip codehero-2.83.3.zip
 cd codehero
 sudo ./upgrade.sh
 ```

@@ -73,6 +73,9 @@ CREATE TABLE `conversation_messages` (
   `is_summarized` tinyint(1) DEFAULT '0',
   PRIMARY KEY (`id`),
   KEY `idx_ticket` (`ticket_id`),
+  KEY `idx_messages_ticket_created` (`ticket_id`, `created_at`),
+  KEY `idx_messages_ticket_role` (`ticket_id`, `role`),
+  KEY `idx_messages_ticket_id_desc` (`ticket_id`, `id` DESC),
   CONSTRAINT `conversation_messages_ibfk_1` FOREIGN KEY (`ticket_id`) REFERENCES `tickets` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -131,6 +134,7 @@ CREATE TABLE `execution_logs` (
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_session` (`session_id`),
+  KEY `idx_logs_session_created` (`session_id`, `created_at` DESC),
   CONSTRAINT `execution_logs_ibfk_1` FOREIGN KEY (`session_id`) REFERENCES `execution_sessions` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -152,6 +156,8 @@ CREATE TABLE `execution_sessions` (
   `api_calls` int DEFAULT '0',
   PRIMARY KEY (`id`),
   KEY `ticket_id` (`ticket_id`),
+  KEY `idx_sessions_status` (`status`),
+  KEY `idx_sessions_ticket_status` (`ticket_id`, `status`),
   CONSTRAINT `execution_sessions_ibfk_1` FOREIGN KEY (`ticket_id`) REFERENCES `tickets` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -263,8 +269,8 @@ CREATE TABLE `projects` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `code` (`code`),
   KEY `idx_status` (`status`),
-  KEY `idx_code` (`code`),
-  KEY `idx_db_name` (`db_name`)
+  KEY `idx_db_name` (`db_name`),
+  KEY `idx_projects_status_updated` (`status`, `updated_at` DESC)
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -392,6 +398,8 @@ CREATE TABLE `tickets` (
   KEY `idx_parent_ticket` (`parent_ticket_id`),
   KEY `idx_tickets_review_scheduled` (`status`,`review_scheduled_at`),
   KEY `idx_tickets_retry_after` (`retry_after`),
+  KEY `idx_tickets_status_updated` (`status`, `updated_at` DESC),
+  KEY `idx_tickets_project_updated` (`project_id`, `updated_at` DESC),
   CONSTRAINT `tickets_ibfk_1` FOREIGN KEY (`project_id`) REFERENCES `projects` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_parent_ticket` FOREIGN KEY (`parent_ticket_id`) REFERENCES `tickets` (`id`) ON DELETE SET NULL
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

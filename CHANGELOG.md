@@ -5,6 +5,35 @@ All notable changes to CodeHero will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.83.3] - 2026-01-26
+
+### Improved
+- **Global Context - Database Design Rules** - Comprehensive database guidelines
+  - Correct field types table (DECIMAL for money, UNSIGNED for IDs, etc.)
+  - Table structure best practices (naming conventions, standard columns)
+  - Extensibility patterns (separate tables vs hardcoded columns)
+  - Foreign key actions (ON DELETE + ON UPDATE) with use-case examples
+  - Expanded checklist (10 items instead of 5)
+
+- **Global Context - File Placement Rules** - Clear workspace path guidelines
+  - File type → path mapping table
+  - Project structure examples (Web, App, Hybrid)
+  - Forbidden locations list with explanations
+  - Checklist before creating files
+
+### Fixed
+- **Migration Backup Import** - Now properly restores context fields
+  - Added `global_context` and `project_context` to import function
+  - All three context fields (context, global_context, project_context) now preserved
+
+- **Web UI Ticket Creation** - Description now visible immediately
+  - Added initial conversation message when creating ticket via UI
+  - Matches MCP behavior - description shows in chat before daemon starts
+
+- **Dashboard Max Workers Display** - Shows correct config value
+  - Changed default from 3 to 10
+  - Reads actual value from MAX_PARALLEL_PROJECTS config
+
 ## [2.83.2] - 2026-01-25
 
 ### Fixed

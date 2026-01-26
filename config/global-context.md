@@ -198,6 +198,48 @@ adb install build/app/outputs/flutter-apk/app-debug.apk
 - [ ] **Web**: Desktop + Mobile responsive
 - [ ] **Mobile apps**: Portrait + Landscape orientation
 
+### Tags/Badges σε Cards (ΠΡΟΣΟΧΗ!)
+- Position tags με `absolute` ΜΟΝΟ αν το parent έχει `relative`
+- Αφήνε padding στο content για να μην επικαλύπτεται: `pt-8` αν το tag είναι πάνω
+- Χρησιμοποίησε `z-index` σωστά: tag `z-10`, content `z-0`
+- ΠΟΤΕ μην βάζεις tag πάνω σε κείμενο - χρησιμοποίησε corners (top-right, top-left)
+
+**Παράδειγμα:**
+```html
+<div class="relative bg-white rounded-lg p-4 pt-10">
+  <span class="absolute top-2 right-2 bg-blue-500 text-white text-xs px-2 py-1 rounded z-10">Tag</span>
+  <h3 class="z-0">Τίτλος</h3>
+  <p>Περιεχόμενο που δεν επικαλύπτεται</p>
+</div>
+```
+
+### Εικόνες & Placeholders (MANDATORY!)
+- ΠΟΤΕ μην αφήνεις κενό χώρο για εικόνες
+- Χρησιμοποίησε placeholder service: `https://placehold.co/400x300/EEE/333?text=Κατηγορία`
+- Ή δημιούργησε SVG placeholder με σχετικό icon
+- Για κατηγορίες χρησιμοποίησε σχετικά icons (FontAwesome, Heroicons)
+
+**Παραδείγματα placeholders:**
+| Κατηγορία | Placeholder |
+|-----------|-------------|
+| Οχήματα | 🚗 icon ή placehold.co με "Οχήματα" |
+| Ακίνητα | 🏠 icon |
+| Ηλεκτρονικά | 📱 icon |
+| Γενικό | Γκρι background με όνομα κατηγορίας |
+
+**Κώδικας:**
+```html
+<!-- Με εικόνα ή fallback -->
+<img src="photo.jpg"
+     onerror="this.src='https://placehold.co/400x300/f3f4f6/9ca3af?text=Χωρίς+Εικόνα'"
+     alt="Περιγραφή">
+
+<!-- SVG Placeholder -->
+<div class="bg-gray-100 flex items-center justify-center h-48">
+  <svg class="w-16 h-16 text-gray-400">...</svg>
+</div>
+```
+
 ---
 
 ## MANDATORY UI TESTING RULES
@@ -450,6 +492,164 @@ curl -o libs/tailwind.min.css https://cdn.tailwindcss.com/...
 
 ---
 
+## DATABASE DESIGN (MANDATORY!)
+
+### Σωστοί Τύποι Πεδίων (ΚΡΙΣΙΜΟ!)
+
+| Δεδομένο | Σωστός Τύπος | ❌ Λάθος | Γιατί |
+|----------|--------------|----------|-------|
+| ID/Primary Key | `INT UNSIGNED` ή `BIGINT UNSIGNED` | `INT` (signed) | Δεν χρειαζόμαστε αρνητικά IDs |
+| Foreign Key | Ίδιος τύπος με το PK | Διαφορετικός | Πρέπει να ταιριάζουν ακριβώς |
+| Τιμή/Χρήματα | `DECIMAL(10,2)` | `FLOAT`, `DOUBLE` | Float έχει precision errors |
+| Email | `VARCHAR(255)` | `TEXT` | Email max 254 chars by RFC |
+| Username | `VARCHAR(50)` | `VARCHAR(255)` | Περιττό μέγεθος |
+| Password hash | `VARCHAR(255)` | `TEXT`, `CHAR` | bcrypt = 60 chars, future-proof |
+| Short text | `VARCHAR(n)` | `TEXT` | TEXT δεν έχει index limit |
+| Long text | `TEXT` ή `MEDIUMTEXT` | `VARCHAR(10000)` | VARCHAR max 65535 bytes |
+| Boolean | `TINYINT(1)` ή `BOOLEAN` | `INT`, `ENUM('0','1')` | Σπατάλη χώρου |
+| Status/Type | `ENUM(...)` | `VARCHAR`, `INT` | Validation + readability |
+| Date μόνο | `DATE` | `DATETIME`, `VARCHAR` | Σωστός τύπος για dates |
+| Date + Time | `DATETIME` | `TIMESTAMP` (για events) | TIMESTAMP για auto-update |
+| Created/Updated | `TIMESTAMP` | `DATETIME` | Auto-update support |
+| IP Address | `VARCHAR(45)` | `VARCHAR(15)` | IPv6 = 45 chars |
+| Phone | `VARCHAR(20)` | `INT` | Phones έχουν + και spaces |
+| UUID | `CHAR(36)` ή `BINARY(16)` | `VARCHAR` | Fixed length |
+| JSON data | `JSON` | `TEXT` | Validation + indexing |
+| Percentage | `DECIMAL(5,2)` | `INT`, `FLOAT` | 0.00 - 100.00 |
+
+### Δομή Πίνακα - Best Practices
+
+**Standard Columns (ΠΑΝΤΑ περιλαμβάνουμε):**
+```sql
+CREATE TABLE table_name (
+    -- Primary Key
+    id INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+
+    -- Business columns εδώ...
+
+    -- Standard timestamps (ΠΑΝΤΑ!)
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    -- Optional: Soft delete
+    deleted_at TIMESTAMP NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+**Naming Conventions:**
+| Τι | Convention | Παράδειγμα |
+|----|------------|------------|
+| Table names | Πληθυντικός, snake_case | `users`, `order_items` |
+| Column names | Ενικός, snake_case | `user_id`, `created_at` |
+| Primary key | `id` | `id` |
+| Foreign key | `{table_singular}_id` | `user_id`, `product_id` |
+| Boolean | `is_` ή `has_` prefix | `is_active`, `has_verified` |
+| Timestamps | `_at` suffix | `created_at`, `expires_at` |
+| Indexes | `idx_{columns}` | `idx_user_id`, `idx_status_created` |
+
+**Επεκτασιμότητα - Σκέψου το Μέλλον:**
+```sql
+-- ❌ ΛΑΘΟΣ: Hardcoded columns
+CREATE TABLE users (
+    phone1 VARCHAR(20),
+    phone2 VARCHAR(20),  -- Τι γίνεται αν θέλει 3 τηλέφωνα;
+    phone3 VARCHAR(20)
+);
+
+-- ✅ ΣΩΣΤΟ: Separate table για πολλαπλές τιμές
+CREATE TABLE users (
+    id INT UNSIGNED PRIMARY KEY AUTO_INCREMENT
+);
+
+CREATE TABLE user_phones (
+    id INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+    user_id INT UNSIGNED NOT NULL,
+    phone VARCHAR(20) NOT NULL,
+    type ENUM('mobile','home','work') DEFAULT 'mobile',
+    is_primary TINYINT(1) DEFAULT 0,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+```
+
+### Indexes - ΠΑΝΤΑ προσθέτουμε:
+| Column Type | Index Type | Παράδειγμα |
+|-------------|------------|------------|
+| Primary Key | PRIMARY | `id INT UNSIGNED PRIMARY KEY AUTO_INCREMENT` |
+| Foreign Key | INDEX | `INDEX idx_user_id (user_id)` |
+| WHERE columns | INDEX | `INDEX idx_status (status)` |
+| ORDER BY columns | INDEX | `INDEX idx_created (created_at)` |
+| Unique fields | UNIQUE | `UNIQUE idx_email (email)` |
+| Composite WHERE | COMPOSITE | `INDEX idx_user_status (user_id, status)` |
+
+### Foreign Keys - Σωστά Actions (ΚΡΙΣΙΜΟ!)
+
+**ON DELETE + ON UPDATE Actions:**
+| Action | ON DELETE | ON UPDATE |
+|--------|-----------|-----------|
+| `CASCADE` | Διαγραφή parent → διαγραφή children | Update parent ID → update children |
+| `RESTRICT` | Απαγόρευση διαγραφής αν υπάρχουν children | Απαγόρευση update αν υπάρχουν children |
+| `SET NULL` | Διαγραφή parent → NULL στο child | Update parent ID → NULL στο child |
+| `NO ACTION` | Ίδιο με RESTRICT (SQL standard) | Ίδιο με RESTRICT |
+
+**Πότε χρησιμοποιούμε τι:**
+| Σχέση | ON DELETE | ON UPDATE | Παράδειγμα |
+|-------|-----------|-----------|------------|
+| Parent-Child (ownership) | `CASCADE` | `CASCADE` | user → user_settings |
+| Parent-Child (data) | `CASCADE` | `CASCADE` | order → order_items |
+| Reference (required) | `RESTRICT` | `CASCADE` | order → product |
+| Reference (optional) | `SET NULL` | `CASCADE` | post → category (nullable) |
+| Audit/Log | `RESTRICT` | `CASCADE` | payment → order |
+| Self-reference | `SET NULL` ή `CASCADE` | `CASCADE` | employee → manager |
+
+**Παράδειγμα Σωστής Δομής:**
+```sql
+CREATE TABLE orders (
+    id INT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+    user_id INT UNSIGNED NOT NULL,
+    product_id INT UNSIGNED NOT NULL,
+    status ENUM('pending','processing','completed','cancelled') DEFAULT 'pending',
+    total_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    notes TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+    -- Foreign Keys με ΣΩΣΤΑ actions
+    FOREIGN KEY (user_id) REFERENCES users(id)
+        ON DELETE CASCADE ON UPDATE CASCADE,      -- Διαγραφή user = διαγραφή orders
+    FOREIGN KEY (product_id) REFERENCES products(id)
+        ON DELETE RESTRICT ON UPDATE CASCADE,     -- Δεν μπορείς να διαγράψεις product με orders
+
+    -- Indexes
+    INDEX idx_user_id (user_id),
+    INDEX idx_product_id (product_id),
+    INDEX idx_status (status),
+    INDEX idx_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+```
+
+### Query Optimization - ΠΑΝΤΑ ελέγχουμε:
+```sql
+-- Πριν γράψεις query, έλεγξε με EXPLAIN:
+EXPLAIN SELECT * FROM orders WHERE user_id = 1 AND status = 'pending';
+
+-- Αν δεις "type: ALL" → ΧΡΕΙΑΖΕΤΑΙ INDEX!
+-- Στόχος: "type: ref" ή "type: range"
+```
+
+### Database Checklist πριν τελειώσεις:
+- [ ] Τύποι πεδίων είναι σωστοί (DECIMAL για χρήματα, κλπ)
+- [ ] Primary keys είναι UNSIGNED
+- [ ] Foreign keys έχουν ίδιο τύπο με το PK που αναφέρονται
+- [ ] Κάθε foreign key έχει INDEX
+- [ ] Foreign keys έχουν σωστό ON DELETE ΚΑΙ ON UPDATE
+- [ ] Υπάρχουν created_at και updated_at columns
+- [ ] WHERE columns έχουν INDEX
+- [ ] ORDER BY columns έχουν INDEX
+- [ ] Πίνακες έχουν utf8mb4 charset
+- [ ] EXPLAIN δείχνει σωστή χρήση indexes
+
+---
+
 ## NO BUILD WORKFLOW
 
 **NEVER use build tools** (Vite, Webpack, npm run build)
@@ -464,13 +664,87 @@ const MyComponent = {
 
 ---
 
-## WORKSPACE PATHS
+## WORKSPACE PATHS (CRITICAL!)
+
+### Πού Δουλεύεις
+Όταν εκτελείς ticket, το σύστημα σου δίνει τα paths στο context:
+- **Web path**: Για web εφαρμογές (PHP, HTML, frontend)
+- **App path**: Για backend/app (Node.js API, Python, CLI, mobile)
+
+**ΚΡΙΣΙΜΟ:** Δούλεψε ΜΟΝΟ μέσα στα paths που σου δόθηκαν!
+
+### Κανόνες Τοποθέτησης Αρχείων
+
+| Τύπος Αρχείου | Που Πάει | Path |
+|---------------|----------|------|
+| HTML, CSS, JS, PHP | Web folder | `{web_path}/` |
+| Images, fonts, assets | Web folder | `{web_path}/assets/` |
+| Libraries (local) | Web folder | `{web_path}/libs/` |
+| Backend API (Node/Python) | App folder | `{app_path}/` |
+| Config files | Root του project | `{web_path}/` ή `{app_path}/` |
+| SQL/migrations | Project folder | `{web_path}/database/` ή `{app_path}/database/` |
+
+### Project Structure Examples
+
+**Web Project (PHP/HTML):**
+```
+{web_path}/
+├── index.php          # Entry point
+├── css/               # Stylesheets
+├── js/                # JavaScript
+├── libs/              # Downloaded libraries (Tailwind, Vue, etc.)
+├── assets/            # Images, fonts
+├── includes/          # PHP includes
+├── database/          # SQL files
+└── config.php         # Configuration
+```
+
+**App Project (Node.js API):**
+```
+{app_path}/
+├── index.js           # Entry point
+├── src/               # Source code
+├── routes/            # API routes
+├── models/            # Data models
+├── config/            # Configuration
+├── database/          # Migrations, schema
+└── package.json       # Dependencies
+```
+
+**Hybrid Project (Frontend + Backend):**
+```
+{web_path}/            # Frontend (Vue/React)
+├── index.html
+├── css/
+├── js/
+└── libs/
+
+{app_path}/            # Backend API
+├── index.js
+├── routes/
+└── models/
+```
+
+### ΑΠΑΓΟΡΕΥΜΕΝΕΣ Τοποθεσίες (NEVER!)
 
 ```
-Allowed:    /var/www/projects/{name}/
-            /opt/apps/{name}/
+❌ FORBIDDEN - ΠΟΤΕ μην γράφεις εδώ:
+/opt/codehero/         # System files
+/etc/nginx/            # Server config
+/etc/systemd/          # Service files
+/var/log/              # Logs
+/tmp/                  # Temporary (εκτός για screenshots)
+/home/claude/          # Home directory
+/root/                 # Root home
 
-FORBIDDEN:  /opt/codehero/
-            /etc/nginx/
-            /etc/systemd/
+✅ ALLOWED - Μόνο εδώ:
+{web_path}/...         # Το web path του project
+{app_path}/...         # Το app path του project
 ```
+
+### Checklist Πριν Δημιουργήσεις Αρχείο
+
+- [ ] Είμαι μέσα στο `{web_path}` ή `{app_path}` του project;
+- [ ] Ο τύπος αρχείου ταιριάζει με το path (web files → web_path);
+- [ ] Χρησιμοποιώ relative paths μέσα στο project;
+- [ ] Libraries πάνε στο `libs/` folder, όχι στο root;
