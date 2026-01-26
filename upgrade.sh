@@ -365,6 +365,13 @@ if [ -d "${SOURCE_DIR}/config" ]; then
     echo "  Copied config files"
 fi
 
+# Language-specific context files
+if [ -d "${SOURCE_DIR}/config/contexts" ]; then
+    mkdir -p "${INSTALL_DIR}/config/contexts"
+    cp -r "${SOURCE_DIR}/config/contexts/"* "${INSTALL_DIR}/config/contexts/" 2>/dev/null || true
+    echo "  Copied language contexts (php, python, node, etc.)"
+fi
+
 # Upgrades directory
 if [ -d "${SOURCE_DIR}/upgrades" ]; then
     mkdir -p "${INSTALL_DIR}/upgrades"

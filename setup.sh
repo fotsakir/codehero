@@ -629,6 +629,12 @@ cp "${SCRIPT_DIR}/config/"*.json ${INSTALL_DIR}/config/ 2>/dev/null || true
 cp "${SCRIPT_DIR}/config/"*.conf ${CONFIG_DIR}/ 2>/dev/null || true
 cp "${SCRIPT_DIR}/config/"*.conf ${INSTALL_DIR}/config/ 2>/dev/null || true
 
+# Copy language-specific context files (php, python, node, etc.)
+if [ -d "${SCRIPT_DIR}/config/contexts" ]; then
+    mkdir -p ${INSTALL_DIR}/config/contexts
+    cp -r "${SCRIPT_DIR}/config/contexts/"* ${INSTALL_DIR}/config/contexts/ 2>/dev/null || true
+fi
+
 # Copy documentation files
 mkdir -p ${INSTALL_DIR}/docs
 cp -r "${SCRIPT_DIR}/docs/"* ${INSTALL_DIR}/docs/ 2>/dev/null || true

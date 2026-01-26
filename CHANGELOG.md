@@ -5,6 +5,14 @@ All notable changes to CodeHero will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.83.5] - 2026-01-26
+
+### Fixed
+- **Setup & Upgrade Scripts** - Now copy language-specific context files
+  - Added contexts folder copy to `setup.sh` (fresh installs)
+  - Added contexts folder copy to `upgrade.sh` (upgrades)
+  - Copies: php.md, python.md, node.md, html.md, java.md, dotnet.md, go.md, react.md, capacitor.md, flutter.md, kotlin.md, swift.md
+
 ## [2.83.4] - 2026-01-26
 
 ### Added
