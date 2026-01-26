@@ -3,12 +3,12 @@
 -- Description: Add missing indexes and remove redundant ones for better query performance
 
 -- ============================================
--- STEP 1: Remove redundant index (if exists)
+-- STEP 1: Remove redundant index
 -- ============================================
 
 -- projects: idx_code is redundant because UNIQUE KEY `code` already exists
--- Note: Run this separately if needed: DROP INDEX idx_code ON projects;
--- Skipping conditional drop for MySQL compatibility
+-- Note: This will error if index doesn't exist - safe to ignore
+DROP INDEX idx_code ON projects;
 
 -- ============================================
 -- STEP 2: Add CRITICAL indexes (High-volume queries)
